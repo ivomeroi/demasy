@@ -1,0 +1,46 @@
+[build]
+  # No build process needed - static files only
+  publish = "."
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[headers]]
+  # Apply these headers to all routes
+  for = "/*"
+  [headers.values]
+    # Enable HTTPS
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # Cache static assets
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  # Special caching for HTML files
+  for = "*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  # Long cache for JS/CSS (with versioning)
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+# SPA fallback - serve index.html for all routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Optional: Custom domain configuration
+# [build.environment]
+#   CUSTOM_DOMAIN = "kinesio-emg.yourdomain.com"

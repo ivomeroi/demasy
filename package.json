@@ -1,0 +1,132 @@
+{
+  "name": "kinesio-emg",
+  "version": "0.1.0",
+  "description": "EMG Analysis Platform for Kinesiologists - A complete web-based application with patient management, local database, and real-time bilateral EMG analysis for cycling biomechanics",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 8000",
+    "start": "python -m http.server 8000",
+    "serve": "npx serve .",
+    "build": "echo 'No build process required for static app'",
+    "test": "echo 'No tests specified yet'",
+    "lint": "echo 'Linting not configured yet'",
+    "format": "echo 'Code formatting not configured yet'",
+    "db:backup": "echo 'Open http://localhost:8000 and run: window.dbUtils.exportAllData() in browser console'",
+    "db:clear": "echo 'Open http://localhost:8000 and run: window.dbUtils.clearSampleData() in browser console'", 
+    "db:init": "echo 'Open http://localhost:8000 and run: window.dbUtils.initializeSampleData() in browser console'",
+    "db:stats": "echo 'Open http://localhost:8000 and run: window.dbUtils.getDatabaseStats() in browser console'",
+    "deploy": "./deploy.sh",
+    "deploy:netlify": "netlify deploy --prod --dir .",
+    "deploy:vercel": "vercel --prod",
+    "deploy:firebase": "firebase deploy",
+    "predeploy": "echo 'Testing application before deployment...' && npm run start &",
+    "postdeploy": "echo 'Deployment completed! 🎉'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/kinesio-emg.git"
+  },
+  "keywords": [
+    "emg",
+    "electromyography", 
+    "kinesiology",
+    "physical-therapy",
+    "medical",
+    "biomedical-engineering", 
+    "esp32",
+    "web-app",
+    "real-time",
+    "signal-processing",
+    "ai-assistant",
+    "healthcare",
+    "rehabilitation",
+    "patient-management",
+    "indexeddb",
+    "bilateral-analysis",
+    "cycling-biomechanics",
+    "database",
+    "offline-first"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/kinesio-emg/issues"
+  },
+  "homepage": "https://github.com/yourusername/kinesio-emg#readme",
+  "dependencies": {
+    "chart.js": "^3.9.1"
+  },
+  "devDependencies": {
+    "serve": "^14.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions"
+  ],
+  "config": {
+    "emg": {
+      "sampleRate": 1000,
+      "maxChannels": 8,
+      "bufferSize": 10000
+    }
+  },
+  "future-dependencies": {
+    "note": "Dependencies to consider for future development phases",
+    "server": {
+      "express": "^4.18.0",
+      "socket.io": "^4.7.0",
+      "cors": "^2.8.5",
+      "helmet": "^7.0.0"
+    },
+    "database": {
+      "sqlite3": "^5.1.0",
+      "better-sqlite3": "^8.7.0"
+    },
+    "signal-processing": {
+      "dsp.js": "^1.0.1",
+      "ml-matrix": "^6.10.0",
+      "fft.js": "^0.3.0"
+    },
+    "ai-integration": {
+      "openai": "^4.0.0",
+      "@anthropic-ai/sdk": "^0.6.0"
+    },
+    "build-tools": {
+      "vite": "^4.4.0",
+      "rollup": "^3.28.0",
+      "terser": "^5.19.0"
+    },
+    "testing": {
+      "vitest": "^0.34.0",
+      "playwright": "^1.37.0",
+      "jsdom": "^22.1.0"
+    },
+    "pwa": {
+      "workbox-webpack-plugin": "^7.0.0",
+      "workbox-strategies": "^7.0.0"
+    }
+  },
+  "pwa": {
+    "name": "KinesioEMG",
+    "short_name": "KinesioEMG",
+    "description": "Professional EMG Analysis Platform",
+    "theme_color": "#2563eb",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "orientation": "landscape-primary"
+  },
+  "hardware": {
+    "esp32": {
+      "supportedBoards": ["ESP32-WROOM-32", "ESP32-S3", "ESP32-C3"],
+      "communicationMethods": ["Serial", "Bluetooth", "WiFi"],
+      "sampleRateRange": [100, 2000],
+      "adcResolution": "12-bit",
+      "inputChannels": 8
+    }
+  }
+}
