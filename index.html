@@ -63,11 +63,17 @@
                     </div>
                 </div>
                 <div class="header-right">
-                    <button class="btn-control primary" id="start-recording">
-                        <i class="fas fa-play"></i> Iniciar Grabación
+                    <button class="btn-control" id="connect-esp32" title="Conectar ESP32 por USB">
+                        <i class="fas fa-usb"></i> Conectar ESP32
                     </button>
-                    <button class="btn-control" id="stop-recording" disabled>
-                        <i class="fas fa-stop"></i> Detener Grabación
+                    <button class="btn-control" id="disconnect-esp32" title="Desconectar ESP32" disabled>
+                        <i class="fas fa-unlink"></i> Desconectar
+                    </button>
+                    <button class="btn-control" id="connect-ble" title="Conectar ESP32 master por Bluetooth">
+                        <i class="fas fa-bluetooth-b"></i> Bluetooth
+                    </button>
+                    <button class="btn-control" id="disconnect-ble" title="Desconectar Bluetooth" disabled>
+                        <i class="fas fa-unlink"></i> BT Off
                     </button>
                     <button class="btn-control" id="save-session" disabled>
                         <i class="fas fa-save"></i> Guardar Sesión
@@ -119,6 +125,9 @@
                                     <button class="btn-small" id="reset-chart" title="Resetear Vista">
                                         <i class="fas fa-refresh"></i>
                                     </button>
+                                    <button class="btn-small" id="clear-chart" title="Limpiar Gráfico">
+                                        <i class="fas fa-eraser"></i>
+                                    </button>
                                 </div>
                             </div>
                             <div class="chart-container">
@@ -137,8 +146,23 @@
                                         <div class="legend-color right"></div>
                                         <span>Pierna Derecha</span>
                                     </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color rms-left"></div>
+                                        <span>RMS Izquierdo</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color rms-right"></div>
+                                        <span>RMS Derecho</span>
+                                    </div>
                                 </div>
                                 <div class="cycling-info">
+                                    <div class="signal-range">
+                                        <small>Rango visible:</small>
+                                        <span id="signal-current">Actual: 0</span>
+                                        <span id="signal-min">Min: 0</span>
+                                        <span id="signal-max">Max: 0</span>
+                                        <span id="signal-peak-max">Pico max: 0</span>
+                                    </div>
                                     <div class="pedal-position">
                                         <small>Posición del Pedal:</small>
                                         <span id="pedal-left">Izq: 0°</span>
@@ -156,22 +180,22 @@
                                     <h4>Lado Izquierdo</h4>
                                     <div class="stat-item">
                                         <span class="stat-label">RMS:</span>
-                                        <span class="stat-value" id="rms-left">0.00 mV</span>
+                                        <span class="stat-value" id="rms-left">0.0 mV</span>
                                     </div>
                                     <div class="stat-item">
                                         <span class="stat-label">Pico:</span>
-                                        <span class="stat-value" id="peak-left">0.00 mV</span>
+                                        <span class="stat-value" id="peak-left">0.0 mV</span>
                                     </div>
                                 </div>
                                 <div class="side-stats">
                                     <h4>Lado Derecho</h4>
                                     <div class="stat-item">
                                         <span class="stat-label">RMS:</span>
-                                        <span class="stat-value" id="rms-right">0.00 mV</span>
+                                        <span class="stat-value" id="rms-right">0.0 mV</span>
                                     </div>
                                     <div class="stat-item">
                                         <span class="stat-label">Pico:</span>
-                                        <span class="stat-value" id="peak-right">0.00 mV</span>
+                                        <span class="stat-value" id="peak-right">0.0 mV</span>
                                     </div>
                                 </div>
                                 <div class="comparison-stats">
@@ -405,6 +429,8 @@
     <script src="database.js"></script>
     <script src="patient-manager.js"></script>
     <script src="emg-simulator.js"></script>
+    <script src="serial-manager.js"></script>
+    <script src="bluetooth-manager.js"></script>
     <script src="ai-assistant.js"></script>
     <script src="app.js"></script>
     <script src="database-init.js"></script>

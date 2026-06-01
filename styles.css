@@ -153,6 +153,14 @@ body {
   background-color: var(--secondary-color);
 }
 
+.status-dot.serial,
+.status-dot.bluetooth,
+.status-dot.recording,
+.status-dot.recording-serial,
+.status-dot.recording-bluetooth {
+  background-color: var(--primary-color);
+}
+
 .status-dot.disconnected {
   background-color: var(--danger-color);
 }
@@ -395,6 +403,14 @@ body {
 
 .legend-color.right {
   background-color: #dc2626;
+}
+
+.legend-color.rms-left {
+  background-color: #10b981;
+}
+
+.legend-color.rms-right {
+  background-color: #f59e0b;
 }
 
 /* Statistics */
@@ -735,19 +751,29 @@ body {
   font-size: 0.75rem;
 }
 
-.pedal-position {
+.pedal-position,
+.signal-range {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.pedal-position span {
+.pedal-position span,
+.signal-range span {
   background: var(--bg-secondary);
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   font-weight: 500;
   min-width: 60px;
   text-align: center;
+}
+
+.signal-range {
+  flex-wrap: wrap;
+}
+
+.signal-range span {
+  min-width: 104px;
 }
 
 /* AI Chat */

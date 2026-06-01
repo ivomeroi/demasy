@@ -205,6 +205,19 @@ class KinesiologyAIAssistant {
         // Extract keywords
         this.updateContextKeywords(query);
 
+        const apiResponse = await this.tryRemoteAssistant(userInput, emgContext);
+        if (apiResponse) {
+            this.conversationHistory.push({
+                type: 'assistant',
+                content: apiResponse,
+                timestamp: new Date(),
+                context: emgContext,
+                source: 'gemini'
+            });
+
+            return apiResponse;
+        }
+
         // Generate response based on query type
         let response;
         
@@ -233,6 +246,34 @@ class KinesiologyAIAssistant {
         });
 
         return response;
+    }
+
+    async tryRemoteAssistant(userInput, emgContext) {
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: userInput,
+                    emgContext,
+                    history: this.conversationHistory.slice(-8)
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.warn('Remote AI unavailable:', errorData.error || response.statusText);
+                return null;
+            }
+
+            const data = await response.json();
+            return data.response || null;
+        } catch (error) {
+            console.warn('Remote AI request failed, using offline assistant:', error);
+            return null;
+        }
     }
 
     updateContextKeywords(query) {

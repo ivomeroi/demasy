@@ -11,6 +11,12 @@ class KinesioEMGApp {
             // Initialize core components
             this.emgSimulator = new EMGSimulator();
             console.log('EMG Simulator created:', !!this.emgSimulator);
+
+            this.serialManager = new EMGSerialManager();
+            this.bluetoothManager = new EMGBluetoothManager();
+            this.signalSource = 'simulator';
+            console.log('Serial manager created:', !!this.serialManager);
+            console.log('Bluetooth manager created:', !!this.bluetoothManager);
             
             this.aiAssistant = new KinesiologyAIAssistant();  
             console.log('AI Assistant created:', !!this.aiAssistant);
@@ -24,6 +30,15 @@ class KinesioEMGApp {
             this.isPaused = false;
             this.sessionData = [];
             this.sessionStartTime = null;
+            this.lastChartUpdateAt = 0;
+            this.lastStatsUpdateAt = 0;
+            this.lastSessionCaptureAt = 0;
+            this.lastReadoutUpdateAt = 0;
+            this.pendingChartData = [];
+            this.signalExtremes = {
+                min: null,
+                max: null
+            };
             
             console.log('KinesioEMG App constructor completed successfully');
         } catch (error) {
@@ -34,7 +49,18 @@ class KinesioEMGApp {
         this.chartConfig = {
             maxDataPoints: 1000,
             updateInterval: 50, // ms
-            timeWindow: 1 // seconds
+            readoutUpdateInterval: 100,
+            statsUpdateInterval: 200,
+            sessionCaptureInterval: 5,
+            maxSessionDataPoints: 120000,
+            rmsWindowPoints: 30,
+            timeWindow: 1, // seconds
+            adcReferenceVoltage: 3.3,
+            adcMaxCount: 4095,
+            yAxisAdcEquivalent: 1500,
+            fixedYMin: -1500 * 3.3 * 1000 / 4095,
+            fixedYMax: 1500 * 3.3 * 1000 / 4095,
+            signalUnit: 'mV'
         };
         
         // Initialize application
@@ -52,6 +78,8 @@ class KinesioEMGApp {
             await this.initializeChart();
             this.setupEventListeners();
             this.setupEMGSimulator();
+            this.setupSerialManager();
+            this.setupBluetoothManager();
             this.setupAIAssistant();
             this.initializeUI();
             
@@ -131,8 +159,27 @@ class KinesioEMGApp {
                     pointHoverRadius: 0,
                     tension: 0.1,
                     fill: false
+                }, {
+                    label: 'RMS Izquierdo',
+                    data: [...initialData],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    tension: 0.25,
+                    fill: false
+                }, {
+                    label: 'RMS Derecho',
+                    data: [...initialData],
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    tension: 0.25,
+                    fill: false
                 }]
-                // Datasets de activación temporalmente removidos completamente
             },
             options: {
                 responsive: true,
@@ -160,7 +207,7 @@ class KinesioEMGApp {
                                 return `Time: ${tooltipItems[0].parsed.x.toFixed(2)}s`;
                             },
                             label: function(context) {
-                                return `${context.dataset.label}: ${context.parsed.y.toFixed(3)} mV`;
+                                return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} mV`;
                             }
                         }
                     }
@@ -187,8 +234,8 @@ class KinesioEMGApp {
                             display: true,
                             text: 'Amplitud (mV)'
                         },
-                        min: -3,
-                        max: 3,
+                        min: this.chartConfig.fixedYMin,
+                        max: this.chartConfig.fixedYMax,
                         ticks: {
                             maxTicksLimit: 8
                         },
@@ -201,6 +248,20 @@ class KinesioEMGApp {
         });
     }
 
+    updateChartMode() {
+        if (!this.emgChart) return;
+
+        const isSerial = this.signalSource === 'serial';
+        const isBluetooth = this.signalSource === 'bluetooth';
+        const isExternal = isSerial || isBluetooth;
+        this.emgChart.data.datasets[0].label = isExternal ? 'Señal ESP32' : 'EMG Lado Izquierdo';
+        this.emgChart.data.datasets[1].hidden = false;
+        this.emgChart.data.datasets[1].label = isExternal ? 'Señal ESP32 Derecha' : 'EMG Lado Derecho';
+        this.emgChart.data.datasets[2].label = isExternal ? 'RMS ESP32 Izquierdo' : 'RMS Izquierdo';
+        this.emgChart.data.datasets[3].label = isExternal ? 'RMS ESP32 Derecho' : 'RMS Derecho';
+        this.emgChart.update('none');
+    }
+
     setupEventListeners() {
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -210,38 +271,47 @@ class KinesioEMGApp {
         });
 
         // Recording controls
-        const startBtn = document.getElementById('start-recording');
-        const stopBtn = document.getElementById('stop-recording');
         const saveBtn = document.getElementById('save-session');
+        const connectBtn = document.getElementById('connect-esp32');
+        const disconnectBtn = document.getElementById('disconnect-esp32');
+        const connectBleBtn = document.getElementById('connect-ble');
+        const disconnectBleBtn = document.getElementById('disconnect-ble');
         
         console.log('Button elements found:', {
-            start: !!startBtn,
-            stop: !!stopBtn, 
-            save: !!saveBtn
+            save: !!saveBtn,
+            connect: !!connectBtn,
+            disconnect: !!disconnectBtn,
+            connectBle: !!connectBleBtn,
+            disconnectBle: !!disconnectBleBtn
         });
-        
-        if (startBtn) {
-            startBtn.addEventListener('click', () => {
-                console.log('Start recording button clicked');
-                
-                // Test if button click is working
-                this.showNotification('¡Botón funciona! Iniciando simulación EMG...', 'success');
-                
-                this.startRecording();
-            });
-        } else {
-            console.error('Start recording button not found!');
-        }
-
-        if (stopBtn) {
-            stopBtn.addEventListener('click', () => {
-                this.stopRecording();
-            });
-        }
 
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
                 this.saveSession();
+            });
+        }
+
+        if (connectBtn) {
+            connectBtn.addEventListener('click', () => {
+                this.connectESP32();
+            });
+        }
+
+        if (disconnectBtn) {
+            disconnectBtn.addEventListener('click', () => {
+                this.disconnectESP32();
+            });
+        }
+
+        if (connectBleBtn) {
+            connectBleBtn.addEventListener('click', () => {
+                this.connectBluetoothESP32();
+            });
+        }
+
+        if (disconnectBleBtn) {
+            disconnectBleBtn.addEventListener('click', () => {
+                this.disconnectBluetoothESP32();
             });
         }
 
@@ -256,6 +326,10 @@ class KinesioEMGApp {
 
         document.getElementById('reset-chart')?.addEventListener('click', () => {
             this.resetChart();
+        });
+
+        document.getElementById('clear-chart')?.addEventListener('click', () => {
+            this.clearChart();
         });
 
         // Phase shifting controls
@@ -314,16 +388,13 @@ class KinesioEMGApp {
         
         // Configure EMG simulator callbacks
         this.emgSimulator.onDataUpdate((data) => {
-            if (!this.isPaused && this.isRecording) {
-                this.updateChart(data);
-                this.sessionData.push(data);
+            if (!this.isPaused && this.signalSource === 'simulator') {
+                this.ingestSignalData(data);
             }
         });
 
         this.emgSimulator.onStatsUpdate((stats) => {
-            this.updateStatistics(stats);
-            this.updateSignalQuality(stats);
-            this.aiAssistant.updateEMGContext(stats);
+            this.ingestStats(stats);
         });
         
         console.log('EMG simulator callbacks configured');
@@ -347,9 +418,148 @@ class KinesioEMGApp {
             this.emgSimulator.setResistance(0.5); // 50% resistance  
             this.emgSimulator.setPedalingEfficiency(0.85); // 85% efficiency
             this.emgSimulator.setActivationLevel(0.3, 'both'); // Light baseline activation
+            this.emgSimulator.start();
             console.log('EMG Simulator initialized successfully');
         } catch (error) {
             console.error('Error initializing EMG Simulator:', error);
+        }
+    }
+
+    setupSerialManager() {
+        console.log('Setting up ESP32 serial callbacks...');
+
+        this.serialManager.onDataUpdate((data) => {
+            if (!this.isPaused && this.signalSource === 'serial') {
+                this.ingestSignalData(data);
+            }
+        });
+
+        this.serialManager.onStatsUpdate((stats) => {
+            if (this.signalSource === 'serial') {
+                this.ingestStats(stats);
+            }
+        });
+
+        this.serialManager.onConnectionChange((status) => {
+            const isConnected = status === 'connected';
+            this.updateSerialControls(isConnected);
+            this.signalSource = isConnected ? 'serial' : 'simulator';
+            this.updateConnectionStatus(isConnected ? 'serial' : 'mock');
+            this.updateChartMode();
+        });
+
+        this.serialManager.onError((error) => {
+            console.error('ESP32 serial error:', error);
+            this.showNotification(`Error de conexión ESP32: ${error.message}`, 'error');
+            if (!this.serialManager.isConnected) {
+                this.signalSource = 'simulator';
+                this.updateConnectionStatus('mock');
+                this.updateSerialControls(false);
+            }
+        });
+    }
+
+    setupBluetoothManager() {
+        console.log('Setting up ESP32 Bluetooth callbacks...');
+
+        this.bluetoothManager.onDataUpdate((data) => {
+            if (!this.isPaused && this.signalSource === 'bluetooth') {
+                this.ingestSignalData(data);
+            }
+        });
+
+        this.bluetoothManager.onStatsUpdate((stats) => {
+            if (this.signalSource === 'bluetooth') {
+                this.ingestStats(stats);
+            }
+        });
+
+        this.bluetoothManager.onConnectionChange((status) => {
+            const isConnected = status === 'connected';
+            this.updateBluetoothControls(isConnected);
+            this.signalSource = isConnected ? 'bluetooth' : 'simulator';
+            this.updateConnectionStatus(isConnected ? 'bluetooth' : 'mock');
+            this.updateChartMode();
+        });
+
+        this.bluetoothManager.onError((error) => {
+            console.error('ESP32 Bluetooth error:', error);
+            this.showNotification(`Error Bluetooth ESP32: ${error.message}`, 'error');
+            if (!this.bluetoothManager.isConnected) {
+                this.signalSource = 'simulator';
+                this.updateConnectionStatus('mock');
+                this.updateBluetoothControls(false);
+            }
+        });
+    }
+
+    async connectESP32() {
+        try {
+            if (!this.serialManager.isSupported()) {
+                this.showNotification('Web Serial requiere Chrome o Edge en localhost/HTTPS', 'error');
+                return;
+            }
+
+            if (this.bluetoothManager.isConnected) {
+                await this.disconnectBluetoothESP32();
+            }
+
+            await this.serialManager.connect({ baudRate: 115200 });
+            this.emgSimulator.stop();
+            this.serialManager.reset();
+            this.serialManager.start();
+            this.showNotification('ESP32 conectado por USB', 'success');
+        } catch (error) {
+            console.error('Error connecting ESP32:', error);
+            this.showNotification(`No se pudo conectar el ESP32: ${error.message}`, 'error');
+        }
+    }
+
+    async disconnectESP32() {
+        try {
+            this.serialManager.stop();
+            await this.serialManager.disconnect();
+            this.signalSource = 'simulator';
+            this.emgSimulator.start();
+            this.showNotification('ESP32 desconectado. Volviendo a simulación.', 'info');
+        } catch (error) {
+            console.error('Error disconnecting ESP32:', error);
+            this.showNotification(`Error al desconectar ESP32: ${error.message}`, 'error');
+        }
+    }
+
+    async connectBluetoothESP32() {
+        try {
+            if (!this.bluetoothManager.isSupported()) {
+                this.showNotification('Web Bluetooth requiere Chrome o Edge en localhost/HTTPS', 'error');
+                return;
+            }
+
+            if (this.serialManager.isConnected) {
+                await this.disconnectESP32();
+            }
+
+            await this.bluetoothManager.connect();
+            this.emgSimulator.stop();
+            this.bluetoothManager.reset();
+            this.bluetoothManager.start();
+            this.showNotification('ESP32 master conectado por Bluetooth', 'success');
+        } catch (error) {
+            console.error('Error connecting Bluetooth ESP32:', error);
+            this.showNotification(`No se pudo conectar Bluetooth: ${error.message}`, 'error');
+        }
+    }
+
+    async disconnectBluetoothESP32() {
+        try {
+            this.bluetoothManager.stop();
+            await this.bluetoothManager.disconnect();
+            this.signalSource = 'simulator';
+            this.emgSimulator.start();
+            this.showNotification('Bluetooth desconectado. Volviendo a simulación.', 'info');
+        } catch (error) {
+            console.error('Error disconnecting Bluetooth ESP32:', error);
+            this.showNotification(`Error al desconectar Bluetooth: ${error.message}`, 'error');
         }
     }
 
@@ -389,6 +599,8 @@ class KinesioEMGApp {
         // Set initial states
         this.updateConnectionStatus('mock');
         this.updateRecordingControls(false);
+        this.updateSerialControls(false);
+        this.updateBluetoothControls(false);
         
         // Initialize bilateral statistics display
         this.updateStatistics({
@@ -502,10 +714,37 @@ class KinesioEMGApp {
             this.isRecording = true;
             this.sessionData = [];
             this.sessionStartTime = new Date();
+            this.lastChartUpdateAt = 0;
+            this.lastStatsUpdateAt = 0;
+            this.lastSessionCaptureAt = 0;
+            this.lastReadoutUpdateAt = 0;
+            this.pendingChartData = [];
+            this.resetSignalReadout();
+            this.signalSource = this.getConnectedSignalSource();
             
             console.log('Updating UI controls...');
             this.updateRecordingControls(true);
-            this.updateConnectionStatus('recording');
+            this.updateSerialControls(this.serialManager.isConnected);
+            this.updateBluetoothControls(this.bluetoothManager.isConnected);
+            this.updateConnectionStatus(this.signalSource === 'serial' ? 'recording-serial' : this.signalSource === 'bluetooth' ? 'recording-bluetooth' : 'recording');
+
+            if (this.signalSource === 'serial') {
+                this.emgSimulator.stop();
+                this.serialManager.reset();
+                this.updateChartMode();
+                this.serialManager.start();
+                this.showNotification('Lectura EMG iniciada desde ESP32 USB', 'success');
+                return;
+            }
+
+            if (this.signalSource === 'bluetooth') {
+                this.emgSimulator.stop();
+                this.bluetoothManager.reset();
+                this.updateChartMode();
+                this.bluetoothManager.start();
+                this.showNotification('Lectura EMG iniciada por Bluetooth', 'success');
+                return;
+            }
             
             // Set initial activation for cycling
             console.log('Setting initial activation...');
@@ -539,6 +778,7 @@ class KinesioEMGApp {
             this.showNotification('Error al iniciar la grabación: ' + error.message, 'error');
             this.isRecording = false;
             this.updateRecordingControls(false);
+            this.updateSerialControls(this.serialManager.isConnected);
         }
     }
 
@@ -590,10 +830,19 @@ class KinesioEMGApp {
 
     stopRecording() {
         this.isRecording = false;
-        this.emgSimulator.stop();
+        if (this.signalSource === 'serial') {
+            this.serialManager.stop();
+        } else if (this.signalSource === 'bluetooth') {
+            this.bluetoothManager.stop();
+        } else {
+            this.emgSimulator.stop();
+        }
         
         this.updateRecordingControls(false);
-        this.updateConnectionStatus('mock');
+        this.updateSerialControls(this.serialManager.isConnected);
+        this.updateBluetoothControls(this.bluetoothManager.isConnected);
+        this.updateConnectionStatus(this.serialManager.isConnected ? 'serial' : this.bluetoothManager.isConnected ? 'bluetooth' : 'mock');
+        this.updateChartMode();
         
         console.log('EMG recording stopped');
     }
@@ -615,18 +864,19 @@ class KinesioEMGApp {
 
     async saveSessionToDatabase() {
         try {
+            const provider = this.getActiveSignalProvider();
             const duration = this.sessionStartTime 
                 ? Math.floor((Date.now() - this.sessionStartTime.getTime()) / 1000)
-                : Math.floor(this.sessionData.length / this.emgSimulator.sampleRate);
+                : Math.floor(this.sessionData.length / provider.sampleRate);
 
             const sessionData = {
-                muscleType: this.emgSimulator.currentMuscle,
+                muscleType: provider.currentMuscle,
                 sessionType: 'cycling',
                 duration: duration,
-                cadence: this.emgSimulator.cyclingParams?.cadence || 80,
-                resistance: this.emgSimulator.cyclingParams?.resistance || 0.5,
+                cadence: provider.cyclingParams?.cadence || 80,
+                resistance: provider.cyclingParams?.resistance || 0.5,
                 emgData: this.sessionData,
-                statistics: this.emgSimulator.getStats(),
+                statistics: provider.getStats(),
                 notes: ''
             };
 
@@ -648,14 +898,16 @@ class KinesioEMGApp {
     }
 
     downloadSessionFile() {
+        const provider = this.getActiveSignalProvider();
         const sessionInfo = {
             timestamp: new Date().toISOString(),
-            muscle: this.emgSimulator.currentMuscle,
+            muscle: provider.currentMuscle,
+            source: this.signalSource,
             duration: this.sessionStartTime 
                 ? Math.floor((Date.now() - this.sessionStartTime.getTime()) / 1000)
-                : Math.floor(this.sessionData.length / this.emgSimulator.sampleRate),
+                : Math.floor(this.sessionData.length / provider.sampleRate),
             dataPoints: this.sessionData.length,
-            stats: this.emgSimulator.getStats(),
+            stats: provider.getStats(),
             patient: this.patientManager?.currentPatient?.name || 'Sin paciente'
         };
 
@@ -689,6 +941,8 @@ class KinesioEMGApp {
 
     changeMuscle(muscleType) {
         this.emgSimulator.setMuscle(muscleType);
+        this.serialManager.setMuscle(muscleType);
+        this.bluetoothManager.setMuscle(muscleType);
         this.resetChart();
         
         console.log(`Muscle changed to: ${muscleType}`);
@@ -733,8 +987,25 @@ class KinesioEMGApp {
             this.emgChart.update('none');
         }
         
-        this.emgSimulator.reset();
+        this.getActiveSignalProvider().reset();
         console.log('Chart reset');
+    }
+
+    clearChart() {
+        if (!this.emgChart) return;
+
+        this.emgChart.data.datasets.forEach(dataset => {
+            dataset.data = [];
+        });
+
+        this.pendingChartData = [];
+        this.lastChartUpdateAt = 0;
+        this.resetSignalReadout();
+        this.emgChart.options.scales.x.min = 0;
+        this.emgChart.options.scales.x.max = this.chartConfig.timeWindow;
+        this.emgChart.update('none');
+
+        this.showNotification('Gráfico limpiado', 'success');
     }
 
     // Cadence and resistance controls removed from UI
@@ -742,6 +1013,16 @@ class KinesioEMGApp {
 
     // Temporal delay controls for signal superposition
     setPhaseShift(degrees) {
+        if (this.signalSource === 'serial') {
+            this.showNotification('El desfase visual solo aplica al modo simulación por ahora', 'info');
+            return;
+        }
+
+        if (this.signalSource === 'bluetooth') {
+            this.showNotification('El desfase visual solo aplica al modo simulación por ahora', 'info');
+            return;
+        }
+
         this.emgSimulator.setTimeDelay(degrees, 'right');
         this.updateElement('phase-display', degrees);
         console.log(`Time delay set to ${degrees}° equivalent`);
@@ -753,6 +1034,16 @@ class KinesioEMGApp {
     }
 
     autoAlignPhases() {
+        if (this.signalSource === 'serial') {
+            this.showNotification('La alineación automática solo aplica al modo simulación por ahora', 'info');
+            return;
+        }
+
+        if (this.signalSource === 'bluetooth') {
+            this.showNotification('La alineación automática solo aplica al modo simulación por ahora', 'info');
+            return;
+        }
+
         this.emgSimulator.autoAlignDelays();
         const newPhase = this.emgSimulator.getTimeDelay('right');
         
@@ -768,6 +1059,16 @@ class KinesioEMGApp {
     }
 
     resetPhaseShift() {
+        if (this.signalSource === 'serial') {
+            this.showNotification('El desfase visual solo aplica al modo simulación por ahora', 'info');
+            return;
+        }
+
+        if (this.signalSource === 'bluetooth') {
+            this.showNotification('El desfase visual solo aplica al modo simulación por ahora', 'info');
+            return;
+        }
+
         this.emgSimulator.resetTimeDelay();
         
         // Update UI controls
@@ -782,6 +1083,16 @@ class KinesioEMGApp {
     }
 
     invertPhase() {
+        if (this.signalSource === 'serial') {
+            this.showNotification('El desfase visual solo aplica al modo simulación por ahora', 'info');
+            return;
+        }
+
+        if (this.signalSource === 'bluetooth') {
+            this.showNotification('El desfase visual solo aplica al modo simulación por ahora', 'info');
+            return;
+        }
+
         this.emgSimulator.invertDelay('right');
         const newPhase = this.emgSimulator.getTimeDelay('right');
         
@@ -815,7 +1126,7 @@ class KinesioEMGApp {
         
         // Calculate pedaling efficiency (based on symmetry and smoothness)
         const symmetry = stats.bilateral.symmetryIndex;
-        const baseEfficiency = this.emgSimulator.cyclingParams.pedalingEfficiency * 100;
+        const baseEfficiency = this.getActiveSignalProvider().cyclingParams.pedalingEfficiency * 100;
         const adjustedEfficiency = baseEfficiency * (symmetry / 100);
         
         this.updateElement('pedaling-efficiency', `${Math.round(adjustedEfficiency)}%`);
@@ -825,50 +1136,52 @@ class KinesioEMGApp {
     }
 
     updatePedalPositions() {
-        if (this.emgSimulator.cyclingParams) {
-            const leftAngle = Math.round(this.emgSimulator.cyclingParams.pedalPosition.left * 180 / Math.PI);
-            const rightAngle = Math.round(this.emgSimulator.cyclingParams.pedalPosition.right * 180 / Math.PI);
+        const provider = this.getActiveSignalProvider();
+
+        if (provider.cyclingParams) {
+            const leftAngle = Math.round(provider.cyclingParams.pedalPosition.left * 180 / Math.PI);
+            const rightAngle = Math.round(provider.cyclingParams.pedalPosition.right * 180 / Math.PI);
             
             this.updateElement('pedal-left', `Izq: ${leftAngle}°`);
             this.updateElement('pedal-right', `Der: ${rightAngle}°`);
         }
     }
 
-    updateChart(data) {
+    updateChart(samples) {
         if (!this.emgChart || this.isPaused) return;
+
+        const sampleList = Array.isArray(samples) ? samples : [samples];
+        if (sampleList.length === 0) return;
 
         const leftEMGDataset = this.emgChart.data.datasets[0];
         const rightEMGDataset = this.emgChart.data.datasets[1];
-        // Activation datasets temporalmente removidos
-        // const leftActivationDataset = this.emgChart.data.datasets[2];
-        // const rightActivationDataset = this.emgChart.data.datasets[3];
-        
-        // const maxAmplitude = this.emgSimulator.muscleProfiles[this.emgSimulator.currentMuscle]?.maxAmplitude || 1.5;
-        
-        // Add new bilateral EMG data points only
-        leftEMGDataset.data.push({
-            x: data.time,
-            y: data.left.amplitude
+        const leftRmsDataset = this.emgChart.data.datasets[2];
+        const rightRmsDataset = this.emgChart.data.datasets[3];
+
+        sampleList.forEach(data => {
+            leftEMGDataset.data.push({
+                x: data.time,
+                y: data.left.amplitude
+            });
+
+            rightEMGDataset.data.push({
+                x: data.time,
+                y: Number.isFinite(data.right.amplitude) ? data.right.amplitude : null
+            });
+
+            leftRmsDataset.data.push({
+                x: data.time,
+                y: Number.isFinite(data.envelopeLeft) ? data.envelopeLeft : this.calculateRMSFromDataset(leftEMGDataset)
+            });
+
+            rightRmsDataset.data.push({
+                x: data.time,
+                y: Number.isFinite(data.envelopeRight) ? data.envelopeRight : this.calculateRMSFromDataset(rightEMGDataset)
+            });
         });
-        
-        rightEMGDataset.data.push({
-            x: data.time,
-            y: data.right.amplitude
-        });
-        
-        // Activation envelope updates temporalmente comentadas
-        // leftActivationDataset.data.push({
-        //     x: data.time,
-        //     y: data.left.activation * maxAmplitude
-        // });
-        
-        // rightActivationDataset.data.push({
-        //     x: data.time,
-        //     y: data.right.activation * maxAmplitude
-        // });
 
         // Maintain data point limit for EMG datasets only
-        const datasets = [leftEMGDataset, rightEMGDataset];
+        const datasets = [leftEMGDataset, rightEMGDataset, leftRmsDataset, rightRmsDataset];
         datasets.forEach(dataset => {
             if (dataset.data.length > this.chartConfig.maxDataPoints) {
                 dataset.data.shift();
@@ -876,20 +1189,135 @@ class KinesioEMGApp {
         });
 
         // Update time window
-        const latestTime = data.time;
+        const latestTime = sampleList[sampleList.length - 1].time;
         this.emgChart.options.scales.x.min = Math.max(0, latestTime - this.chartConfig.timeWindow);
         this.emgChart.options.scales.x.max = Math.max(this.chartConfig.timeWindow, latestTime);
+        this.updateVisibleSignalRange(datasets);
 
         // Update chart
         this.emgChart.update('none');
     }
 
+    calculateRMSFromDataset(dataset) {
+        const values = dataset.data
+            .slice(-this.chartConfig.rmsWindowPoints)
+            .map(point => point.y)
+            .filter(value => Number.isFinite(value));
+
+        if (values.length === 0) return 0;
+
+        const meanSquare = values.reduce((sum, value) => sum + value * value, 0) / values.length;
+        return Math.sqrt(meanSquare);
+    }
+
+    ingestSignalData(data) {
+        const now = performance.now();
+
+        if (!this.sessionStartTime) {
+            this.sessionStartTime = new Date();
+        }
+
+        this.trackSignalValue(data.left.amplitude);
+        this.pendingChartData.push(data);
+
+        if (now - this.lastSessionCaptureAt >= this.chartConfig.sessionCaptureInterval) {
+            this.lastSessionCaptureAt = now;
+            this.sessionData.push(data);
+
+            if (this.sessionData.length > this.chartConfig.maxSessionDataPoints) {
+                const excess = this.sessionData.length - this.chartConfig.maxSessionDataPoints;
+                this.sessionData.splice(0, excess);
+            }
+
+            this.updateRecordingControls(false);
+        }
+
+        if (now - this.lastChartUpdateAt >= this.chartConfig.updateInterval) {
+            this.lastChartUpdateAt = now;
+            const pendingSamples = this.pendingChartData.splice(0);
+            this.updateChart(pendingSamples);
+        }
+
+        if (now - this.lastReadoutUpdateAt >= this.chartConfig.readoutUpdateInterval) {
+            this.lastReadoutUpdateAt = now;
+            this.updateCurrentSignalReadout(data.left.amplitude);
+        }
+    }
+
+    ingestStats(stats) {
+        const now = performance.now();
+        if (now - this.lastStatsUpdateAt < this.chartConfig.statsUpdateInterval) return;
+
+        this.lastStatsUpdateAt = now;
+        this.updateStatistics(stats);
+        this.updateSignalQuality(stats);
+        this.aiAssistant.updateEMGContext(stats);
+    }
+
+    updateVisibleSignalRange(datasets) {
+        const xMin = this.emgChart.options.scales.x.min;
+        const xMax = this.emgChart.options.scales.x.max;
+        const values = datasets
+            .filter(dataset => !dataset.hidden)
+            .flatMap(dataset => dataset.data)
+            .filter(point => point.x >= xMin && point.x <= xMax && Number.isFinite(point.y))
+            .map(point => point.y);
+
+        if (values.length === 0) {
+            this.updateElement('signal-min', 'Min: 0');
+            this.updateElement('signal-max', 'Max: 0');
+            return;
+        }
+
+        const minValue = Math.min(...values);
+        const maxValue = Math.max(...values);
+        this.updateElement('signal-min', `Min: ${this.formatSignalValue(minValue)}`);
+        this.updateElement('signal-max', `Max: ${this.formatSignalValue(maxValue)}`);
+    }
+
+    updateCurrentSignalReadout(value) {
+        if (!Number.isFinite(value)) return;
+
+        this.trackSignalValue(value);
+        this.updateElement('signal-current', `Actual: ${this.formatSignalValue(value)}`);
+        this.updateElement('signal-peak-max', `Pico max: ${this.formatSignalValue(this.signalExtremes.max)}`);
+    }
+
+    trackSignalValue(value) {
+        if (!Number.isFinite(value)) return;
+
+        if (this.signalExtremes.min === null || value < this.signalExtremes.min) {
+            this.signalExtremes.min = value;
+        }
+
+        if (this.signalExtremes.max === null || value > this.signalExtremes.max) {
+            this.signalExtremes.max = value;
+        }
+    }
+
+    resetSignalReadout() {
+        this.signalExtremes = {
+            min: null,
+            max: null
+        };
+        this.updateElement('signal-current', `Actual: 0.0 ${this.chartConfig.signalUnit}`);
+        this.updateElement('signal-min', `Min: 0.0 ${this.chartConfig.signalUnit}`);
+        this.updateElement('signal-max', `Max: 0.0 ${this.chartConfig.signalUnit}`);
+        this.updateElement('signal-peak-max', `Pico max: 0.0 ${this.chartConfig.signalUnit}`);
+    }
+
+    formatSignalValue(value) {
+        const absValue = Math.abs(value);
+        const formatted = absValue >= 100 ? value.toFixed(0) : value.toFixed(1);
+        return `${formatted} ${this.chartConfig.signalUnit}`;
+    }
+
     updateStatistics(stats) {
         // Update bilateral statistics
-        this.updateElement('rms-left', `${stats.left.rms.toFixed(2)} mV`);
-        this.updateElement('rms-right', `${stats.right.rms.toFixed(2)} mV`);
-        this.updateElement('peak-left', `${stats.left.peakAmplitude.toFixed(2)} mV`);
-        this.updateElement('peak-right', `${stats.right.peakAmplitude.toFixed(2)} mV`);
+        this.updateElement('rms-left', this.formatVoltageStat(stats.left.rms));
+        this.updateElement('rms-right', this.formatVoltageStat(stats.right.rms));
+        this.updateElement('peak-left', this.formatVoltageStat(stats.left.peakAmplitude));
+        this.updateElement('peak-right', this.formatVoltageStat(stats.right.peakAmplitude));
         
         // Update comparison statistics
         this.updateElement('symmetry-index', `${stats.bilateral.symmetryIndex.toFixed(0)}%`);
@@ -897,8 +1325,9 @@ class KinesioEMGApp {
         this.updateElement('bilateral-difference', `${stats.bilateral.difference.toFixed(1)}%`);
         
         // Update activation levels for both sides
-        const leftActivation = (stats.left.rms / 2.0) * 100; // Normalize to percentage
-        const rightActivation = (stats.right.rms / 2.0) * 100;
+        const activationReference = Math.max(1, this.chartConfig.fixedYMax);
+        const leftActivation = (stats.left.rms / activationReference) * 100;
+        const rightActivation = (stats.right.rms / activationReference) * 100;
         
         this.updateElement('activation-percent-left', `${Math.min(100, leftActivation).toFixed(0)}%`);
         this.updateElement('activation-percent-right', `${Math.min(100, rightActivation).toFixed(0)}%`);
@@ -921,6 +1350,11 @@ class KinesioEMGApp {
         
         // Update pedal positions
         this.updatePedalPositions();
+    }
+
+    formatVoltageStat(value) {
+        if (!Number.isFinite(value)) return `0.0 ${this.chartConfig.signalUnit}`;
+        return `${value.toFixed(1)} ${this.chartConfig.signalUnit}`;
     }
 
     updateSignalQuality(stats) {
@@ -971,13 +1405,25 @@ class KinesioEMGApp {
     }
 
     updateRecordingControls(isRecording) {
-        const startBtn = document.getElementById('start-recording');
-        const stopBtn = document.getElementById('stop-recording');
         const saveBtn = document.getElementById('save-session');
         
-        if (startBtn) startBtn.disabled = isRecording;
-        if (stopBtn) stopBtn.disabled = !isRecording;
-        if (saveBtn) saveBtn.disabled = isRecording || this.sessionData.length === 0;
+        if (saveBtn) saveBtn.disabled = this.sessionData.length === 0;
+    }
+
+    updateSerialControls(isConnected) {
+        const connectBtn = document.getElementById('connect-esp32');
+        const disconnectBtn = document.getElementById('disconnect-esp32');
+
+        if (connectBtn) connectBtn.disabled = isConnected;
+        if (disconnectBtn) disconnectBtn.disabled = !isConnected;
+    }
+
+    updateBluetoothControls(isConnected) {
+        const connectBtn = document.getElementById('connect-ble');
+        const disconnectBtn = document.getElementById('disconnect-ble');
+
+        if (connectBtn) connectBtn.disabled = isConnected;
+        if (disconnectBtn) disconnectBtn.disabled = !isConnected;
     }
 
     updateConnectionStatus(status) {
@@ -992,6 +1438,10 @@ class KinesioEMGApp {
             const statusTexts = {
                 mock: 'Mock Mode',
                 recording: 'Recording',
+                serial: 'ESP32 USB',
+                bluetooth: 'ESP32 Bluetooth',
+                'recording-serial': 'Recording ESP32',
+                'recording-bluetooth': 'Recording Bluetooth',
                 connected: 'ESP32 Connected',
                 disconnected: 'Disconnected'
             };
@@ -1018,7 +1468,7 @@ class KinesioEMGApp {
             // Get AI response
             const response = await this.aiAssistant.processQuery(
                 message, 
-                this.emgSimulator.getStats()
+                this.getActiveSignalProvider().getStats()
             );
             
             // Add AI response to chat
@@ -1083,6 +1533,18 @@ class KinesioEMGApp {
         if (element) {
             element.textContent = value;
         }
+    }
+
+    getActiveSignalProvider() {
+        if (this.signalSource === 'serial') return this.serialManager;
+        if (this.signalSource === 'bluetooth') return this.bluetoothManager;
+        return this.emgSimulator;
+    }
+
+    getConnectedSignalSource() {
+        if (this.serialManager.isConnected) return 'serial';
+        if (this.bluetoothManager.isConnected) return 'bluetooth';
+        return 'simulator';
     }
 
     showNotification(message, type = 'info') {
