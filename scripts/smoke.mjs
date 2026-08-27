@@ -64,6 +64,12 @@ async function main() {
 
         const localAssets = [
             'styles.css',
+            'core/demasy-config.js',
+            'core/signal-source-contract.js',
+            'services/analysis-service.js',
+            'services/settings-service.js',
+            'services/memory-storage-adapter.js',
+            'services/replay-signal-source.js',
             'database.js',
             'patient-manager.js',
             'emg-simulator.js',
