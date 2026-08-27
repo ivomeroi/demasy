@@ -442,3 +442,5 @@ Mostrar en chat UI
 5. IA interpreta y recomienda
 
 Esta arquitectura te permite **escalar fácilmente** añadiendo nuevos músculos, análisis más complejos, o diferentes tipos de ejercicios manteniendo la estructura base.
+
+PORT=8001 npm start
