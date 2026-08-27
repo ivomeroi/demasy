@@ -8,15 +8,18 @@ class PatientManager {
         this.database = database;
         this.currentPatient = null;
         this.currentSession = null;
+        this.includeArchived = false;
     }
 
     // Patient Registration and Management
-    async showPatientRegistrationForm() {
+    async showPatientRegistrationForm(patientId = null) {
+        const patient = patientId ? await this.database.getPatient(patientId) : null;
+        const participantCode = patient?.participantCode || await this.database.generateParticipantCode();
         const formHTML = `
             <div class="modal-overlay" id="patient-modal">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3>Registrar Nuevo Paciente</h3>
+                        <h3>${patient ? 'Editar participante' : 'Registrar participante'}</h3>
                         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times"></i>
                         </button>
@@ -24,52 +27,63 @@ class PatientManager {
                     <form id="patient-form" class="patient-form">
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="patient-name">Nombre Completo *</label>
-                                <input type="text" id="patient-name" name="name" required>
+                                <label for="participant-code">Código de participante *</label>
+                                <input type="text" id="participant-code" name="participantCode" required maxlength="30"
+                                    pattern="[A-Za-z0-9_-]{2,30}" value="${this.escapeHTML(participantCode)}">
                             </div>
                             <div class="form-group">
-                                <label for="patient-email">Email</label>
-                                <input type="email" id="patient-email" name="email">
+                                <label for="patient-name">Nombre completo (opcional)</label>
+                                <input type="text" id="patient-name" name="name" value="${this.escapeHTML(patient?.name || '')}">
                             </div>
                         </div>
-                        
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="patient-dob">Fecha de Nacimiento</label>
-                                <input type="date" id="patient-dob" name="dateOfBirth">
+                                <label for="patient-email">Email</label>
+                                <input type="email" id="patient-email" name="email" value="${this.escapeHTML(patient?.email || '')}">
                             </div>
+                            <div class="form-group">
+                                <label for="patient-dob">Fecha de Nacimiento</label>
+                                <input type="date" id="patient-dob" name="dateOfBirth" value="${this.escapeHTML(patient?.dateOfBirth || '')}">
+                            </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label for="patient-gender">Género</label>
                                 <select id="patient-gender" name="gender">
                                     <option value="">Seleccionar...</option>
-                                    <option value="male">Masculino</option>
-                                    <option value="female">Femenino</option>
-                                    <option value="other">Otro</option>
+                                    <option value="male" ${patient?.gender === 'male' ? 'selected' : ''}>Masculino</option>
+                                    <option value="female" ${patient?.gender === 'female' ? 'selected' : ''}>Femenino</option>
+                                    <option value="other" ${patient?.gender === 'other' ? 'selected' : ''}>Otro</option>
                                 </select>
                             </div>
-                        </div>
-                        
-                        <div class="form-row">
                             <div class="form-group">
                                 <label for="patient-height">Altura (cm)</label>
-                                <input type="number" id="patient-height" name="height" min="50" max="250">
+                                <input type="number" id="patient-height" name="height" min="50" max="250" value="${patient?.height || ''}">
                             </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label for="patient-weight">Peso (kg)</label>
-                                <input type="number" id="patient-weight" name="weight" min="10" max="300">
+                                <input type="number" id="patient-weight" name="weight" min="10" max="300" value="${patient?.weight || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="consentConfirmed" ${patient?.consentConfirmed ? 'checked' : ''}>
+                                    Consentimiento informado registrado
+                                </label>
                             </div>
                         </div>
                         
                         <div class="form-group">
                             <label for="patient-history">Historia Médica</label>
-                            <textarea id="patient-history" name="medicalHistory" rows="3" 
-                                placeholder="Lesiones previas, cirugías, condiciones médicas relevantes..."></textarea>
+                            <textarea id="patient-history" name="medicalHistory" rows="3"
+                                placeholder="Lesiones previas, cirugías, condiciones médicas relevantes...">${this.escapeHTML((patient?.medicalHistory || []).join('\n'))}</textarea>
                         </div>
                         
                         <div class="form-group">
                             <label for="patient-notes">Notas Adicionales</label>
-                            <textarea id="patient-notes" name="notes" rows="2" 
-                                placeholder="Objetivos de rehabilitación, observaciones especiales..."></textarea>
+                            <textarea id="patient-notes" name="notes" rows="2"
+                                placeholder="Objetivos de rehabilitación, observaciones especiales...">${this.escapeHTML(patient?.notes || '')}</textarea>
                         </div>
                         
                         <div class="form-actions">
@@ -77,7 +91,7 @@ class PatientManager {
                                 Cancelar
                             </button>
                             <button type="submit" class="btn-control primary">
-                                Registrar Paciente
+                                ${patient ? 'Guardar cambios' : 'Registrar participante'}
                             </button>
                         </div>
                     </form>
@@ -90,13 +104,14 @@ class PatientManager {
         // Handle form submission
         document.getElementById('patient-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            await this.handlePatientRegistration(e.target);
+            await this.handlePatientRegistration(e.target, patientId);
         });
     }
 
-    async handlePatientRegistration(form) {
+    async handlePatientRegistration(form, patientId = null) {
         const formData = new FormData(form);
         const patientData = {
+            participantCode: formData.get('participantCode'),
             name: formData.get('name'),
             email: formData.get('email'),
             dateOfBirth: formData.get('dateOfBirth'),
@@ -104,12 +119,18 @@ class PatientManager {
             height: parseInt(formData.get('height')) || null,
             weight: parseInt(formData.get('weight')) || null,
             medicalHistory: formData.get('medicalHistory')?.split('\n').filter(line => line.trim()),
-            notes: formData.get('notes')
+            notes: formData.get('notes'),
+            consentConfirmed: formData.get('consentConfirmed') === 'on'
         };
 
         try {
-            const patient = await this.database.createPatient(patientData);
-            this.showNotification(`Paciente ${patient.name} registrado exitosamente`, 'success');
+            const patient = patientId
+                ? await this.database.updatePatient(patientId, patientData)
+                : await this.database.createPatient(patientData);
+            this.showNotification(
+                `Participante ${patient.participantCode} ${patientId ? 'actualizado' : 'registrado'} correctamente`,
+                'success'
+            );
             
             // Close modal
             document.getElementById('patient-modal').remove();
@@ -117,6 +138,10 @@ class PatientManager {
             // Refresh patient list if visible
             await this.refreshPatientList();
             
+            if (this.currentPatient?.id === patient.id) {
+                this.currentPatient = patient;
+                this.updateCurrentPatientUI();
+            }
             return patient;
         } catch (error) {
             console.error('Error registering patient:', error);
@@ -126,32 +151,36 @@ class PatientManager {
 
     async showPatientList() {
         try {
-            const patients = await this.database.getAllPatients();
+            const patients = await this.database.listPatients({ includeArchived: this.includeArchived });
+            const statistics = await this.database.getStatistics();
             
             const listHTML = `
                 <div class="patients-container">
                     <div class="patients-header">
-                        <h2>Gestión de Pacientes</h2>
+                        <h2>Gestión de participantes</h2>
                         <div class="patients-actions">
-                            <input type="text" id="patient-search" placeholder="Buscar pacientes..." class="search-input">
+                            <input type="text" id="patient-search" placeholder="Buscar por código, nombre o email..." class="search-input">
+                            <button class="btn-outline" onclick="window.patientManager.toggleArchivedPatients()">
+                                ${this.includeArchived ? 'Ocultar archivados' : 'Mostrar archivados'}
+                            </button>
                             <button class="btn-control primary" onclick="window.patientManager.showPatientRegistrationForm()">
-                                <i class="fas fa-user-plus"></i> Nuevo Paciente
+                                <i class="fas fa-user-plus"></i> Nuevo participante
                             </button>
                         </div>
                     </div>
                     
                     <div class="patients-stats">
                         <div class="stat-card">
-                            <h4>Total Pacientes</h4>
-                            <span class="stat-number">${patients.length}</span>
+                            <h4>Total de participantes</h4>
+                            <span class="stat-number">${statistics.totalPatients}</span>
                         </div>
                         <div class="stat-card">
-                            <h4>Sesiones Activas</h4>
-                            <span class="stat-number" id="active-sessions">-</span>
+                            <h4>Participantes activos</h4>
+                            <span class="stat-number">${statistics.activePatients}</span>
                         </div>
                         <div class="stat-card">
-                            <h4>Último Mes</h4>
-                            <span class="stat-number" id="monthly-patients">-</span>
+                            <h4>Archivados</h4>
+                            <span class="stat-number">${statistics.archivedPatients}</span>
                         </div>
                     </div>
                     
@@ -173,8 +202,8 @@ class PatientManager {
             return `
                 <div class="empty-state">
                     <i class="fas fa-users"></i>
-                    <h3>No hay pacientes registrados</h3>
-                    <p>Registra tu primer paciente para comenzar</p>
+                    <h3>${this.includeArchived ? 'No hay participantes para mostrar' : 'No hay participantes activos'}</h3>
+                    <p>Registra un participante para comenzar</p>
                     <button class="btn-control primary" onclick="window.patientManager.showPatientRegistrationForm()">
                         Registrar Primer Paciente
                     </button>
@@ -187,14 +216,15 @@ class PatientManager {
             const lastSession = sessions[0]; // Most recent session
             
             return `
-                <div class="patient-card" data-patient-id="${patient.id}">
+                <div class="patient-card ${patient.status === 'archived' ? 'archived' : ''}" data-patient-id="${patient.id}">
                     <div class="patient-header">
                         <div class="patient-avatar">
-                            ${patient.name.charAt(0).toUpperCase()}
+                            ${this.escapeHTML((patient.name || patient.participantCode).charAt(0).toUpperCase())}
                         </div>
                         <div class="patient-info">
-                            <h4>${patient.name}</h4>
-                            <p class="patient-email">${patient.email || 'Sin email'}</p>
+                            <h4>${this.escapeHTML(patient.participantCode)}</h4>
+                            <p>${this.escapeHTML(patient.name || 'Sin nombre identificatorio')}</p>
+                            <p class="patient-email">${this.escapeHTML(patient.email || 'Sin email')}</p>
                         </div>
                         <div class="patient-menu">
                             <button class="btn-small" onclick="window.patientManager.showPatientMenu(${patient.id})">
@@ -219,7 +249,7 @@ class PatientManager {
                     </div>
                     
                     <div class="patient-actions">
-                        <button class="btn-outline" onclick="window.patientManager.selectPatient(${patient.id})">
+                        <button class="btn-outline" onclick="window.patientManager.selectPatient(${patient.id})" ${patient.status === 'archived' ? 'disabled' : ''}>
                             <i class="fas fa-play"></i> Nueva Sesión
                         </button>
                         <button class="btn-outline" onclick="window.patientManager.viewPatientHistory(${patient.id})">
@@ -235,7 +265,9 @@ class PatientManager {
 
     async selectPatient(patientId) {
         try {
-            this.currentPatient = await this.database.getPatient(patientId);
+            const patient = await this.database.getPatient(patientId);
+            if (!patient || patient.status === 'archived') throw new Error('El participante está archivado');
+            this.currentPatient = patient;
             
             // Update UI to show selected patient
             this.updateCurrentPatientUI();
@@ -252,17 +284,20 @@ class PatientManager {
                 document.querySelector('[data-section="dashboard"]').classList.add('active');
             }
             
-            this.showNotification(`Paciente ${this.currentPatient.name} seleccionado`, 'success');
+            this.showNotification(`Participante ${this.currentPatient.participantCode} seleccionado`, 'success');
         } catch (error) {
             console.error('Error selecting patient:', error);
-            this.showNotification('Error al seleccionar paciente', 'error');
+            this.showNotification(error.message || 'Error al seleccionar participante', 'error');
         }
     }
 
     updateCurrentPatientUI() {
         const patientElement = document.getElementById('current-patient');
         if (patientElement && this.currentPatient) {
-            patientElement.textContent = `${this.currentPatient.name} - Sesión EMG`;
+            const label = this.currentPatient.name
+                ? `${this.currentPatient.participantCode} · ${this.currentPatient.name}`
+                : this.currentPatient.participantCode;
+            patientElement.textContent = `${label} - Sesión EMG`;
         }
     }
 
@@ -275,7 +310,7 @@ class PatientManager {
                 <div class="modal-overlay" id="history-modal">
                     <div class="modal-content large-modal">
                         <div class="modal-header">
-                            <h3>Historial de ${patient.name}</h3>
+                            <h3>Historial de ${this.escapeHTML(patient.participantCode)}</h3>
                             <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -525,15 +560,68 @@ class PatientManager {
         }
     }
 
+    async toggleArchivedPatients() {
+        this.includeArchived = !this.includeArchived;
+        await this.refreshPatientList();
+    }
+
+    async showPatientMenu(patientId) {
+        const patient = await this.database.getPatient(patientId);
+        if (!patient) return this.showNotification('Participante no encontrado', 'error');
+        const action = patient.status === 'archived'
+            ? `<button class="btn-control primary" onclick="window.patientManager.restorePatient(${patient.id})">Restaurar participante</button>`
+            : `<button class="btn-outline" onclick="window.patientManager.archivePatient(${patient.id})">Archivar participante</button>`;
+        document.body.insertAdjacentHTML('beforeend', `
+            <div class="modal-overlay" id="patient-menu-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>${this.escapeHTML(patient.participantCode)}</h3>
+                        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-outline" onclick="window.patientManager.showPatientRegistrationForm(${patient.id}); this.closest('.modal-overlay').remove();">Editar datos</button>
+                        ${action}
+                    </div>
+                </div>
+            </div>`);
+    }
+
+    async archivePatient(patientId) {
+        if (!window.confirm('¿Archivar este participante? Sus sesiones se conservarán.')) return;
+        try {
+            const patient = await this.database.archivePatient(patientId);
+            if (this.currentPatient?.id === patient.id) {
+                this.currentPatient = null;
+                document.getElementById('current-patient')?.replaceChildren(document.createTextNode('Sin participante seleccionado'));
+            }
+            document.getElementById('patient-menu-modal')?.remove();
+            await this.refreshPatientList();
+            this.showNotification(`Participante ${patient.participantCode} archivado`, 'success');
+        } catch (error) {
+            this.showNotification(`No se pudo archivar: ${error.message}`, 'error');
+        }
+    }
+
+    async restorePatient(patientId) {
+        try {
+            const patient = await this.database.restorePatient(patientId);
+            document.getElementById('patient-menu-modal')?.remove();
+            await this.refreshPatientList();
+            this.showNotification(`Participante ${patient.participantCode} restaurado`, 'success');
+        } catch (error) {
+            this.showNotification(`No se pudo restaurar: ${error.message}`, 'error');
+        }
+    }
+
     setupPatientSearch() {
         const searchInput = document.getElementById('patient-search');
         if (searchInput) {
             searchInput.addEventListener('input', async (e) => {
                 const searchTerm = e.target.value;
                 if (searchTerm.length > 2 || searchTerm.length === 0) {
-                    const patients = searchTerm.length > 0 
-                        ? await this.database.searchPatients(searchTerm)
-                        : await this.database.getAllPatients();
+                    const patients = searchTerm.length > 0
+                        ? await this.database.searchPatients(searchTerm, { includeArchived: this.includeArchived })
+                        : await this.database.listPatients({ includeArchived: this.includeArchived });
                     
                     const grid = document.getElementById('patients-grid');
                     if (grid) {
@@ -556,7 +644,7 @@ class PatientManager {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${patient.name.replace(/\s+/g, '_')}_data_${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = `${patient.participantCode}_data_${new Date().toISOString().slice(0, 10)}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -576,6 +664,12 @@ class PatientManager {
         } else {
             console.log(`${type.toUpperCase()}: ${message}`);
         }
+    }
+
+    escapeHTML(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        })[character]);
     }
 
     // Initialize patient manager

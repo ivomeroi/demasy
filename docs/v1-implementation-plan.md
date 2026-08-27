@@ -1174,8 +1174,8 @@ Actualizar esta tabla al cerrar cada punto de validación:
 |---|---|---|---|---|---|
 | 0. Línea base | Aprobada | 2026-08-26 | Codex + responsable | `docs/v1-phase-0-baseline.md` | Decisiones aprobadas; análisis de fatiga excluido y base renombrada a DEMASYDB |
 | 1. Fundaciones | Aprobada | 2026-08-27 | Codex + responsable | `docs/v1-phase-1-foundations.md` | Integrada en `feature/demasy-v1` |
-| 2. Grabación | En validación | 2026-08-27 | Codex | `docs/v1-phase-2-recording.md` | Implementación en `feature/demasy-v1-phase-2` |
-| 3. Persistencia | Pendiente | | | | |
+| 2. Grabación | Aprobada | 2026-08-27 | Codex + responsable | `docs/v1-phase-2-recording.md` | Integrada en `feature/demasy-v1` |
+| 3. Persistencia | En validación | 2026-08-27 | Codex | `docs/v1-phase-3-persistence.md` | Implementación en `feature/demasy-v1-phase-3` |
 | 4. Historial | Pendiente | | | | |
 | 5. Análisis | Pendiente | | | | |
 | 6. Importación/exportación | Pendiente | | | | |
