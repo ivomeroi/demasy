@@ -23,6 +23,11 @@ class EMGSimulator {
         this.fatigueLevel = { left: 0, right: 0 };
         this.asymmetryFactor = 1.0; // 1.0 = perfect symmetry, 0.8 = 20% asymmetry
         this.noiseLevel = 0.05;
+        this.simulationScenario = {
+            type: 'symmetric',
+            parameters: {},
+            durationSeconds: 60
+        };
         
         // Temporal delay for signal alignment analysis (in seconds)
         this.timeDelay = { left: 0, right: 0 }; // seconds (-0.5 to +0.5)
@@ -267,6 +272,31 @@ class EMGSimulator {
         }
     }
 
+    setScenario(type = 'symmetric', parameters = {}, durationSeconds = 60) {
+        this.simulationScenario = {
+            type,
+            parameters: { ...parameters },
+            durationSeconds: Math.max(1, Number(durationSeconds) || 60)
+        };
+        this.fatigueLevel = { left: 0, right: 0 };
+    }
+
+    updateScenarioState() {
+        const scenario = this.simulationScenario;
+        const progress = Math.max(0, Math.min(1, this.time / scenario.durationSeconds));
+
+        if (scenario.type === 'left-fatigue') {
+            this.fatigueLevel.left = progress * 0.8;
+            this.fatigueLevel.right = 0;
+        } else if (scenario.type === 'right-fatigue') {
+            this.fatigueLevel.right = progress * 0.8;
+            this.fatigueLevel.left = 0;
+        } else if (scenario.type === 'intervals') {
+            const highIntensity = Math.floor(this.time / 10) % 2 === 0;
+            this.setActivationLevel(highIntensity ? 0.85 : 0.45, 'both');
+        }
+    }
+
     start() {
         console.log('EMGSimulator.start() called');
         
@@ -338,6 +368,7 @@ class EMGSimulator {
             }
             
             const dt = 1 / this.sampleRate;
+            this.updateScenarioState();
         
         // Generate bilateral signals
         const signals = { left: 0, right: 0 };

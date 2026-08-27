@@ -85,6 +85,23 @@
             <div class="content-sections">
                 <!-- Dashboard Section -->
                 <section id="dashboard" class="content-section active">
+                    <div class="session-workflow card" id="session-workflow">
+                        <div class="session-workflow-summary">
+                            <div>
+                                <span class="session-state" id="session-state">Sin configurar</span>
+                                <strong id="session-label">Configura una sesión simulada</strong>
+                                <small id="session-configuration-summary">Selecciona primero un participante</small>
+                            </div>
+                            <div class="session-timer" id="session-timer">00:00.0</div>
+                        </div>
+                        <div class="session-workflow-actions">
+                            <button class="btn-outline" id="configure-session">Configurar sesión</button>
+                            <button class="btn-control primary" id="start-session" disabled>Iniciar grabación</button>
+                            <button class="btn-outline" id="pause-session" disabled>Pausar</button>
+                            <button class="btn-outline" id="finish-session" disabled>Finalizar</button>
+                            <button class="btn-outline danger" id="discard-session" disabled>Descartar</button>
+                        </div>
+                    </div>
                     <div class="dashboard-grid">
                         <!-- Real-time EMG Chart -->
                         <div class="card chart-card">
@@ -428,10 +445,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="core/demasy-config.js"></script>
     <script src="core/signal-source-contract.js"></script>
+    <script src="core/recording-controller.js"></script>
     <script src="services/analysis-service.js"></script>
     <script src="services/settings-service.js"></script>
     <script src="services/memory-storage-adapter.js"></script>
     <script src="services/replay-signal-source.js"></script>
+    <script src="services/session-configuration-service.js"></script>
     <script src="database.js"></script>
     <script src="patient-manager.js"></script>
     <script src="emg-simulator.js"></script>

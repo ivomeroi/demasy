@@ -24,6 +24,10 @@ class KinesioEMGApp {
             // Initialize database and patient manager
             this.database = new KinesioEMGDatabase();
             this.patientManager = null; // Will be initialized after database
+            this.recordingController = new RecordingController();
+            this.sessionConfigurationService = new SessionConfigurationService();
+            this.sessionReview = null;
+            this.recordingTimerInterval = null;
             
             this.emgChart = null;
             this.isRecording = false;
@@ -47,13 +51,14 @@ class KinesioEMGApp {
         
         // Chart configuration
         const signalConfig = window.DEMASY_CONFIG?.signal || {};
+        const sessionConfig = window.DEMASY_CONFIG?.session || {};
         this.chartConfig = {
             maxDataPoints: 1000,
             updateInterval: signalConfig.chartUpdateIntervalMs || 50,
             readoutUpdateInterval: 100,
             statsUpdateInterval: 200,
-            sessionCaptureInterval: 5,
-            maxSessionDataPoints: 120000,
+            sessionCaptureInterval: 1000 / (signalConfig.storageRateHz || 100),
+            maxSessionDataPoints: (signalConfig.storageRateHz || 100) * (sessionConfig.maximumDurationSeconds || 1800),
             rmsWindowPoints: 30,
             timeWindow: signalConfig.defaultChartWindowSeconds || 1,
             adcReferenceVoltage: 3.3,
@@ -271,6 +276,13 @@ class KinesioEMGApp {
             });
         });
 
+        window.addEventListener('beforeunload', event => {
+            if (['recording', 'paused', 'review'].includes(this.recordingController.state)) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
+        });
+
         // Recording controls
         const saveBtn = document.getElementById('save-session');
         const connectBtn = document.getElementById('connect-esp32');
@@ -291,6 +303,26 @@ class KinesioEMGApp {
                 this.saveSession();
             });
         }
+
+        document.getElementById('configure-session')?.addEventListener('click', () => {
+            this.showSessionConfigurationForm();
+        });
+
+        document.getElementById('start-session')?.addEventListener('click', () => {
+            this.startRecording();
+        });
+
+        document.getElementById('pause-session')?.addEventListener('click', () => {
+            this.toggleRecordingPause();
+        });
+
+        document.getElementById('finish-session')?.addEventListener('click', () => {
+            this.finishRecording();
+        });
+
+        document.getElementById('discard-session')?.addEventListener('click', () => {
+            this.discardSession();
+        });
 
         if (connectBtn) {
             connectBtn.addEventListener('click', () => {
@@ -602,6 +634,9 @@ class KinesioEMGApp {
         this.updateRecordingControls(false);
         this.updateSerialControls(false);
         this.updateBluetoothControls(false);
+        this.recordingController.subscribe(() => this.updateRecordingWorkflowUI());
+        this.startRecordingTimer();
+        this.updateRecordingWorkflowUI();
         
         // Initialize bilateral statistics display
         this.updateStatistics({
@@ -712,6 +747,12 @@ class KinesioEMGApp {
         console.log('Starting EMG recording...');
         
         try {
+            if (!this.recordingController.can('start')) {
+                this.showNotification('Configura una sesión válida antes de iniciar', 'warning');
+                return;
+            }
+
+            this.recordingController.start();
             this.isRecording = true;
             this.sessionData = [];
             this.sessionStartTime = new Date();
@@ -722,6 +763,8 @@ class KinesioEMGApp {
             this.pendingChartData = [];
             this.resetSignalReadout();
             this.signalSource = this.getConnectedSignalSource();
+            const configuration = this.recordingController.configuration;
+            this.applySessionConfiguration(configuration);
             
             console.log('Updating UI controls...');
             this.updateRecordingControls(true);
@@ -755,6 +798,7 @@ class KinesioEMGApp {
             
             console.log('Starting EMG Simulator...');
             if (this.emgSimulator && typeof this.emgSimulator.start === 'function') {
+                this.emgSimulator.resetSignal();
                 this.emgSimulator.start();
                 console.log('EMG Simulator started successfully');
                 
@@ -765,11 +809,6 @@ class KinesioEMGApp {
                     this.showNotification('Simulación EMG iniciada - Selecciona un paciente para guardar la sesión', 'info');
                 }
                 
-                // Simple cycling patterns with error handling
-                setTimeout(() => {
-                    this.startCyclingSimulations();
-                }, 1000);
-                
             } else {
                 throw new Error('EMG Simulator not properly initialized');
             }
@@ -778,6 +817,9 @@ class KinesioEMGApp {
             console.error('Error starting recording:', error);
             this.showNotification('Error al iniciar la grabación: ' + error.message, 'error');
             this.isRecording = false;
+            if (this.recordingController.state === 'recording') {
+                this.recordingController.finish();
+            }
             this.updateRecordingControls(false);
             this.updateSerialControls(this.serialManager.isConnected);
         }
@@ -848,9 +890,345 @@ class KinesioEMGApp {
         console.log('EMG recording stopped');
     }
 
+    toggleRecordingPause() {
+        try {
+            if (this.recordingController.state === 'recording') {
+                this.recordingController.pause();
+                this.showNotification('Grabación pausada; la previsualización continúa', 'info');
+            } else if (this.recordingController.state === 'paused') {
+                this.recordingController.resume();
+                this.showNotification('Grabación reanudada', 'success');
+            }
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+        }
+    }
+
+    finishRecording() {
+        try {
+            if (!this.recordingController.can('finish')) return;
+            this.recordingController.finish();
+            this.isRecording = false;
+
+            if (this.signalSource === 'serial') this.serialManager.stop();
+            if (this.signalSource === 'bluetooth') this.bluetoothManager.stop();
+
+            this.sessionReview = this.createSessionReview();
+            this.updateConnectionStatus(this.getConnectedSignalSource() === 'simulator' ? 'mock' : this.getConnectedSignalSource());
+            this.showSessionReview();
+            this.showNotification('Grabación finalizada. Revisa los resultados antes de guardar.', 'success');
+        } catch (error) {
+            this.showNotification(`No se pudo finalizar: ${error.message}`, 'error');
+        }
+    }
+
+    discardSession() {
+        if (!this.recordingController.can('discard')) return;
+        if (!window.confirm('¿Descartar los datos de esta sesión? Esta acción no se puede deshacer.')) return;
+
+        document.getElementById('session-review-modal')?.remove();
+        this.recordingController.discard();
+        this.sessionData = [];
+        this.sessionReview = null;
+        this.sessionStartTime = null;
+        this.resetSignalReadout();
+        this.showNotification('Sesión descartada', 'info');
+    }
+
+    startRecordingTimer() {
+        if (this.recordingTimerInterval) clearInterval(this.recordingTimerInterval);
+        this.recordingTimerInterval = setInterval(() => {
+            this.updateSessionTimer();
+            const configuration = this.recordingController.configuration;
+            if (
+                this.recordingController.state === 'recording' &&
+                configuration &&
+                this.recordingController.getElapsedSeconds() >= configuration.plannedDurationSeconds
+            ) {
+                this.finishRecording();
+            }
+        }, 100);
+    }
+
+    updateSessionTimer() {
+        const timer = document.getElementById('session-timer');
+        if (!timer) return;
+        const totalSeconds = this.recordingController.getElapsedSeconds();
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = Math.floor(totalSeconds % 60);
+        const tenths = Math.floor((totalSeconds % 1) * 10);
+        timer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`;
+    }
+
+    updateRecordingWorkflowUI() {
+        const state = this.recordingController.state;
+        const configuration = this.recordingController.configuration;
+        const stateLabels = {
+            idle: 'Sin configurar',
+            ready: 'Lista',
+            recording: 'Grabando',
+            paused: 'Pausada',
+            review: 'En revisión',
+            saved: 'Guardada'
+        };
+        const stateElement = document.getElementById('session-state');
+        if (stateElement) {
+            stateElement.textContent = stateLabels[state] || state;
+            stateElement.className = `session-state ${state}`;
+        }
+
+        this.updateElement('session-label', configuration?.label || 'Configura una sesión simulada');
+        this.updateElement(
+            'session-configuration-summary',
+            configuration
+                ? `${this.formatMuscle(configuration.muscleType)} · ${configuration.cadenceRpm} RPM · ${configuration.resistancePercent}% · ${configuration.plannedDurationSeconds}s`
+                : 'Selecciona primero un participante'
+        );
+
+        const configure = document.getElementById('configure-session');
+        const start = document.getElementById('start-session');
+        const pause = document.getElementById('pause-session');
+        const finish = document.getElementById('finish-session');
+        const discard = document.getElementById('discard-session');
+        const save = document.getElementById('save-session');
+
+        if (configure) configure.disabled = !this.recordingController.can('configure');
+        if (start) start.disabled = !this.recordingController.can('start');
+        if (pause) {
+            pause.disabled = !['recording', 'paused'].includes(state);
+            pause.textContent = state === 'paused' ? 'Reanudar' : 'Pausar';
+        }
+        if (finish) finish.disabled = !this.recordingController.can('finish');
+        if (discard) discard.disabled = !this.recordingController.can('discard');
+        if (save) save.disabled = !this.recordingController.can('save') || this.sessionData.length === 0;
+        this.updateSessionTimer();
+    }
+
+    showSessionConfigurationForm() {
+        const patient = this.patientManager?.currentPatient;
+        if (!patient) {
+            this.showNotification('Selecciona un participante desde la sección Pacientes', 'warning');
+            this.showSection('patients');
+            this.updatePageTitle('patients');
+            this.loadPatientsSection();
+            return;
+        }
+
+        document.getElementById('session-config-modal')?.remove();
+        const current = this.recordingController.configuration || {};
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'session-config-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Configurar sesión simulada</h2>
+                    <button class="modal-close" type="button" aria-label="Cerrar">&times;</button>
+                </div>
+                <form id="session-config-form" class="patient-form session-config-form">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>Participante</label>
+                            <input value="${this.escapeHTML(patient.name || `Participante ${patient.id}`)}" disabled>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="session-config-label">Nombre de la sesión</label>
+                            <input id="session-config-label" name="label" maxlength="80" value="${this.escapeHTML(current.label || 'Sesión simulada')}">
+                        </div>
+                        <div class="form-group">
+                            <label for="session-config-muscle">Músculo</label>
+                            <select id="session-config-muscle" name="muscleType">${this.muscleOptions(current.muscleType)}</select>
+                            <small class="form-error" data-error="muscleType"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="session-config-scenario">Escenario</label>
+                            <select id="session-config-scenario" name="scenario">${this.scenarioOptions(current.scenario)}</select>
+                            <small class="form-error" data-error="scenario"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="session-config-duration">Duración (segundos)</label>
+                            <input id="session-config-duration" name="plannedDurationSeconds" type="number" min="10" max="1800" value="${current.plannedDurationSeconds || 60}">
+                            <small class="form-error" data-error="plannedDurationSeconds"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="session-config-cadence">Cadencia (RPM)</label>
+                            <input id="session-config-cadence" name="cadenceRpm" type="number" min="30" max="200" value="${current.cadenceRpm || 80}">
+                            <small class="form-error" data-error="cadenceRpm"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="session-config-resistance">Resistencia (%)</label>
+                            <input id="session-config-resistance" name="resistancePercent" type="number" min="0" max="100" value="${current.resistancePercent ?? 50}">
+                            <small class="form-error" data-error="resistancePercent"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="session-config-asymmetry">Diferencia simulada (%)</label>
+                            <input id="session-config-asymmetry" name="asymmetryPercent" type="number" min="0" max="80" value="${current.scenarioParameters?.asymmetryPercent || 0}">
+                            <small class="form-error" data-error="asymmetryPercent"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="session-config-phase">Desfase derecho (°)</label>
+                            <input id="session-config-phase" name="phaseDelayDegrees" type="number" min="-180" max="180" value="${current.scenarioParameters?.phaseDelayDegrees || 0}">
+                            <small class="form-error" data-error="phaseDelayDegrees"></small>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="session-config-notes">Notas</label>
+                            <textarea id="session-config-notes" name="notes" rows="2">${this.escapeHTML(current.notes || '')}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-outline" data-action="cancel">Cancelar</button>
+                        <button type="submit" class="btn-control primary">Guardar configuración</button>
+                    </div>
+                </form>
+            </div>`;
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelector('.modal-close').addEventListener('click', close);
+        modal.querySelector('[data-action="cancel"]').addEventListener('click', close);
+        modal.querySelector('form').addEventListener('submit', event => this.handleSessionConfiguration(event, patient.id, modal));
+    }
+
+    handleSessionConfiguration(event, patientId, modal) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const raw = Object.fromEntries(new FormData(form).entries());
+        raw.patientId = patientId;
+
+        form.querySelectorAll('.form-error').forEach(element => { element.textContent = ''; });
+        try {
+            const configuration = this.sessionConfigurationService.normalize(raw);
+            this.recordingController.configure(configuration);
+            this.applySessionConfiguration(configuration);
+            modal.remove();
+            this.showNotification('Sesión configurada y lista para grabar', 'success');
+        } catch (error) {
+            Object.entries(error.validationErrors || {}).forEach(([field, message]) => {
+                const target = form.querySelector(`[data-error="${field}"]`);
+                if (target) target.textContent = message;
+            });
+        }
+    }
+
+    applySessionConfiguration(configuration) {
+        if (!configuration) return;
+        const simulator = this.emgSimulator;
+        simulator.setMuscle(configuration.muscleType);
+        simulator.setCadence(configuration.cadenceRpm);
+        simulator.setResistance(configuration.resistancePercent / 100);
+        simulator.resetTimeDelay();
+        simulator.setAsymmetryFactor(1);
+        simulator.setActivationLevel(0.4, 'both');
+        simulator.setScenario(
+            configuration.scenario,
+            configuration.scenarioParameters,
+            configuration.plannedDurationSeconds
+        );
+
+        const difference = configuration.scenarioParameters.asymmetryPercent || 25;
+        if (configuration.scenario.includes('weakness')) {
+            const factor = Math.max(0.2, 1 - difference / 100);
+            if (configuration.scenario.startsWith('right')) {
+                simulator.setActivationLevel(0.4, 'left');
+                simulator.setActivationLevel(0.4 * factor, 'right');
+            } else {
+                simulator.setActivationLevel(0.4 * factor, 'left');
+                simulator.setActivationLevel(0.4, 'right');
+            }
+        }
+        if (configuration.scenario === 'phase-delay') {
+            simulator.setTimeDelay(configuration.scenarioParameters.phaseDelayDegrees || 30, 'right');
+        }
+
+        const muscleSelect = document.getElementById('muscle-select');
+        if (muscleSelect) muscleSelect.value = configuration.muscleType;
+    }
+
+    createSessionReview() {
+        const configuration = this.recordingController.configuration;
+        const statistics = new AnalysisService().analyzeSamples(this.sessionData);
+        return {
+            configuration,
+            durationSeconds: this.recordingController.getElapsedSeconds(),
+            sampleCount: this.sessionData.length,
+            statistics
+        };
+    }
+
+    showSessionReview() {
+        const review = this.sessionReview;
+        if (!review) return;
+        document.getElementById('session-review-modal')?.remove();
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'session-review-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header"><h2>Revisión de sesión</h2></div>
+                <p><strong>${this.escapeHTML(review.configuration.label)}</strong></p>
+                <p>${this.formatMuscle(review.configuration.muscleType)} · ${this.escapeHTML(this.formatScenario(review.configuration.scenario))}</p>
+                <div class="session-review-grid">
+                    <div class="session-review-metric"><span>Duración efectiva</span><strong>${review.durationSeconds.toFixed(1)} s</strong></div>
+                    <div class="session-review-metric"><span>Muestras guardables</span><strong>${review.sampleCount}</strong></div>
+                    <div class="session-review-metric"><span>Simetría</span><strong>${review.statistics.bilateral.symmetryIndex.toFixed(1)}%</strong></div>
+                    <div class="session-review-metric"><span>RMS izquierdo</span><strong>${review.statistics.left.rms.toFixed(2)} mV</strong></div>
+                    <div class="session-review-metric"><span>RMS derecho</span><strong>${review.statistics.right.rms.toFixed(2)} mV</strong></div>
+                    <div class="session-review-metric"><span>Diferencia</span><strong>${review.statistics.bilateral.difference.toFixed(1)}%</strong></div>
+                </div>
+                <p><small>Datos generados mediante simulación. Los resultados son descriptivos y no constituyen un diagnóstico.</small></p>
+                <div class="modal-actions">
+                    <button class="btn-outline danger" data-action="discard">Descartar</button>
+                    <button class="btn-control primary" data-action="save">Guardar sesión</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('[data-action="discard"]').addEventListener('click', () => this.discardSession());
+        modal.querySelector('[data-action="save"]').addEventListener('click', () => this.saveSession());
+    }
+
+    muscleOptions(selected = 'quadriceps') {
+        const labels = {
+            quadriceps: 'Cuádriceps', gastrocnemius: 'Gastrocnemio', hamstring: 'Isquiotibiales',
+            tibialis: 'Tibial anterior', gluteus: 'Glúteo', soleus: 'Sóleo'
+        };
+        return this.sessionConfigurationService.getMuscles()
+            .map(value => `<option value="${value}" ${value === selected ? 'selected' : ''}>${labels[value]}</option>`)
+            .join('');
+    }
+
+    scenarioOptions(selected = 'symmetric') {
+        const labels = {
+            symmetric: 'Pedaleo simétrico', 'left-weakness': 'Menor activación izquierda',
+            'right-weakness': 'Menor activación derecha', 'left-fatigue': 'Patrón de fatiga izquierda',
+            'right-fatigue': 'Patrón de fatiga derecha', 'phase-delay': 'Retraso de fase',
+            intervals: 'Intervalos', custom: 'Personalizado'
+        };
+        return this.sessionConfigurationService.getScenarios()
+            .map(value => `<option value="${value}" ${value === selected ? 'selected' : ''}>${labels[value]}</option>`)
+            .join('');
+    }
+
+    formatMuscle(value) {
+        const labels = { quadriceps: 'Cuádriceps', gastrocnemius: 'Gastrocnemio', hamstring: 'Isquiotibiales', tibialis: 'Tibial anterior', gluteus: 'Glúteo', soleus: 'Sóleo' };
+        return labels[value] || value;
+    }
+
+    formatScenario(value) {
+        const labels = { symmetric: 'Pedaleo simétrico', 'left-weakness': 'Menor activación izquierda', 'right-weakness': 'Menor activación derecha', 'left-fatigue': 'Patrón de fatiga izquierda', 'right-fatigue': 'Patrón de fatiga derecha', 'phase-delay': 'Retraso de fase', intervals: 'Intervalos', custom: 'Personalizado' };
+        return labels[value] || value;
+    }
+
+    escapeHTML(value) {
+        return String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
+    }
+
     async saveSession() {
         if (this.sessionData.length === 0) {
             this.showNotification('No hay datos para guardar', 'warning');
+            return;
+        }
+
+        if (!this.recordingController.can('save')) {
+            this.showNotification('Finaliza y revisa la sesión antes de guardarla', 'warning');
             return;
         }
 
@@ -866,9 +1244,8 @@ class KinesioEMGApp {
     async saveSessionToDatabase() {
         try {
             const provider = this.getActiveSignalProvider();
-            const duration = this.sessionStartTime 
-                ? Math.floor((Date.now() - this.sessionStartTime.getTime()) / 1000)
-                : Math.floor(this.sessionData.length / provider.sampleRate);
+            const duration = this.recordingController.getElapsedSeconds();
+            const configuration = this.recordingController.configuration;
 
             const sessionData = {
                 muscleType: provider.currentMuscle,
@@ -878,12 +1255,17 @@ class KinesioEMGApp {
                 resistance: provider.cyclingParams?.resistance || 0.5,
                 emgData: this.sessionData,
                 statistics: provider.getStats(),
-                notes: ''
+                notes: configuration.notes,
+                configuration,
+                source: configuration.source,
+                label: configuration.label
             };
 
             const session = await this.patientManager.saveCurrentSession(sessionData);
             
             if (session) {
+                this.recordingController.markSaved();
+                document.getElementById('session-review-modal')?.remove();
                 // Reset save button
                 setTimeout(() => {
                     const saveBtn = document.getElementById('save-session');
@@ -929,6 +1311,10 @@ class KinesioEMGApp {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        if (this.recordingController.can('save')) {
+            this.recordingController.markSaved();
+            document.getElementById('session-review-modal')?.remove();
+        }
         URL.revokeObjectURL(url);
 
         this.showNotification('Sesión guardada como archivo', 'success');
@@ -1221,16 +1607,18 @@ class KinesioEMGApp {
         this.trackSignalValue(data.left.amplitude);
         this.pendingChartData.push(data);
 
-        if (now - this.lastSessionCaptureAt >= this.chartConfig.sessionCaptureInterval) {
+        if (
+            this.recordingController.state === 'recording' &&
+            now - this.lastSessionCaptureAt >= this.chartConfig.sessionCaptureInterval
+        ) {
             this.lastSessionCaptureAt = now;
             this.sessionData.push(data);
 
             if (this.sessionData.length > this.chartConfig.maxSessionDataPoints) {
-                const excess = this.sessionData.length - this.chartConfig.maxSessionDataPoints;
-                this.sessionData.splice(0, excess);
+                this.sessionData.length = this.chartConfig.maxSessionDataPoints;
+                this.showNotification('Se alcanzó el límite seguro de muestras; la grabación finalizará.', 'warning');
+                this.finishRecording();
             }
-
-            this.updateRecordingControls(false);
         }
 
         if (now - this.lastChartUpdateAt >= this.chartConfig.updateInterval) {
@@ -1406,9 +1794,8 @@ class KinesioEMGApp {
     }
 
     updateRecordingControls(isRecording) {
-        const saveBtn = document.getElementById('save-session');
-        
-        if (saveBtn) saveBtn.disabled = this.sessionData.length === 0;
+        this.isRecording = isRecording;
+        this.updateRecordingWorkflowUI();
     }
 
     updateSerialControls(isConnected) {

@@ -26,3 +26,13 @@ test('simulator pause and resume preserve its time and buffers', () => {
     assert.equal(simulator.time, 1.25);
     assert.equal(simulator.signalBuffer.left.length, 1);
 });
+
+test('simulator applies configured unilateral fatigue progression', () => {
+    const simulator = new EMGSimulator();
+    simulator.setScenario('left-fatigue', {}, 100);
+    simulator.time = 50;
+    simulator.updateScenarioState();
+
+    assert.equal(simulator.fatigueLevel.left, 0.4);
+    assert.equal(simulator.fatigueLevel.right, 0);
+});

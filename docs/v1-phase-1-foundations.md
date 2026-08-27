@@ -1,8 +1,10 @@
 # DEMASY v1 — Fase 1: fundaciones y contratos
 
-**Estado:** En validación  
-**Fecha:** 2026-08-27  
-**Rama:** `feature/demasy-v1-phase-1`  
+**Estado:** Aprobada
+
+**Fecha:** 2026-08-27
+
+**Rama:** `feature/demasy-v1-phase-1`
 **Base:** `feature/demasy-v1`
 
 ## 1. Objetivo
@@ -210,3 +212,5 @@ Antes de integrar esta rama en `feature/demasy-v1`, el responsable debe revisar:
 5. el resultado de las pruebas y la revisión visual.
 
 Después de la aprobación se integrará la rama de Fase 1 y recién entonces se creará `feature/demasy-v1-phase-2`.
+
+**Resultado:** aprobado por el responsable e integrado en `feature/demasy-v1` el 2026-08-27.
