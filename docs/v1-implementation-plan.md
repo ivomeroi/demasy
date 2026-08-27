@@ -1173,7 +1173,7 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | Fase | Estado | Fecha | Responsable | Evidencia | Observaciones |
 |---|---|---|---|---|---|
 | 0. Línea base | Aprobada | 2026-08-26 | Codex + responsable | `docs/v1-phase-0-baseline.md` | Decisiones aprobadas; análisis de fatiga excluido y base renombrada a DEMASYDB |
-| 1. Fundaciones | Pendiente | | | | |
+| 1. Fundaciones | En validación | 2026-08-27 | Codex | `docs/v1-phase-1-foundations.md` | Implementación en `feature/demasy-v1-phase-1` |
 | 2. Grabación | Pendiente | | | | |
 | 3. Persistencia | Pendiente | | | | |
 | 4. Historial | Pendiente | | | | |

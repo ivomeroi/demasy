@@ -46,15 +46,16 @@ class KinesioEMGApp {
         }
         
         // Chart configuration
+        const signalConfig = window.DEMASY_CONFIG?.signal || {};
         this.chartConfig = {
             maxDataPoints: 1000,
-            updateInterval: 50, // ms
+            updateInterval: signalConfig.chartUpdateIntervalMs || 50,
             readoutUpdateInterval: 100,
             statsUpdateInterval: 200,
             sessionCaptureInterval: 5,
             maxSessionDataPoints: 120000,
             rmsWindowPoints: 30,
-            timeWindow: 1, // seconds
+            timeWindow: signalConfig.defaultChartWindowSeconds || 1,
             adcReferenceVoltage: 3.3,
             adcMaxCount: 4095,
             yAxisAdcEquivalent: 1500,

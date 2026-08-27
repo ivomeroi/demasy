@@ -1,3 +1,7 @@
+const DEMASY_SIMULATOR_CONFIG = typeof window !== 'undefined'
+    ? window.DEMASY_CONFIG
+    : require('./core/demasy-config.js');
+
 /**
  * Bilateral EMG Signal Simulator
  * Generates realistic bilateral electromyography signals for different muscle types
@@ -9,8 +13,9 @@ class EMGSimulator {
         console.log('Initializing EMGSimulator...');
         
         this.isRunning = false;
+        this.isPaused = false;
         this.currentMuscle = 'quadriceps'; // Default to quadriceps for cycling
-        this.sampleRate = 1000; // Hz
+        this.sampleRate = DEMASY_SIMULATOR_CONFIG.signal.simulationRateHz;
         this.time = 0;
         
         // Bilateral activation levels
@@ -268,6 +273,7 @@ class EMGSimulator {
         if (!this.isRunning) {
             console.log('Starting EMG simulation...');
             this.isRunning = true;
+            this.isPaused = false;
             this.time = 0;
             this.fatigueLevel = { left: 0, right: 0 };
             this.signalBuffer = { left: [], right: [] };
@@ -288,6 +294,25 @@ class EMGSimulator {
 
     stop() {
         this.isRunning = false;
+        this.isPaused = false;
+    }
+
+    pause() {
+        if (!this.isRunning) return;
+        this.isRunning = false;
+        this.isPaused = true;
+    }
+
+    resume() {
+        if (!this.isPaused) return;
+        this.isPaused = false;
+        this.isRunning = true;
+        this.generateSignal();
+    }
+
+    getStatus() {
+        if (this.isPaused) return 'paused';
+        return this.isRunning ? 'running' : 'stopped';
     }
 
     reset() {
@@ -966,4 +991,10 @@ class EMGSimulator {
 }
 
 // Export for use in other files
-window.EMGSimulator = EMGSimulator;
+if (typeof window !== 'undefined') {
+    window.EMGSimulator = EMGSimulator;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = EMGSimulator;
+}
