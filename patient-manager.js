@@ -493,6 +493,7 @@ class PatientManager {
         if (!samples.length) return '<div class="empty-sessions">Esta sesión no contiene muestras reproducibles.</div>';
         return `<div class="replay-panel" data-session-id="${session.id}">
             <div class="replay-values"><strong id="replay-status">Lista para reproducir</strong><span id="replay-time">0.00 s</span><span id="replay-left">Izq: —</span><span id="replay-right">Der: —</span></div>
+            <div class="replay-chart-container"><canvas id="replay-chart" aria-label="Señal EMG bilateral grabada"></canvas></div>
             <div class="replay-track"><div id="replay-progress" class="replay-progress"></div></div>
             <div class="replay-controls">
                 <button class="btn-control primary" id="replay-toggle" onclick="window.patientManager.toggleReplay(${session.id})">Reproducir</button>
@@ -516,6 +517,7 @@ class PatientManager {
     createReplaySource(sessionId, samples) {
         this.replaySource?.stop();
         this.replaySessionId = sessionId;
+        this.createReplayChart();
         this.replaySource = new ReplaySignalSource(samples);
         this.replaySource.onDataUpdate(sample => {
             const time = Number(sample.time ?? sample.timestamp ?? 0);
@@ -524,9 +526,58 @@ class PatientManager {
             if (document.getElementById('replay-time')) document.getElementById('replay-time').textContent = `${time.toFixed(2)} s`;
             if (document.getElementById('replay-left')) document.getElementById('replay-left').textContent = `Izq: ${left.toFixed(3)} mV`;
             if (document.getElementById('replay-right')) document.getElementById('replay-right').textContent = `Der: ${right.toFixed(3)} mV`;
+            this.appendReplayChartSample(time, left, right);
         });
         this.replaySource.onProgress(progress => { if (document.getElementById('replay-progress')) document.getElementById('replay-progress').style.width = `${progress.percent}%`; });
         this.replaySource.onStatusChange(status => this.updateReplayUI(status));
+    }
+
+    createReplayChart() {
+        this.replayChart?.destroy();
+        this.replayChart = null;
+        this.lastReplayChartRenderTime = Number.NEGATIVE_INFINITY;
+        const canvas = document.getElementById('replay-chart');
+        if (!canvas || typeof Chart === 'undefined') {
+            this.showNotification('No se pudo inicializar el gráfico de reproducción', 'warning');
+            return;
+        }
+        this.replayChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                datasets: [
+                    { label: 'Izquierda', data: [], borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0 },
+                    { label: 'Derecha', data: [], borderColor: '#ef4444', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                parsing: false,
+                normalized: true,
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } },
+                    y: { title: { display: true, text: 'Amplitud (mV)' } }
+                }
+            }
+        });
+    }
+
+    appendReplayChartSample(time, left, right) {
+        if (!this.replayChart || !Number.isFinite(time) || !Number.isFinite(left) || !Number.isFinite(right)) return;
+        const datasets = this.replayChart.data.datasets;
+        datasets[0].data.push({ x: time, y: left });
+        datasets[1].data.push({ x: time, y: right });
+        const windowStart = Math.max(0, time - 5);
+        while (datasets[0].data[0]?.x < windowStart) datasets[0].data.shift();
+        while (datasets[1].data[0]?.x < windowStart) datasets[1].data.shift();
+        this.replayChart.options.scales.x.min = windowStart;
+        this.replayChart.options.scales.x.max = Math.max(5, time);
+        if (time - this.lastReplayChartRenderTime >= 0.05) {
+            this.lastReplayChartRenderTime = time;
+            this.replayChart.update('none');
+        }
     }
 
     updateReplayUI(status) {
@@ -546,6 +597,8 @@ class PatientManager {
         this.replaySource?.reset();
         this.replaySource = null;
         this.replaySessionId = null;
+        this.replayChart?.destroy();
+        this.replayChart = null;
         ['replay-time', 'replay-left', 'replay-right'].forEach((id, index) => {
             const element = document.getElementById(id);
             if (element) element.textContent = index === 0 ? '0.00 s' : index === 1 ? 'Izq: —' : 'Der: —';
@@ -557,6 +610,8 @@ class PatientManager {
     closeSessionDetails() {
         this.replaySource?.stop();
         this.replaySource = null;
+        this.replayChart?.destroy();
+        this.replayChart = null;
         document.getElementById('session-detail-modal')?.remove();
     }
 

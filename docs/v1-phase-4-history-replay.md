@@ -46,9 +46,11 @@ Una sesión antigua o vacía continúa siendo consultable y exportable, pero mue
 - reiniciar desde el comienzo;
 - seleccionar 0.5×, 1× o 2× durante la reproducción;
 - consultar tiempo, valores bilaterales y progreso;
+- observar un gráfico bilateral móvil construido con las muestras guardadas, con una ventana visible de cinco segundos;
 - detectar la finalización automáticamente.
 
 El cálculo de estadísticas durante la reproducción solo se ejecuta cuando existe un consumidor registrado, evitando trabajo cuadrático innecesario en sesiones extensas.
+El gráfico conserva las muestras de la ventana visible y limita su redibujado a 20 veces por segundo para mantener fluidez incluso al reproducir a 2×.
 
 ## 5. Gestión y exportación
 
@@ -103,6 +105,7 @@ En `http://127.0.0.1:8000`:
 3. combinar filtros de fecha, músculo, escenario y estado, y luego limpiarlos;
 4. abrir un detalle y verificar configuración, procedencia, métricas y notas;
 5. reproducir a 1×, pausar, continuar y reiniciar;
+   comprobar que el gráfico muestre exclusivamente la señal grabada y que se detenga al pausar;
 6. repetir a 0.5× y 2×;
 7. dejar terminar una reproducción y comprobar el estado “Finalizada”;
 8. exportar una sesión y revisar el JSON descargado;
