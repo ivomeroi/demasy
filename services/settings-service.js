@@ -26,7 +26,11 @@
                 resistancePercent: 50,
                 muscleType: 'quadriceps',
                 chartWindowSeconds: config?.signal?.defaultChartWindowSeconds || 1,
-                assistantMode: 'auto'
+                assistantMode: 'auto',
+                chartScaleMode: 'fixed',
+                showLeftSignal: true,
+                showRightSignal: true,
+                showRms: true
             });
         }
 
@@ -59,6 +63,14 @@
             if (key === 'cadenceRpm') return this.numberInRange(value, 30, 200, key);
             if (key === 'resistancePercent') return this.numberInRange(value, 0, 100, key);
             if (key === 'chartWindowSeconds') return this.numberInRange(value, 1, 60, key);
+
+            if (key === 'chartScaleMode' && !['auto', 'fixed'].includes(value)) {
+                throw new RangeError('chartScaleMode must be auto or fixed');
+            }
+
+            if (['showLeftSignal', 'showRightSignal', 'showRms'].includes(key) && typeof value !== 'boolean') {
+                throw new TypeError(`${key} must be a boolean`);
+            }
 
             if (key === 'assistantMode' && !['local', 'remote', 'auto', 'mock'].includes(value)) {
                 throw new RangeError('assistantMode must be local, remote, auto or mock');
