@@ -1,8 +1,8 @@
 # Punto de reanudación de DEMASY
 
 **Actualizado:** 2026-08-29  
-**Rama actual:** `feature/demasy-v1-phase-5`
-**Última integración:** `6389ef8 Merge DEMASY v1 phase 4 history and replay`
+**Rama actual:** `feature/demasy-v1-phase-6`
+**Última integración:** `39c3e9e Merge DEMASY v1 phase 5 analysis`
 
 ## Estado del trabajo
 
@@ -13,6 +13,7 @@
 - Fase 3 integrada en `feature/demasy-v1`.
 - Fase 4 aprobada por el responsable el 2026-08-29 y lista para integrar.
 - Fases 4 y 5 aprobadas; Fase 5 lista para integrar antes de iniciar la Fase 6.
+- Fase 6 aprobada; Fase 7 pospuesta por decisión del responsable; siguiente trabajo: Fase 8.
 
 ## Qué incluye la Fase 3
 
