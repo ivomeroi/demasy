@@ -753,18 +753,18 @@ Reemplazar la sección de marcador de posición por análisis reproducibles y co
 
 #### Tareas
 
-- [ ] Implementar todas las métricas obligatorias.
-- [ ] Calcular métricas por ventanas temporales.
-- [ ] Mostrar evolución de activación y asimetría.
-- [ ] Verificar que la interfaz no presente análisis ni conclusiones de fatiga.
-- [ ] Mostrar lado dominante.
-- [ ] Mostrar fórmula o ayuda contextual.
-- [ ] Marcar las interpretaciones como descriptivas.
-- [ ] Crear selector de dos sesiones compatibles.
-- [ ] Definir reglas de compatibilidad.
-- [ ] Comparar valores absolutos y diferencias porcentuales.
-- [ ] Mostrar configuración de ambas sesiones para evitar comparaciones engañosas.
-- [ ] Permitir exportar el resumen comparativo como JSON o CSV.
+- [x] Implementar todas las métricas obligatorias.
+- [x] Calcular métricas por ventanas temporales.
+- [x] Mostrar evolución de activación y asimetría.
+- [x] Verificar que la interfaz no presente análisis ni conclusiones de fatiga.
+- [x] Mostrar lado dominante.
+- [x] Mostrar fórmula o ayuda contextual.
+- [x] Marcar las interpretaciones como descriptivas.
+- [x] Crear selector de dos sesiones compatibles.
+- [x] Definir reglas de compatibilidad.
+- [x] Comparar valores absolutos y diferencias porcentuales.
+- [x] Mostrar configuración de ambas sesiones para evitar comparaciones engañosas.
+- [x] Permitir exportar el resumen comparativo como JSON o CSV.
 
 #### Pruebas
 
@@ -1177,8 +1177,8 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 2. Grabación | Aprobada | 2026-08-27 | Codex + responsable | `docs/v1-phase-2-recording.md` | Integrada en `feature/demasy-v1` |
 | 3. Persistencia | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-3-persistence.md` | Validación manual completada; lista para integrar |
 | 4. Historial | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-4-history-replay.md` | Validación manual completada; lista para integrar |
-| 5. Análisis | En curso | 2026-08-29 | Codex | Pendiente | Rama `feature/demasy-v1-phase-5` |
-| 6. Importación/exportación | Pendiente | | | | |
+| 5. Análisis | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-5-analysis.md` | Validación completada; lista para integrar |
+| 6. Importación/exportación | En curso | 2026-08-29 | Codex | Pendiente | Rama `feature/demasy-v1-phase-6` |
 | 7. Asistente | Pendiente | | | | |
 | 8. UX | Pendiente | | | | |
 | 9. Calidad | Pendiente | | | | |

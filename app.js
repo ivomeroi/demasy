@@ -24,6 +24,7 @@ class KinesioEMGApp {
             // Initialize database and patient manager
             this.database = new DEMASYDatabase();
             this.patientManager = null; // Will be initialized after database
+            this.analysisManager = null;
             this.recordingController = new RecordingController();
             this.sessionConfigurationService = new SessionConfigurationService();
             this.sectionRouter = new SectionRouter();
@@ -107,6 +108,7 @@ class KinesioEMGApp {
             // Initialize patient manager
             this.patientManager = new PatientManager(this.database);
             await this.patientManager.initialize();
+            this.analysisManager = new AnalysisManager(this.database);
             
             console.log('Database and patient manager initialized successfully');
         } catch (error) {
@@ -684,9 +686,12 @@ class KinesioEMGApp {
     async navigateToSection(section, options = {}) {
         const target = this.sectionRouter.routes[section] ? section : 'dashboard';
         if (target === 'patients') await this.loadPatientsSection();
+        if (target === 'analysis') await this.analysisManager?.render();
         document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.section === target));
         this.showSection(target);
         this.updatePageTitle(target);
+        const emgHeaderActions = document.getElementById('emg-header-actions');
+        if (emgHeaderActions) emgHeaderActions.hidden = target !== 'dashboard';
         if (options.updateHistory !== false) {
             const method = options.replaceHistory ? 'replaceState' : 'pushState';
             window.history[method]({ section: target }, '', this.sectionRouter.getPath(target));

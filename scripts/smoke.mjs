@@ -77,6 +77,7 @@ async function main() {
         'services/session-history-service.js',
             'database.js',
             'patient-manager.js',
+            'analysis-manager.js',
             'emg-simulator.js',
             'serial-manager.js',
             'bluetooth-manager.js',
