@@ -364,26 +364,7 @@
 
                 <!-- Analysis Section -->
                 <section id="analysis" class="content-section">
-                    <div class="analysis-dashboard">
-                        <h2>Herramientas de Análisis Avanzado</h2>
-                        <div class="analysis-grid">
-                            <div class="card">
-                                <h3><i class="fas fa-chart-area"></i> Análisis de Frecuencia</h3>
-                                <p>FFT y análisis espectral de señales EMG bilaterales</p>
-                                <button class="btn-outline">Próximamente</button>
-                            </div>
-                            <div class="card">
-                                <h3><i class="fas fa-balance-scale"></i> Comparación Bilateral</h3>
-                                <p>Comparar activación muscular bilateral y detectar asimetrías</p>
-                                <button class="btn-outline">Próximamente</button>
-                            </div>
-                            <div class="card">
-                                <h3><i class="fas fa-file-export"></i> Generar Reporte</h3>
-                                <p>Crear reportes profesionales de análisis bilateral</p>
-                                <button class="btn-outline">Próximamente</button>
-                            </div>
-                        </div>
-                    </div>
+                    <div id="analysis-content" class="analysis-dashboard"><div class="loading-content"><i class="fas fa-spinner fa-spin"></i><p>Cargando análisis…</p></div></div>
                 </section>
 
                 <!-- Patients Section -->
@@ -451,6 +432,7 @@
     <script src="services/session-history-service.js"></script>
     <script src="database.js"></script>
     <script src="patient-manager.js"></script>
+    <script src="analysis-manager.js"></script>
     <script src="emg-simulator.js"></script>
     <script src="serial-manager.js"></script>
     <script src="bluetooth-manager.js"></script>
