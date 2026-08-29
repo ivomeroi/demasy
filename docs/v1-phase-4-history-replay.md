@@ -66,6 +66,16 @@ El gráfico conserva las muestras de la ventana visible y limita su redibujado a
 - Las sesiones sin escenario se identifican como “No registrado”.
 - Las sesiones sin muestras no causan errores en el detalle.
 
+### Casos sintéticos de demostración
+
+Los participantes `DEMO-001`, `DEMO-002` y `DEMO-003` poseen dos sesiones coherentes y reproducibles cada uno:
+
+- María: menor activación izquierda de cuádriceps, con mejoría en el control;
+- Carlos: menor activación derecha de isquiotibiales, con recuperación parcial;
+- Ana: evaluación preventiva simétrica y un control con retraso temporal leve.
+
+Las señales se generan de manera determinista a 100 Hz durante 30 segundos, con envolvente ligada a la cadencia, portadoras EMG sintéticas, ruido acotado y escalas bilaterales consistentes con cada escenario. Todos los registros declaran `source.type = simulation` y `source.provider = demasy-demo-v2`; no representan mediciones clínicas reales.
+
 ## 7. Validación automatizada
 
 - Orden descendente del historial.
