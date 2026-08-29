@@ -1,6 +1,6 @@
 # DEMASY v1 — Fase 6: respaldo y recuperación
 
-**Estado:** En validación
+**Estado:** Aprobada e integrada
 **Rama:** `feature/demasy-v1-phase-6`
 **Fecha:** 2026-08-29
 
@@ -55,4 +55,4 @@ Resultado: **39 pruebas aprobadas**, lint y smoke aprobados.
 8. cancelar la confirmación reforzada y comprobar que nada cambie;
 9. ejecutar la acción de datos demo y comprobar que no duplique sesiones.
 
-No integrar la fase ni comenzar la Fase 7 hasta recibir aprobación del responsable.
+El responsable aprobó la fase y decidió continuar directamente con la Fase 8. La restauración en perfil limpio se conserva como prueba de regresión previa a la entrega final.

@@ -1178,13 +1178,13 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 3. Persistencia | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-3-persistence.md` | Validación manual completada; lista para integrar |
 | 4. Historial | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-4-history-replay.md` | Validación manual completada; lista para integrar |
 | 5. Análisis | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-5-analysis.md` | Validación completada; lista para integrar |
-| 6. Importación/exportación | En validación | 2026-08-29 | Codex | `docs/v1-phase-6-backup-recovery.md` | Implementación en `feature/demasy-v1-phase-6` |
-| 7. Asistente | Pendiente | | | | |
-| 8. UX | Pendiente | | | | |
+| 6. Importación/exportación | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-6-backup-recovery.md` | Validación aceptada; restauración limpia se repetirá antes de entrega |
+| 7. Asistente | Pospuesta | 2026-08-29 | Responsable | Sección 7 del plan | Se prioriza el cierre visual y funcional de la Fase 8 |
+| 8. UX | En curso | 2026-08-29 | Codex | Pendiente | Rama `feature/demasy-v1-phase-8`; identidad basada en `DEMASY-LOGO.jpeg` |
 | 9. Calidad | Pendiente | | | | |
 | 10. Entrega | Pendiente | | | | |
 
-Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Bloqueada`.
+Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Pospuesta`, `Bloqueada`.
 
 ## 20. Checklist final de DEMASY v1
 
