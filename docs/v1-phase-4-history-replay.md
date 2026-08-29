@@ -126,3 +126,17 @@ En `http://127.0.0.1:8000`:
 11. abrir una sesión histórica o sin muestras, si existe, y comprobar el estado vacío.
 
 La fase permanece en validación hasta la confirmación del responsable. No iniciar la Fase 5 antes de esa aprobación.
+
+## 10. Navegación persistente
+
+Cada sección principal posee una subruta propia:
+
+| Sección | Ruta |
+|---|---|
+| EMG en vivo | `/emg-en-vivo` |
+| Análisis | `/analisis` |
+| Pacientes | `/pacientes` |
+| Asistente IA | `/asistente-ia` |
+| Configuración | `/configuracion` |
+
+La navegación usa el historial del navegador, admite avanzar y retroceder, y conserva la sección al refrescar. El servidor local, Netlify y Vercel devuelven la aplicación para estas rutas sin convertir rutas de archivos inexistentes en respuestas válidas.

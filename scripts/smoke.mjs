@@ -67,6 +67,7 @@ async function main() {
             'core/demasy-config.js',
             'core/signal-source-contract.js',
             'core/recording-controller.js',
+            'core/section-router.js',
             'services/analysis-service.js',
             'services/settings-service.js',
             'services/memory-storage-adapter.js',
@@ -94,6 +95,13 @@ async function main() {
         const health = await request('/api/health');
         if (health.status !== 200 || !health.body.includes('geminiConfigured')) {
             throw new Error('/api/health did not return the expected response');
+        }
+
+        for (const route of ['/emg-en-vivo', '/analisis', '/pacientes', '/asistente-ia', '/configuracion']) {
+            const response = await request(route);
+            if (response.status !== 200 || !response.body.includes('DEMASY')) {
+                throw new Error(`${route} did not return the app shell`);
+            }
         }
 
         console.log(`Smoke check passed at ${baseUrl}`);

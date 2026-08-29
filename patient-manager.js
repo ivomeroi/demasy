@@ -276,14 +276,7 @@ class PatientManager {
             
             // Switch to dashboard
             if (window.app) {
-                window.app.showSection('dashboard');
-                window.app.updatePageTitle('dashboard');
-                
-                // Update navigation
-                document.querySelectorAll('.nav-item').forEach(item => {
-                    item.classList.remove('active');
-                });
-                document.querySelector('[data-section="dashboard"]').classList.add('active');
+                await window.app.navigateToSection('dashboard');
             }
             
             this.showNotification(`Participante ${this.currentPatient.participantCode} seleccionado`, 'success');

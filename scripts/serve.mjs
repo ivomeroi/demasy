@@ -19,6 +19,7 @@ const portArg = process.argv.find(arg => /^\d+$/.test(arg));
 const port = Number(process.env.PORT || portArg || 8000);
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const assistantContextPath = join(root, 'docs', 'ai-assistant-context.md');
+const appRoutes = new Set(['/emg-en-vivo', '/analisis', '/pacientes', '/asistente-ia', '/configuracion']);
 
 const contentTypes = {
     '.css': 'text/css; charset=utf-8',
@@ -204,6 +205,8 @@ const server = createServer(async (req, res) => {
         return;
     }
 
+    const rawPathname = new URL(req.url || '/', 'http://localhost').pathname;
+    const requestPathname = rawPathname.replace(/\/+$/, '') || '/';
     let filePath = resolveRequestPath(req.url || '/');
 
     if (!filePath) {
@@ -217,8 +220,11 @@ const server = createServer(async (req, res) => {
             filePath = join(filePath, 'index.html');
         }
     } catch {
-        send(res, 404, 'Not found');
-        return;
+        if (appRoutes.has(requestPathname)) filePath = join(root, 'index.html');
+        else {
+            send(res, 404, 'Not found');
+            return;
+        }
     }
 
     try {
