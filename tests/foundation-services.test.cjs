@@ -86,3 +86,28 @@ test('replay source reports progress, speed and completion', () => {
     assert.deepEqual(progress, [50, 100, 100]);
     assert.deepEqual(statuses, ['stopped', 'running', 'completed']);
 });
+
+test('replay timers do not inherit the source as their invocation context', () => {
+    let scheduled = false;
+    let cancelled = false;
+    let timerCallback;
+    const replay = new ReplaySignalSource([{ time: 0 }], {
+        setTimeoutFn: function (callback) {
+            assert.notEqual(this, replay);
+            scheduled = true;
+            timerCallback = callback;
+            return 10;
+        },
+        clearTimeoutFn: function (timer) {
+            assert.notEqual(this, replay);
+            assert.equal(timer, 10);
+            cancelled = true;
+        }
+    });
+
+    replay.start();
+    assert.equal(scheduled, true);
+    replay.setSpeed(2);
+    assert.equal(cancelled, true);
+    assert.equal(typeof timerCallback, 'function');
+});

@@ -22,8 +22,10 @@
             this.status = 'stopped';
             this.timer = null;
             this.analysisService = options.analysisService || new AnalysisService();
-            this.setTimeoutFn = options.setTimeoutFn || setTimeout;
-            this.clearTimeoutFn = options.clearTimeoutFn || clearTimeout;
+            const schedule = options.setTimeoutFn || ((callback, delay) => setTimeout(callback, delay));
+            const cancel = options.clearTimeoutFn || (timer => clearTimeout(timer));
+            this.setTimeoutFn = (callback, delay) => schedule(callback, delay);
+            this.clearTimeoutFn = timer => cancel(timer);
             this.callbacks = { onDataUpdate: null, onStatsUpdate: null, onStatusChange: null, onProgress: null };
         }
 
