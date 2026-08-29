@@ -30,6 +30,8 @@
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
 }
 
+[hidden] { display: none !important; }
+
 * {
   margin: 0;
   padding: 0;

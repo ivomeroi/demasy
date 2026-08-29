@@ -111,3 +111,7 @@ Resultado: **37 pruebas aprobadas**, lint y smoke aprobados, prueba con 180.000 
 9. revisar fórmulas, unidades, umbrales y lenguaje descriptivo de este documento.
 
 No integrar la fase ni comenzar la Fase 6 hasta recibir aprobación del responsable.
+
+## 9. Controles contextuales
+
+Los controles de conexión USB, Bluetooth, desconexión y guardado del encabezado se muestran únicamente en `/emg-en-vivo`. Las demás secciones conservan un encabezado limpio y no exponen acciones que no corresponden a su contexto.

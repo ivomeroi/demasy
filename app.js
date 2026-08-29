@@ -690,6 +690,8 @@ class KinesioEMGApp {
         document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.section === target));
         this.showSection(target);
         this.updatePageTitle(target);
+        const emgHeaderActions = document.getElementById('emg-header-actions');
+        if (emgHeaderActions) emgHeaderActions.hidden = target !== 'dashboard';
         if (options.updateHistory !== false) {
             const method = options.replaceHistory ? 'replaceState' : 'pushState';
             window.history[method]({ section: target }, '', this.sectionRouter.getPath(target));
