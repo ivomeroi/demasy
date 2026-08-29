@@ -10,6 +10,8 @@ Cerrar las rutas principales con una experiencia coherente, configurable y utili
 ## Cambios implementados
 
 - Logo oficial en la navegación lateral, metadatos DEMASY y paleta global alineada con la marca.
+- Refinamiento visual con azul marino más profundo, fondos fríos, tarjetas con mayor jerarquía y controles de formulario personalizados.
+- Selectores con flecha, separador, bordes, estados hover/focus y espaciado consistentes en todas las pantallas.
 - Preferencias persistentes en IndexedDB para ventana temporal, escala vertical y series visibles.
 - Ventanas de 1, 5, 10 y 30 segundos; el valor mostrado coincide con el gráfico real.
 - Escala vertical fija o automática.
