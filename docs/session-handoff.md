@@ -12,7 +12,7 @@
 - Fase 3 aprobada manualmente por el responsable el 2026-08-29.
 - Fase 3 integrada en `feature/demasy-v1`.
 - Fase 4 aprobada por el responsable el 2026-08-29 y lista para integrar.
-- Fase 4 integrada; Fase 5 implementada y pendiente de validación manual.
+- Fases 4 y 5 aprobadas; Fase 5 lista para integrar antes de iniciar la Fase 6.
 
 ## Qué incluye la Fase 3
 

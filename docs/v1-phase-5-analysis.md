@@ -1,6 +1,6 @@
 # DEMASY v1 — Fase 5: análisis y comparación
 
-**Estado:** En validación
+**Estado:** Aprobada e integrada
 **Rama:** `feature/demasy-v1-phase-5`
 **Fecha:** 2026-08-29
 
@@ -110,7 +110,7 @@ Resultado: **37 pruebas aprobadas**, lint y smoke aprobados, prueba con 180.000 
 8. verificar que no aparezcan análisis, conclusiones ni indicadores de fatiga;
 9. revisar fórmulas, unidades, umbrales y lenguaje descriptivo de este documento.
 
-No integrar la fase ni comenzar la Fase 6 hasta recibir aprobación del responsable.
+El responsable aprobó la fase el 2026-08-29. La Fase 5 queda habilitada para integración y permite comenzar la Fase 6.
 
 ## 9. Controles contextuales
 
