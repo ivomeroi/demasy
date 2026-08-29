@@ -380,31 +380,7 @@
 
                 <!-- Settings Section -->
                 <section id="settings" class="content-section">
-                    <div class="settings-dashboard">
-                        <h2>Configuración de la Aplicación</h2>
-                        <div class="settings-grid">
-                            <div class="card">
-                                <h3><i class="fas fa-microchip"></i> Configuración de Dispositivo</h3>
-                                <p>Configurar conexión ESP32 y canales bilaterales</p>
-                                <button class="btn-outline">Próximamente</button>
-                            </div>
-                            <div class="card">
-                                <h3><i class="fas fa-sliders-h"></i> Procesamiento de Señal</h3>
-                                <p>Ajustar filtros y parámetros de procesamiento bilateral</p>
-                                <button class="btn-outline">Próximamente</button>
-                            </div>
-                            <div class="card">
-                                <h3><i class="fas fa-palette"></i> Tema de Interfaz</h3>
-                                <p>Personalizar apariencia de la aplicación</p>
-                                <button class="btn-outline">Próximamente</button>
-                            </div>
-                            <div class="card">
-                                <h3><i class="fas fa-user-cog"></i> Preferencias de Usuario</h3>
-                                <p>Establecer preferencias personales y valores predeterminados</p>
-                                <button class="btn-outline">Próximamente</button>
-                            </div>
-                        </div>
-                    </div>
+                    <div id="settings-content"><div class="loading-content"><i class="fas fa-spinner fa-spin"></i><p>Cargando configuración…</p></div></div>
                 </section>
             </div>
         </main>
@@ -430,9 +406,11 @@
     <script src="services/session-configuration-service.js"></script>
     <script src="services/data-normalization-service.js"></script>
     <script src="services/session-history-service.js"></script>
+    <script src="services/backup-service.js"></script>
     <script src="database.js"></script>
     <script src="patient-manager.js"></script>
     <script src="analysis-manager.js"></script>
+    <script src="backup-manager.js"></script>
     <script src="emg-simulator.js"></script>
     <script src="serial-manager.js"></script>
     <script src="bluetooth-manager.js"></script>

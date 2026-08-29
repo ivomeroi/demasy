@@ -790,19 +790,19 @@ Evitar que IndexedDB sea un punto único de pérdida de datos.
 
 #### Tareas
 
-- [ ] Implementar exportación total versionada.
-- [ ] Implementar exportación por participante.
-- [ ] Implementar exportación por sesión.
-- [ ] Crear validación estructural de archivos importados.
-- [ ] Limitar tamaño aceptado.
-- [ ] Mostrar previsualización del contenido.
-- [ ] Implementar estrategia `merge`.
-- [ ] Implementar estrategia `replace` con confirmación reforzada.
-- [ ] Detectar conflictos y duplicados.
-- [ ] Informar creados, actualizados, omitidos y fallidos.
-- [ ] Probar restauración sobre una base vacía.
-- [ ] Probar migración de una versión anterior.
-- [ ] Añadir acción explícita para datos de demostración.
+- [x] Implementar exportación total versionada.
+- [x] Implementar exportación por participante.
+- [x] Implementar exportación por sesión.
+- [x] Crear validación estructural de archivos importados.
+- [x] Limitar tamaño aceptado.
+- [x] Mostrar previsualización del contenido.
+- [x] Implementar estrategia `merge`.
+- [x] Implementar estrategia `replace` con confirmación reforzada.
+- [x] Detectar conflictos y duplicados.
+- [x] Informar creados, actualizados, omitidos y fallidos.
+- [ ] Probar restauración sobre una base vacía (validación manual de Fase 6).
+- [x] Probar migración de una versión anterior.
+- [x] Añadir acción explícita para datos de demostración.
 
 #### Mock requerido
 
@@ -1178,7 +1178,7 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 3. Persistencia | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-3-persistence.md` | Validación manual completada; lista para integrar |
 | 4. Historial | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-4-history-replay.md` | Validación manual completada; lista para integrar |
 | 5. Análisis | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-5-analysis.md` | Validación completada; lista para integrar |
-| 6. Importación/exportación | En curso | 2026-08-29 | Codex | Pendiente | Rama `feature/demasy-v1-phase-6` |
+| 6. Importación/exportación | En validación | 2026-08-29 | Codex | `docs/v1-phase-6-backup-recovery.md` | Implementación en `feature/demasy-v1-phase-6` |
 | 7. Asistente | Pendiente | | | | |
 | 8. UX | Pendiente | | | | |
 | 9. Calidad | Pendiente | | | | |

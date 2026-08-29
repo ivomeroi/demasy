@@ -43,7 +43,7 @@ const DEMO_PROFILES = [
     }
 ];
 
-async function initializeSampleData() {
+async function initializeSampleData(options = {}) {
     console.log('Setting up sample database data...');
     
     try {
@@ -56,13 +56,13 @@ async function initializeSampleData() {
         const db = window.app.database;
         
         const existingPatients = await db.listPatients({ includeArchived: true });
-        if (await db.getSetting(DEMO_DATASET_KEY, false)) {
+        if (!options.force && await db.getSetting(DEMO_DATASET_KEY, false)) {
             console.log('Coherent demo dataset already initialized');
             return;
         }
 
         const existingByCode = new Map(existingPatients.map(patient => [patient.participantCode, patient]));
-        if (existingPatients.length > 0 && !DEMO_PROFILES.some(profile => existingByCode.has(profile.participant.participantCode))) {
+        if (!options.force && existingPatients.length > 0 && !DEMO_PROFILES.some(profile => existingByCode.has(profile.participant.participantCode))) {
             console.log('User database detected without demo participants; sample data was not added');
             await db.setSetting(DEMO_DATASET_KEY, { status: 'skipped', reason: 'user-data-present' });
             return;

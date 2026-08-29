@@ -7,6 +7,7 @@ class DEMASYDatabase {
         this.dbVersion = options.dbVersion || schema.version;
         this.db = null;
         this.normalizer = options.normalizer || new DataNormalizationService();
+        this.backupService = options.backupService || new BackupService();
         this.stores = Object.freeze({ patients: 'patients', sessions: 'sessions', analyses: 'analyses', settings: 'settings' });
         this.migrationSettingKey = 'legacyMigration.v1';
     }
@@ -253,6 +254,47 @@ class DEMASYDatabase {
                 settings: await this.getAll(this.stores.settings)
             }
         };
+    }
+    async importAllData(payload, strategy = 'merge') {
+        const validation = this.backupService.validate(payload);
+        if (!validation.valid) throw new Error(validation.errors.join('. '));
+        if (!['merge', 'replace'].includes(strategy)) throw new Error('Estrategia de importación inválida');
+        const incoming = this.normalizeImportData(payload.data);
+        if (strategy === 'replace') {
+            await this.writeImportTransaction(incoming, true);
+            return { strategy, created: validation.preview, updated: {}, skipped: {}, failed: [] };
+        }
+        const current = (await this.exportAllData()).data;
+        const plan = this.backupService.planMerge(current, incoming);
+        await this.writeImportTransaction(plan.records, false);
+        return { strategy, ...plan.report };
+    }
+
+    normalizeImportData(data) {
+        return {
+            patients: data.patients.map(item => {
+                const normalized = this.normalizer.normalizeParticipant(item);
+                return { ...normalized, id: Number(item.id), createdAt: item.createdAt || normalized.createdAt, updatedAt: item.updatedAt || normalized.updatedAt };
+            }),
+            sessions: data.sessions.map(item => this.normalizer.normalizeSession(item)),
+            analyses: data.analyses.map(item => ({ ...item, id: Number(item.id), sessionId: Number(item.sessionId) })),
+            settings: data.settings.map(item => ({ ...item, key: String(item.key) }))
+        };
+    }
+
+    writeImportTransaction(data, clearFirst) {
+        return new Promise((resolve, reject) => {
+            const names = Object.values(this.stores);
+            const transaction = this.db.transaction(names, 'readwrite');
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(this.normalizeStorageError(transaction.error));
+            transaction.onabort = () => reject(this.normalizeStorageError(transaction.error));
+            for (const name of names) {
+                const store = transaction.objectStore(name);
+                if (clearFirst) store.clear();
+                for (const item of data[name] || []) store.put(item);
+            }
+        });
     }
     async getStatistics() {
         const patients = await this.listPatients({ includeArchived: true });
