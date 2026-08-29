@@ -58,7 +58,7 @@ async function requestWithRetry(path) {
 async function main() {
     try {
         const index = await requestWithRetry('/');
-        if (index.status !== 200 || !index.body.includes('KinesioEMG')) {
+        if (index.status !== 200 || !index.body.includes('DEMASY')) {
             throw new Error('The app shell did not load correctly.');
         }
 
@@ -72,6 +72,7 @@ async function main() {
             'services/memory-storage-adapter.js',
             'services/replay-signal-source.js',
             'services/session-configuration-service.js',
+            'services/data-normalization-service.js',
             'database.js',
             'patient-manager.js',
             'emg-simulator.js',

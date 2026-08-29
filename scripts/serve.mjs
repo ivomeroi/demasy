@@ -83,7 +83,7 @@ function getAssistantContext() {
     try {
         return readFileSync(assistantContextPath, 'utf8');
     } catch {
-        return 'You are the assistant for KinesioEMG. Give cautious educational EMG guidance.';
+        return 'You are the assistant for DEMASY. Give cautious educational EMG guidance.';
     }
 }
 
@@ -241,7 +241,7 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(port, host, () => {
-    console.log(`KinesioEMG is running at http://${host}:${port}`);
+    console.log(`DEMASY is running at http://${host}:${port}`);
     console.log(`AI assistant: ${process.env.GEMINI_API_KEY ? `Gemini enabled (${geminiModel})` : 'offline fallback only'}`);
     console.log('Press Ctrl+C to stop the server.');
 });

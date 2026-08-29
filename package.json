@@ -1,7 +1,7 @@
 {
-  "name": "kinesio-emg",
+  "name": "demasy",
   "version": "0.1.0",
-  "description": "EMG Analysis Platform for Kinesiologists - A complete web-based application with patient management, local database, and real-time bilateral EMG analysis for cycling biomechanics",
+  "description": "DEMASY: plataforma web para adquisición simulada y análisis bilateral de señales EMG",
   "main": "index.html",
   "scripts": {
     "dev": "node scripts/serve.mjs",
@@ -114,8 +114,8 @@
     }
   },
   "pwa": {
-    "name": "KinesioEMG",
-    "short_name": "KinesioEMG",
+    "name": "DEMASY",
+    "short_name": "DEMASY",
     "description": "Professional EMG Analysis Platform",
     "theme_color": "#2563eb",
     "background_color": "#ffffff",

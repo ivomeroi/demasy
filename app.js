@@ -22,7 +22,7 @@ class KinesioEMGApp {
             console.log('AI Assistant created:', !!this.aiAssistant);
             
             // Initialize database and patient manager
-            this.database = new KinesioEMGDatabase();
+            this.database = new DEMASYDatabase();
             this.patientManager = null; // Will be initialized after database
             this.recordingController = new RecordingController();
             this.sessionConfigurationService = new SessionConfigurationService();

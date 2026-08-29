@@ -16,7 +16,7 @@ async function initializeSampleData() {
         const db = window.app.database;
         
         // Check if we already have patients
-        const existingPatients = await db.getAllPatients();
+        const existingPatients = await db.listPatients({ includeArchived: true });
         if (existingPatients.length > 0) {
             console.log('Database already contains patient data');
             return;
@@ -27,6 +27,7 @@ async function initializeSampleData() {
         // Sample patients for demonstration
         const samplePatients = [
             {
+                participantCode: "DEMO-001",
                 name: "María García",
                 email: "maria.garcia@email.com",
                 dateOfBirth: "1985-03-15",
@@ -37,6 +38,7 @@ async function initializeSampleData() {
                 notes: "Rehabilitación post-cirugía, enfoque en fortalecimiento bilateral"
             },
             {
+                participantCode: "DEMO-002",
                 name: "Carlos Rodríguez", 
                 email: "carlos.rodriguez@email.com",
                 dateOfBirth: "1978-11-22",
@@ -47,6 +49,7 @@ async function initializeSampleData() {
                 notes: "Atleta amateur, entrenamiento de ciclismo para recuperación"
             },
             {
+                participantCode: "DEMO-003",
                 name: "Ana López",
                 email: "ana.lopez@email.com", 
                 dateOfBirth: "1992-07-08",

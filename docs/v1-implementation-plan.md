@@ -661,36 +661,36 @@ Completar la administración de participantes y hacer confiable el guardado de s
 
 #### Tareas de base de datos
 
-- [ ] Crear `DEMASYDB` como nombre físico de la base v1.
-- [ ] Detectar y migrar de forma no destructiva los datos existentes desde `KinesioEMGDB`.
-- [ ] Incrementar versión de IndexedDB si cambia el esquema.
-- [ ] Crear migración no destructiva.
-- [ ] Añadir código de participante y estado.
-- [ ] Definir índices necesarios.
-- [ ] Normalizar fechas y valores numéricos.
-- [ ] Manejar transacciones fallidas.
-- [ ] Detectar cuota agotada.
-- [ ] Evitar duplicados evidentes.
+- [x] Crear `DEMASYDB` como nombre físico de la base v1.
+- [x] Detectar y migrar de forma no destructiva los datos existentes desde `KinesioEMGDB`.
+- [x] Incrementar versión de IndexedDB si cambia el esquema.
+- [x] Crear migración no destructiva.
+- [x] Añadir código de participante y estado.
+- [x] Definir índices necesarios.
+- [x] Normalizar fechas y valores numéricos.
+- [x] Manejar transacciones fallidas.
+- [x] Detectar cuota agotada.
+- [x] Evitar duplicados evidentes.
 
 #### Tareas de participantes
 
-- [ ] Crear participante.
-- [ ] Editar participante.
-- [ ] Consultar detalle.
-- [ ] Archivar y restaurar.
-- [ ] Buscar y filtrar.
-- [ ] Seleccionar y cambiar participante actual.
-- [ ] Añadir estados vacíos y confirmaciones.
-- [ ] Escapar todo contenido mostrado.
+- [x] Crear participante.
+- [x] Editar participante.
+- [x] Consultar detalle.
+- [x] Archivar y restaurar.
+- [x] Buscar y filtrar.
+- [x] Seleccionar y cambiar participante actual.
+- [x] Añadir estados vacíos y confirmaciones.
+- [x] Escapar todo contenido mostrado.
 
 #### Tareas de sesiones
 
-- [ ] Guardar la sesión revisada.
-- [ ] Asociarla al participante correcto.
-- [ ] Guardar configuración, fuente, muestras, métricas y notas.
-- [ ] Confirmar el guardado visualmente.
-- [ ] Impedir guardados duplicados accidentales.
-- [ ] Mantener una copia recuperable si la transacción falla.
+- [x] Guardar la sesión revisada.
+- [x] Asociarla al participante correcto.
+- [x] Guardar configuración, fuente, muestras, métricas y notas.
+- [x] Confirmar el guardado visualmente.
+- [x] Impedir guardados duplicados accidentales.
+- [x] Mantener una copia recuperable si la transacción falla.
 
 #### Pruebas
 
@@ -1174,9 +1174,9 @@ Actualizar esta tabla al cerrar cada punto de validación:
 |---|---|---|---|---|---|
 | 0. Línea base | Aprobada | 2026-08-26 | Codex + responsable | `docs/v1-phase-0-baseline.md` | Decisiones aprobadas; análisis de fatiga excluido y base renombrada a DEMASYDB |
 | 1. Fundaciones | Aprobada | 2026-08-27 | Codex + responsable | `docs/v1-phase-1-foundations.md` | Integrada en `feature/demasy-v1` |
-| 2. Grabación | En validación | 2026-08-27 | Codex | `docs/v1-phase-2-recording.md` | Implementación en `feature/demasy-v1-phase-2` |
-| 3. Persistencia | Pendiente | | | | |
-| 4. Historial | Pendiente | | | | |
+| 2. Grabación | Aprobada | 2026-08-27 | Codex + responsable | `docs/v1-phase-2-recording.md` | Integrada en `feature/demasy-v1` |
+| 3. Persistencia | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-3-persistence.md` | Validación manual completada; lista para integrar |
+| 4. Historial | En curso | 2026-08-29 | Codex | Pendiente | Rama `feature/demasy-v1-phase-4` |
 | 5. Análisis | Pendiente | | | | |
 | 6. Importación/exportación | Pendiente | | | | |
 | 7. Asistente | Pendiente | | | | |

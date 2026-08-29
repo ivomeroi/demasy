@@ -1,6 +1,6 @@
 # DEMASY v1 — Fase 2: configuración y grabación
 
-**Estado:** En validación
+**Estado:** Aprobada e integrada
 
 **Fecha:** 2026-08-27
 
@@ -209,4 +209,4 @@ Antes de integrar esta rama, el responsable debe validar manualmente:
 8. guardar o descartar;
 9. repetir con otro escenario.
 
-Después de la aprobación se integrará la Fase 2 en `feature/demasy-v1` y se creará `feature/demasy-v1-phase-3`.
+La Fase 2 fue aprobada e integrada en `feature/demasy-v1`. La implementación continúa en `feature/demasy-v1-phase-3`.
