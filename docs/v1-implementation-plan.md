@@ -717,17 +717,17 @@ Permitir que los datos guardados vuelvan a utilizarse.
 
 #### Tareas
 
-- [ ] Crear listado de sesiones por participante.
-- [ ] Agregar filtros por fecha, músculo, escenario y estado.
-- [ ] Implementar detalle de sesión.
-- [ ] Mostrar configuración y procedencia.
-- [ ] Mostrar métricas guardadas.
-- [ ] Implementar reproducción con controles.
-- [ ] Añadir velocidad 0.5×, 1× y 2× si no compromete el alcance.
-- [ ] Permitir pausar y reiniciar reproducción.
-- [ ] Exportar sesión individual.
-- [ ] Archivar sesión con confirmación.
-- [ ] Corregir o retirar referencias actuales a métodos inexistentes.
+- [x] Crear listado de sesiones por participante.
+- [x] Agregar filtros por fecha, músculo, escenario y estado.
+- [x] Implementar detalle de sesión.
+- [x] Mostrar configuración y procedencia.
+- [x] Mostrar métricas guardadas.
+- [x] Implementar reproducción con controles.
+- [x] Añadir velocidad 0.5×, 1× y 2× si no compromete el alcance.
+- [x] Permitir pausar y reiniciar reproducción.
+- [x] Exportar sesión individual.
+- [x] Archivar sesión con confirmación.
+- [x] Corregir o retirar referencias actuales a métodos inexistentes.
 
 #### Pruebas
 
@@ -1176,7 +1176,7 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 1. Fundaciones | Aprobada | 2026-08-27 | Codex + responsable | `docs/v1-phase-1-foundations.md` | Integrada en `feature/demasy-v1` |
 | 2. Grabación | Aprobada | 2026-08-27 | Codex + responsable | `docs/v1-phase-2-recording.md` | Integrada en `feature/demasy-v1` |
 | 3. Persistencia | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-3-persistence.md` | Validación manual completada; lista para integrar |
-| 4. Historial | En curso | 2026-08-29 | Codex | Pendiente | Rama `feature/demasy-v1-phase-4` |
+| 4. Historial | En validación | 2026-08-29 | Codex | `docs/v1-phase-4-history-replay.md` | Implementación en `feature/demasy-v1-phase-4` |
 | 5. Análisis | Pendiente | | | | |
 | 6. Importación/exportación | Pendiente | | | | |
 | 7. Asistente | Pendiente | | | | |

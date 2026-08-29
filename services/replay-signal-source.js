@@ -24,7 +24,7 @@
             this.analysisService = options.analysisService || new AnalysisService();
             this.setTimeoutFn = options.setTimeoutFn || setTimeout;
             this.clearTimeoutFn = options.clearTimeoutFn || clearTimeout;
-            this.callbacks = { onDataUpdate: null, onStatsUpdate: null };
+            this.callbacks = { onDataUpdate: null, onStatsUpdate: null, onStatusChange: null, onProgress: null };
         }
 
         start(config = {}) {
@@ -32,6 +32,7 @@
             if (Number.isFinite(config.speed) && config.speed > 0) this.speed = config.speed;
             this.reset();
             this.status = 'running';
+            this.emitStatus();
             this.scheduleNext();
         }
 
@@ -39,17 +40,20 @@
             if (this.status !== 'running') return;
             this.status = 'paused';
             this.cancelTimer();
+            this.emitStatus();
         }
 
         resume() {
             if (this.status !== 'paused') return;
             this.status = 'running';
+            this.emitStatus();
             this.scheduleNext();
         }
 
         stop() {
             this.status = 'stopped';
             this.cancelTimer();
+            this.emitStatus();
         }
 
         reset() {
@@ -59,6 +63,16 @@
 
         getStatus() {
             return this.status;
+        }
+
+        setSpeed(speed) {
+            const numeric = Number(speed);
+            if (![0.5, 1, 2].includes(numeric)) throw new Error('Velocidad de reproducción inválida');
+            this.speed = numeric;
+            if (this.status === 'running') {
+                this.cancelTimer();
+                this.scheduleNext();
+            }
         }
 
         getStats() {
@@ -78,14 +92,21 @@
 
             const sample = this.samples[this.index];
             if (!sample) {
-                this.stop();
+                this.cancelTimer();
                 this.status = 'completed';
+                this.emitStatus();
+                this.callbacks.onProgress?.({ index: this.index, total: this.samples.length, percent: 100 });
                 return;
             }
 
             this.index += 1;
             this.callbacks.onDataUpdate?.(sample);
-            this.callbacks.onStatsUpdate?.(this.getStats());
+            if (this.callbacks.onStatsUpdate) this.callbacks.onStatsUpdate(this.getStats());
+            this.callbacks.onProgress?.({
+                index: this.index,
+                total: this.samples.length,
+                percent: this.samples.length ? (this.index / this.samples.length) * 100 : 100
+            });
             this.scheduleNext();
         }
 
@@ -101,6 +122,10 @@
             if (this.timer !== null) this.clearTimeoutFn(this.timer);
             this.timer = null;
         }
+
+        onStatusChange(callback) { this.callbacks.onStatusChange = callback; }
+        onProgress(callback) { this.callbacks.onProgress = callback; }
+        emitStatus() { this.callbacks.onStatusChange?.(this.status); }
     }
 
     return ReplaySignalSource;

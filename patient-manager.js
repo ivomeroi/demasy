@@ -9,6 +9,8 @@ class PatientManager {
         this.currentPatient = null;
         this.currentSession = null;
         this.includeArchived = false;
+        this.historyService = new SessionHistoryService();
+        this.replaySource = null;
     }
 
     // Patient Registration and Management
@@ -304,7 +306,10 @@ class PatientManager {
     async viewPatientHistory(patientId) {
         try {
             const patient = await this.database.getPatient(patientId);
-            const sessions = await this.database.getPatientSessions(patientId);
+            if (!patient) throw new Error('Participante no encontrado');
+            const sessions = await this.database.getPatientSessions(patientId, { includeArchived: true });
+            this.historyPatientId = patientId;
+            this.historySessions = sessions;
             
             const historyHTML = `
                 <div class="modal-overlay" id="history-modal">
@@ -339,7 +344,16 @@ class PatientManager {
                         
                         <div class="sessions-history">
                             <h4>Historial de Sesiones</h4>
-                            ${this.generateSessionHistory(sessions)}
+                            <div class="history-filters">
+                                <input type="date" id="history-date-from" aria-label="Fecha desde">
+                                <input type="date" id="history-date-to" aria-label="Fecha hasta">
+                                <select id="history-muscle"><option value="">Todos los músculos</option>${this.generateFilterOptions(sessions, 'muscleType')}</select>
+                                <select id="history-scenario"><option value="">Todos los escenarios</option>${this.generateScenarioOptions(sessions)}</select>
+                                <select id="history-status"><option value="">Todos los estados</option><option value="completed">Guardadas</option><option value="archived">Archivadas</option></select>
+                                <button class="btn-outline" onclick="window.patientManager.applyHistoryFilters()">Aplicar</button>
+                                <button class="btn-small" onclick="window.patientManager.clearHistoryFilters()">Limpiar</button>
+                            </div>
+                            <div id="session-history-results">${this.generateSessionHistory(sessions)}</div>
                         </div>
                         
                         <div class="modal-actions">
@@ -375,23 +389,30 @@ class PatientManager {
                             <th>Tipo de Músculo</th>
                             <th>Duración</th>
                             <th>Simetría</th>
+                            <th>Escenario</th>
+                            <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${sessions.map(session => `
                             <tr>
-                                <td>${this.formatDate(session.date)}</td>
-                                <td>${this.capitalize(session.muscleType)}</td>
-                                <td>${this.formatDuration(session.duration)}</td>
-                                <td>${session.statistics?.bilateral?.symmetryIndex?.toFixed(0) || 'N/A'}%</td>
+                                <td>${this.formatDate(session.startedAt || session.date)}</td>
+                                <td>${this.escapeHTML(this.capitalize(session.muscleType))}</td>
+                                <td>${this.formatDuration(session.durationSeconds ?? session.duration)}</td>
+                                <td>${Number.isFinite(session.statistics?.bilateral?.symmetryIndex) ? `${session.statistics.bilateral.symmetryIndex.toFixed(0)}%` : 'N/A'}</td>
+                                <td>${this.escapeHTML(this.formatScenario(this.historyService.getScenario(session)))}</td>
+                                <td>${session.status === 'archived' ? 'Archivada' : 'Guardada'}</td>
                                 <td>
-                                    <button class="btn-small" onclick="window.patientManager.viewSessionDetails(${session.id})">
-                                        <i class="fas fa-eye"></i>
+                                    <button class="btn-small" title="Ver detalle" onclick="window.patientManager.viewSessionDetails(${session.id})">
+                                        <i class="fas fa-eye"></i><span class="sr-only">Ver detalle</span>
                                     </button>
-                                    <button class="btn-small" onclick="window.patientManager.downloadSession(${session.id})">
-                                        <i class="fas fa-download"></i>
+                                    <button class="btn-small" title="Exportar" onclick="window.patientManager.downloadSession(${session.id})">
+                                        <i class="fas fa-download"></i><span class="sr-only">Exportar</span>
                                     </button>
+                                    ${session.status === 'archived'
+                                        ? `<button class="btn-small" title="Restaurar" onclick="window.patientManager.restoreSession(${session.id})"><i class="fas fa-undo"></i><span class="sr-only">Restaurar</span></button>`
+                                        : `<button class="btn-small" title="Archivar" onclick="window.patientManager.archiveSession(${session.id})"><i class="fas fa-archive"></i><span class="sr-only">Archivar</span></button>`}
                                 </td>
                             </tr>
                         `).join('')}
@@ -399,6 +420,170 @@ class PatientManager {
                 </table>
             </div>
         `;
+    }
+
+    generateFilterOptions(sessions, property) {
+        return [...new Set(sessions.map(session => session[property]).filter(Boolean))]
+            .sort().map(value => `<option value="${this.escapeHTML(value)}">${this.escapeHTML(this.capitalize(value))}</option>`).join('');
+    }
+
+    generateScenarioOptions(sessions) {
+        return [...new Set(sessions.map(session => this.historyService.getScenario(session)).filter(value => value !== 'unknown'))]
+            .sort().map(value => `<option value="${this.escapeHTML(value)}">${this.escapeHTML(this.formatScenario(value))}</option>`).join('');
+    }
+
+    applyHistoryFilters() {
+        const filters = {
+            dateFrom: document.getElementById('history-date-from')?.value,
+            dateTo: document.getElementById('history-date-to')?.value,
+            muscleType: document.getElementById('history-muscle')?.value,
+            scenario: document.getElementById('history-scenario')?.value,
+            status: document.getElementById('history-status')?.value
+        };
+        const results = document.getElementById('session-history-results');
+        if (results) results.innerHTML = this.generateSessionHistory(this.historyService.filter(this.historySessions, filters));
+    }
+
+    clearHistoryFilters() {
+        ['history-date-from', 'history-date-to', 'history-muscle', 'history-scenario', 'history-status']
+            .forEach(id => { const input = document.getElementById(id); if (input) input.value = ''; });
+        this.applyHistoryFilters();
+    }
+
+    async refreshHistory() {
+        if (!this.historyPatientId || !document.getElementById('history-modal')) return;
+        this.historySessions = await this.database.getPatientSessions(this.historyPatientId, { includeArchived: true });
+        this.applyHistoryFilters();
+    }
+
+    async viewSessionDetails(sessionId) {
+        try {
+            const session = await this.database.getSession(sessionId);
+            if (!session) throw new Error('Sesión no encontrada');
+            const samples = this.historyService.getSamples(session);
+            const symmetry = session.statistics?.bilateral?.symmetryIndex;
+            document.getElementById('session-detail-modal')?.remove();
+            document.body.insertAdjacentHTML('beforeend', `
+                <div class="modal-overlay" id="session-detail-modal">
+                    <div class="modal-content large-modal">
+                        <div class="modal-header"><h3>${this.escapeHTML(session.label || `Sesión ${session.id}`)}</h3><button class="modal-close" onclick="window.patientManager.closeSessionDetails()"><i class="fas fa-times"></i></button></div>
+                        <div class="session-detail-grid">
+                            <div><label>Fecha</label><strong>${this.formatDate(session.startedAt || session.date)}</strong></div>
+                            <div><label>Duración</label><strong>${this.formatDuration(session.durationSeconds ?? session.duration)}</strong></div>
+                            <div><label>Músculo</label><strong>${this.escapeHTML(this.capitalize(session.muscleType))}</strong></div>
+                            <div><label>Escenario</label><strong>${this.escapeHTML(this.formatScenario(this.historyService.getScenario(session)))}</strong></div>
+                            <div><label>Origen</label><strong>${this.escapeHTML(`${session.source?.type || 'simulation'} · ${session.source?.provider || 'local'}`)}</strong></div>
+                            <div><label>Muestras</label><strong>${samples.length}</strong></div>
+                            <div><label>Cadencia</label><strong>${Number(session.cadence || 0)} rpm</strong></div>
+                            <div><label>Resistencia</label><strong>${this.formatResistance(session.resistance)}</strong></div>
+                            <div><label>Simetría</label><strong>${Number.isFinite(symmetry) ? `${symmetry.toFixed(1)}%` : 'N/A'}</strong></div>
+                            <div><label>Estado</label><strong>${session.status === 'archived' ? 'Archivada' : 'Guardada'}</strong></div>
+                        </div>
+                        <div class="session-notes"><label>Notas</label><p>${this.escapeHTML(session.notes || 'Sin notas')}</p></div>
+                        ${this.generateReplayPanel(session, samples)}
+                        <div class="modal-actions"><button class="btn-outline" onclick="window.patientManager.downloadSession(${session.id})">Exportar JSON</button></div>
+                    </div>
+                </div>`);
+        } catch (error) {
+            this.showNotification(`No se pudo abrir la sesión: ${error.message}`, 'error');
+        }
+    }
+
+    generateReplayPanel(session, samples) {
+        if (!samples.length) return '<div class="empty-sessions">Esta sesión no contiene muestras reproducibles.</div>';
+        return `<div class="replay-panel" data-session-id="${session.id}">
+            <div class="replay-values"><strong id="replay-status">Lista para reproducir</strong><span id="replay-time">0.00 s</span><span id="replay-left">Izq: —</span><span id="replay-right">Der: —</span></div>
+            <div class="replay-track"><div id="replay-progress" class="replay-progress"></div></div>
+            <div class="replay-controls">
+                <button class="btn-control primary" id="replay-toggle" onclick="window.patientManager.toggleReplay(${session.id})">Reproducir</button>
+                <button class="btn-outline" onclick="window.patientManager.resetReplay(${session.id})">Reiniciar</button>
+                <label>Velocidad <select id="replay-speed" onchange="window.patientManager.setReplaySpeed(this.value)"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+            </div>
+        </div>`;
+    }
+
+    async toggleReplay(sessionId) {
+        const session = await this.database.getSession(sessionId);
+        const samples = this.historyService.getSamples(session);
+        if (!samples.length) return;
+        if (!this.replaySource || this.replaySessionId !== sessionId || ['stopped', 'completed'].includes(this.replaySource.getStatus())) {
+            this.createReplaySource(sessionId, samples);
+            this.replaySource.start({ speed: Number(document.getElementById('replay-speed')?.value || 1) });
+        } else if (this.replaySource.getStatus() === 'running') this.replaySource.pause();
+        else this.replaySource.resume();
+    }
+
+    createReplaySource(sessionId, samples) {
+        this.replaySource?.stop();
+        this.replaySessionId = sessionId;
+        this.replaySource = new ReplaySignalSource(samples);
+        this.replaySource.onDataUpdate(sample => {
+            const time = Number(sample.time ?? sample.timestamp ?? 0);
+            const left = Number(sample.left?.amplitude ?? sample.left?.emg ?? sample.left ?? 0);
+            const right = Number(sample.right?.amplitude ?? sample.right?.emg ?? sample.right ?? 0);
+            if (document.getElementById('replay-time')) document.getElementById('replay-time').textContent = `${time.toFixed(2)} s`;
+            if (document.getElementById('replay-left')) document.getElementById('replay-left').textContent = `Izq: ${left.toFixed(3)} mV`;
+            if (document.getElementById('replay-right')) document.getElementById('replay-right').textContent = `Der: ${right.toFixed(3)} mV`;
+        });
+        this.replaySource.onProgress(progress => { if (document.getElementById('replay-progress')) document.getElementById('replay-progress').style.width = `${progress.percent}%`; });
+        this.replaySource.onStatusChange(status => this.updateReplayUI(status));
+    }
+
+    updateReplayUI(status) {
+        const labels = { running: 'Reproduciendo', paused: 'Pausada', stopped: 'Detenida', completed: 'Finalizada' };
+        const statusElement = document.getElementById('replay-status');
+        const toggle = document.getElementById('replay-toggle');
+        if (statusElement) statusElement.textContent = labels[status] || status;
+        if (toggle) toggle.textContent = status === 'running' ? 'Pausar' : status === 'paused' ? 'Continuar' : 'Reproducir';
+    }
+
+    setReplaySpeed(speed) {
+        try { this.replaySource?.setSpeed(Number(speed)); }
+        catch (error) { this.showNotification(error.message, 'error'); }
+    }
+
+    async resetReplay(sessionId) {
+        this.replaySource?.reset();
+        this.replaySource = null;
+        this.replaySessionId = null;
+        ['replay-time', 'replay-left', 'replay-right'].forEach((id, index) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = index === 0 ? '0.00 s' : index === 1 ? 'Izq: —' : 'Der: —';
+        });
+        if (document.getElementById('replay-progress')) document.getElementById('replay-progress').style.width = '0%';
+        this.updateReplayUI('stopped');
+    }
+
+    closeSessionDetails() {
+        this.replaySource?.stop();
+        this.replaySource = null;
+        document.getElementById('session-detail-modal')?.remove();
+    }
+
+    async downloadSession(sessionId) {
+        try {
+            const session = await this.database.getSession(sessionId);
+            if (!session) throw new Error('Sesión no encontrada');
+            this.downloadJSON({ application: 'DEMASY', schemaVersion: 1, exportedAt: new Date().toISOString(), session }, `demasy-session-${session.id}.json`);
+            this.showNotification('Sesión exportada correctamente', 'success');
+        } catch (error) { this.showNotification(`No se pudo exportar: ${error.message}`, 'error'); }
+    }
+
+    async archiveSession(sessionId) {
+        if (!window.confirm('¿Archivar esta sesión? Los datos se conservarán.')) return;
+        try {
+            await this.database.archiveSession(sessionId);
+            await this.refreshHistory();
+            this.showNotification('Sesión archivada', 'success');
+        } catch (error) { this.showNotification(`No se pudo archivar: ${error.message}`, 'error'); }
+    }
+
+    async restoreSession(sessionId) {
+        try {
+            await this.database.restoreSession(sessionId);
+            await this.refreshHistory();
+            this.showNotification('Sesión restaurada', 'success');
+        } catch (error) { this.showNotification(`No se pudo restaurar: ${error.message}`, 'error'); }
     }
 
     // Session Management
@@ -493,6 +678,25 @@ class PatientManager {
         const minutes = Math.floor(duration / 60);
         const seconds = duration % 60;
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    formatScenario(value) {
+        const labels = {
+            symmetric: 'Pedaleo simétrico',
+            'left-weakness': 'Menor activación izquierda',
+            'right-weakness': 'Menor activación derecha',
+            'left-fatigue': 'Patrón simulado de fatiga izquierda',
+            'right-fatigue': 'Patrón simulado de fatiga derecha',
+            'phase-delay': 'Retraso de fase',
+            intervals: 'Intervalos', custom: 'Personalizado', unknown: 'No registrado'
+        };
+        return labels[value] || this.capitalize(value);
+    }
+
+    formatResistance(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return 'N/A';
+        return `${numeric <= 1 ? Math.round(numeric * 100) : Math.round(numeric)}%`;
     }
 
     capitalize(str) {
@@ -637,24 +841,25 @@ class PatientManager {
             const data = await this.database.exportPatientData(patientId);
             const patient = await this.database.getPatient(patientId);
             
-            const blob = new Blob([JSON.stringify(data, null, 2)], {
-                type: 'application/json'
-            });
-            
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${patient.participantCode}_data_${new Date().toISOString().slice(0, 10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            this.downloadJSON(data, `${patient.participantCode}_data_${new Date().toISOString().slice(0, 10)}.json`);
             
             this.showNotification('Datos del paciente exportados exitosamente', 'success');
         } catch (error) {
             console.error('Error exporting patient data:', error);
             this.showNotification('Error al exportar datos del paciente', 'error');
         }
+    }
+
+    downloadJSON(data, filename) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
     }
 
     showNotification(message, type = 'info') {

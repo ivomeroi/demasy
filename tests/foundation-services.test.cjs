@@ -62,3 +62,27 @@ test('replay source supports deterministic pause and resume', () => {
     replay.resume();
     assert.equal(replay.getStatus(), 'running');
 });
+
+test('replay source reports progress, speed and completion', () => {
+    const scheduled = [];
+    const replay = new ReplaySignalSource([{ time: 0 }, { time: 0.01 }], {
+        setTimeoutFn: callback => { scheduled.push(callback); return scheduled.length; },
+        clearTimeoutFn: () => {}
+    });
+    const statuses = [];
+    const progress = [];
+    replay.onStatusChange(status => statuses.push(status));
+    replay.onProgress(value => progress.push(value.percent));
+    replay.setSpeed(2);
+    assert.equal(replay.speed, 2);
+    assert.throws(() => replay.setSpeed(3), /Velocidad/);
+
+    replay.start();
+    scheduled.shift()();
+    scheduled.shift()();
+    scheduled.shift()();
+
+    assert.equal(replay.getStatus(), 'completed');
+    assert.deepEqual(progress, [50, 100, 100]);
+    assert.deepEqual(statuses, ['stopped', 'running', 'completed']);
+});
