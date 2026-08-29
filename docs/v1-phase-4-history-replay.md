@@ -1,6 +1,6 @@
 # DEMASY v1 — Fase 4: historial, detalle y reproducción
 
-**Estado:** En validación
+**Estado:** Aprobada e integrada
 **Rama:** `feature/demasy-v1-phase-4`
 **Fecha:** 2026-08-29
 
@@ -125,7 +125,7 @@ En `http://127.0.0.1:8000`:
 10. archivar una sesión, filtrarla por estado y restaurarla;
 11. abrir una sesión histórica o sin muestras, si existe, y comprobar el estado vacío.
 
-La fase permanece en validación hasta la confirmación del responsable. No iniciar la Fase 5 antes de esa aprobación.
+El responsable confirmó la validación visual y funcional el 2026-08-29. La Fase 4 queda aprobada y habilita el inicio de la Fase 5.
 
 ## 10. Navegación persistente
 

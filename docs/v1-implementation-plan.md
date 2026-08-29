@@ -1176,8 +1176,8 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 1. Fundaciones | Aprobada | 2026-08-27 | Codex + responsable | `docs/v1-phase-1-foundations.md` | Integrada en `feature/demasy-v1` |
 | 2. Grabación | Aprobada | 2026-08-27 | Codex + responsable | `docs/v1-phase-2-recording.md` | Integrada en `feature/demasy-v1` |
 | 3. Persistencia | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-3-persistence.md` | Validación manual completada; lista para integrar |
-| 4. Historial | En validación | 2026-08-29 | Codex | `docs/v1-phase-4-history-replay.md` | Implementación en `feature/demasy-v1-phase-4` |
-| 5. Análisis | Pendiente | | | | |
+| 4. Historial | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-4-history-replay.md` | Validación manual completada; lista para integrar |
+| 5. Análisis | En curso | 2026-08-29 | Codex | Pendiente | Rama `feature/demasy-v1-phase-5` |
 | 6. Importación/exportación | Pendiente | | | | |
 | 7. Asistente | Pendiente | | | | |
 | 8. UX | Pendiente | | | | |
