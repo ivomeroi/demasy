@@ -1,6 +1,6 @@
 # DEMASY v1 — Fase 3: participantes y persistencia
 
-**Estado:** En validación  
+**Estado:** Aprobada e integrada
 **Rama:** `feature/demasy-v1-phase-3`  
 **Fecha:** 2026-08-27
 
@@ -122,7 +122,7 @@ El navegador integrado de Codex no se encontraba conectado durante esta ejecuci�
 | Guardar sesión normalizada | Cumplido | normalizador v1 y relación obligatoria |
 | Recuperación ante error | Cumplido | datos en memoria hasta confirmar transacción |
 | Pruebas automatizadas | Cumplido | 23 pruebas y smoke |
-| Recarga y consulta manual | Pendiente de validación | recorrido indicado abajo |
+| Recarga y consulta manual | Cumplido | recorrido validado por el responsable el 2026-08-29 |
 
 ## 10. Punto de validación 3
 
@@ -138,4 +138,4 @@ Validar manualmente en `http://127.0.0.1:8000`:
 8. activar **Mostrar archivados**, restaurarlo y volver a seleccionarlo;
 9. si existía una instalación anterior, comprobar en DevTools que `KinesioEMGDB` continúa presente y que `DEMASYDB` contiene sus registros.
 
-La fase debe permanecer en validación hasta que el responsable confirme este recorrido. No iniciar la Fase 4 antes de esa aprobación.
+El responsable confirmó este recorrido el 2026-08-29. La Fase 3 queda aprobada y habilita el inicio de la Fase 4.
