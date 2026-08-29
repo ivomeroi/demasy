@@ -484,6 +484,7 @@ class PatientManager {
                         <div class="modal-actions"><button class="btn-outline" onclick="window.patientManager.downloadSession(${session.id})">Exportar JSON</button></div>
                     </div>
                 </div>`);
+            if (samples.length) this.createReplayCharts(samples);
         } catch (error) {
             this.showNotification(`No se pudo abrir la sesión: ${error.message}`, 'error');
         }
@@ -493,10 +494,14 @@ class PatientManager {
         if (!samples.length) return '<div class="empty-sessions">Esta sesión no contiene muestras reproducibles.</div>';
         return `<div class="replay-panel" data-session-id="${session.id}">
             <div class="replay-values"><strong id="replay-status">Lista para reproducir</strong><span id="replay-time">0.00 s</span><span id="replay-left">Izq: —</span><span id="replay-right">Der: —</span></div>
-            <div class="replay-chart-container"><canvas id="replay-chart" aria-label="Señal EMG bilateral grabada"></canvas></div>
+            <label class="replay-chart-label">Señal completa grabada</label>
+            <div class="replay-overview-container"><canvas id="replay-overview-chart" aria-label="Vista completa de la señal EMG bilateral"></canvas></div>
+            <div class="replay-window-header"><label for="replay-window-slider">Ventana temporal ampliada</label><span id="replay-window-label">0.00–5.00 s</span></div>
+            <input type="range" id="replay-window-slider" class="replay-window-slider" min="0" max="0" value="0" step="0.1" oninput="window.patientManager.moveReplayWindow(this.value)">
+            <div class="replay-chart-container"><canvas id="replay-chart" aria-label="Ventana de la señal EMG bilateral grabada"></canvas></div>
             <div class="replay-track"><div id="replay-progress" class="replay-progress"></div></div>
             <div class="replay-controls">
-                <button class="btn-control primary" id="replay-toggle" onclick="window.patientManager.toggleReplay(${session.id})">Reproducir</button>
+                <button class="btn-control primary" id="replay-toggle" onclick="window.patientManager.toggleReplay(${session.id})">Recorrer automáticamente</button>
                 <button class="btn-outline" onclick="window.patientManager.resetReplay(${session.id})">Reiniciar</button>
                 <label>Velocidad <select id="replay-speed" onchange="window.patientManager.setReplaySpeed(this.value)"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
             </div>
@@ -517,7 +522,7 @@ class PatientManager {
     createReplaySource(sessionId, samples) {
         this.replaySource?.stop();
         this.replaySessionId = sessionId;
-        this.createReplayChart();
+        if (!this.replayChart) this.createReplayCharts(samples);
         this.replaySource = new ReplaySignalSource(samples);
         this.replaySource.onDataUpdate(sample => {
             const time = Number(sample.time ?? sample.timestamp ?? 0);
@@ -526,57 +531,96 @@ class PatientManager {
             if (document.getElementById('replay-time')) document.getElementById('replay-time').textContent = `${time.toFixed(2)} s`;
             if (document.getElementById('replay-left')) document.getElementById('replay-left').textContent = `Izq: ${left.toFixed(3)} mV`;
             if (document.getElementById('replay-right')) document.getElementById('replay-right').textContent = `Der: ${right.toFixed(3)} mV`;
-            this.appendReplayChartSample(time, left, right);
+            this.followReplayTime(time);
         });
         this.replaySource.onProgress(progress => { if (document.getElementById('replay-progress')) document.getElementById('replay-progress').style.width = `${progress.percent}%`; });
         this.replaySource.onStatusChange(status => this.updateReplayUI(status));
     }
 
-    createReplayChart() {
+    createReplayCharts(samples) {
         this.replayChart?.destroy();
+        this.replayOverviewChart?.destroy();
         this.replayChart = null;
+        this.replayOverviewChart = null;
         this.lastReplayChartRenderTime = Number.NEGATIVE_INFINITY;
         const canvas = document.getElementById('replay-chart');
-        if (!canvas || typeof Chart === 'undefined') {
+        const overviewCanvas = document.getElementById('replay-overview-chart');
+        if (!canvas || !overviewCanvas || typeof Chart === 'undefined') {
             this.showNotification('No se pudo inicializar el gráfico de reproducción', 'warning');
             return;
         }
+        this.replayChartSamples = samples.map(sample => ({
+            time: Number(sample.time ?? sample.timestamp ?? 0),
+            left: Number(sample.left?.amplitude ?? sample.left?.emg ?? sample.left ?? 0),
+            right: Number(sample.right?.amplitude ?? sample.right?.emg ?? sample.right ?? 0)
+        })).filter(sample => Number.isFinite(sample.time) && Number.isFinite(sample.left) && Number.isFinite(sample.right));
+        const duration = this.replayChartSamples.at(-1)?.time || 0;
+        const slider = document.getElementById('replay-window-slider');
+        if (slider) slider.max = String(Math.max(0, duration - 5));
+        const overview = this.decimateReplaySamples(this.replayChartSamples, 2000);
+        this.replayOverviewChart = new Chart(overviewCanvas.getContext('2d'), {
+            type: 'line',
+            data: { datasets: this.buildReplayDatasets(overview) },
+            options: this.buildReplayChartOptions(true)
+        });
         this.replayChart = new Chart(canvas.getContext('2d'), {
             type: 'line',
-            data: {
-                datasets: [
-                    { label: 'Izquierda', data: [], borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0 },
-                    { label: 'Derecha', data: [], borderColor: '#ef4444', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                parsing: false,
-                normalized: true,
-                interaction: { intersect: false, mode: 'index' },
-                scales: {
-                    x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } },
-                    y: { title: { display: true, text: 'Amplitud (mV)' } }
-                }
-            }
+            data: { datasets: this.buildReplayDatasets([]) },
+            options: this.buildReplayChartOptions(true)
         });
+        this.renderReplayWindow(0);
     }
 
-    appendReplayChartSample(time, left, right) {
-        if (!this.replayChart || !Number.isFinite(time) || !Number.isFinite(left) || !Number.isFinite(right)) return;
-        const datasets = this.replayChart.data.datasets;
-        datasets[0].data.push({ x: time, y: left });
-        datasets[1].data.push({ x: time, y: right });
-        const windowStart = Math.max(0, time - 5);
-        while (datasets[0].data[0]?.x < windowStart) datasets[0].data.shift();
-        while (datasets[1].data[0]?.x < windowStart) datasets[1].data.shift();
-        this.replayChart.options.scales.x.min = windowStart;
-        this.replayChart.options.scales.x.max = Math.max(5, time);
+    buildReplayDatasets(samples) {
+        return [
+            { label: 'Izquierda', data: samples.map(sample => ({ x: sample.time, y: sample.left })), borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0 },
+            { label: 'Derecha', data: samples.map(sample => ({ x: sample.time, y: sample.right })), borderColor: '#ef4444', backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0 }
+        ];
+    }
+
+    buildReplayChartOptions(showAxes) {
+        return {
+            responsive: true, maintainAspectRatio: false, animation: false, parsing: false, normalized: true,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: { legend: { display: true } },
+            scales: {
+                x: { type: 'linear', display: showAxes, title: { display: showAxes, text: 'Tiempo (s)' } },
+                y: { display: showAxes, title: { display: showAxes, text: 'Amplitud (mV)' } }
+            }
+        };
+    }
+
+    decimateReplaySamples(samples, maximumPoints) {
+        if (samples.length <= maximumPoints) return samples;
+        const step = Math.ceil(samples.length / maximumPoints);
+        return samples.filter((_, index) => index % step === 0 || index === samples.length - 1);
+    }
+
+    renderReplayWindow(startValue) {
+        if (!this.replayChart || !this.replayChartSamples) return;
+        const maximumStart = Math.max(0, (this.replayChartSamples.at(-1)?.time || 0) - 5);
+        const start = Math.min(maximumStart, Math.max(0, Number(startValue) || 0));
+        const end = start + 5;
+        const visible = this.replayChartSamples.filter(sample => sample.time >= start && sample.time <= end);
+        this.replayChart.data.datasets = this.buildReplayDatasets(visible);
+        this.replayChart.options.scales.x.min = start;
+        this.replayChart.options.scales.x.max = end;
+        this.replayChart.update('none');
+        const slider = document.getElementById('replay-window-slider');
+        if (slider) slider.value = String(start);
+        const label = document.getElementById('replay-window-label');
+        if (label) label.textContent = `${start.toFixed(2)}–${end.toFixed(2)} s`;
+    }
+
+    moveReplayWindow(value) {
+        if (this.replaySource?.getStatus() === 'running') this.replaySource.pause();
+        this.renderReplayWindow(value);
+    }
+
+    followReplayTime(time) {
         if (time - this.lastReplayChartRenderTime >= 0.05) {
             this.lastReplayChartRenderTime = time;
-            this.replayChart.update('none');
+            this.renderReplayWindow(Math.max(0, time - 5));
         }
     }
 
@@ -585,7 +629,7 @@ class PatientManager {
         const statusElement = document.getElementById('replay-status');
         const toggle = document.getElementById('replay-toggle');
         if (statusElement) statusElement.textContent = labels[status] || status;
-        if (toggle) toggle.textContent = status === 'running' ? 'Pausar' : status === 'paused' ? 'Continuar' : 'Reproducir';
+        if (toggle) toggle.textContent = status === 'running' ? 'Pausar' : status === 'paused' ? 'Continuar' : 'Recorrer automáticamente';
     }
 
     setReplaySpeed(speed) {
@@ -597,8 +641,7 @@ class PatientManager {
         this.replaySource?.reset();
         this.replaySource = null;
         this.replaySessionId = null;
-        this.replayChart?.destroy();
-        this.replayChart = null;
+        this.renderReplayWindow(0);
         ['replay-time', 'replay-left', 'replay-right'].forEach((id, index) => {
             const element = document.getElementById(id);
             if (element) element.textContent = index === 0 ? '0.00 s' : index === 1 ? 'Izq: —' : 'Der: —';
@@ -611,7 +654,10 @@ class PatientManager {
         this.replaySource?.stop();
         this.replaySource = null;
         this.replayChart?.destroy();
+        this.replayOverviewChart?.destroy();
         this.replayChart = null;
+        this.replayOverviewChart = null;
+        this.replayChartSamples = null;
         document.getElementById('session-detail-modal')?.remove();
     }
 

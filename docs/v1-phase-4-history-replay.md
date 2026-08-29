@@ -46,7 +46,9 @@ Una sesión antigua o vacía continúa siendo consultable y exportable, pero mue
 - reiniciar desde el comienzo;
 - seleccionar 0.5×, 1× o 2× durante la reproducción;
 - consultar tiempo, valores bilaterales y progreso;
-- observar un gráfico bilateral móvil construido con las muestras guardadas, con una ventana visible de cinco segundos;
+- observar la curva bilateral completa desde que se abre el detalle;
+- desplazar manualmente una ventana ampliada de cinco segundos mediante una barra temporal;
+- seguir automáticamente esa misma ventana durante la reproducción;
 - detectar la finalización automáticamente.
 
 El cálculo de estadísticas durante la reproducción solo se ejecuta cuando existe un consumidor registrado, evitando trabajo cuadrático innecesario en sesiones extensas.
@@ -114,12 +116,13 @@ En `http://127.0.0.1:8000`:
 2. comprobar que las sesiones estén ordenadas de la más reciente a la más antigua;
 3. combinar filtros de fecha, músculo, escenario y estado, y luego limpiarlos;
 4. abrir un detalle y verificar configuración, procedencia, métricas y notas;
-5. reproducir a 1×, pausar, continuar y reiniciar;
+5. comprobar que la curva completa aparezca al abrir el detalle y mover manualmente la ventana ampliada con la barra temporal;
+6. recorrer automáticamente a 1×, pausar, continuar y reiniciar;
    comprobar que el gráfico muestre exclusivamente la señal grabada y que se detenga al pausar;
-6. repetir a 0.5× y 2×;
-7. dejar terminar una reproducción y comprobar el estado “Finalizada”;
-8. exportar una sesión y revisar el JSON descargado;
-9. archivar una sesión, filtrarla por estado y restaurarla;
-10. abrir una sesión histórica o sin muestras, si existe, y comprobar el estado vacío.
+7. repetir a 0.5× y 2×;
+8. dejar terminar un recorrido y comprobar el estado “Finalizada”;
+9. exportar una sesión y revisar el JSON descargado;
+10. archivar una sesión, filtrarla por estado y restaurarla;
+11. abrir una sesión histórica o sin muestras, si existe, y comprobar el estado vacío.
 
 La fase permanece en validación hasta la confirmación del responsable. No iniciar la Fase 5 antes de esa aprobación.
