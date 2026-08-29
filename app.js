@@ -26,6 +26,7 @@ class KinesioEMGApp {
             this.patientManager = null; // Will be initialized after database
             this.recordingController = new RecordingController();
             this.sessionConfigurationService = new SessionConfigurationService();
+            this.sectionRouter = new SectionRouter();
             this.sessionReview = null;
             this.recordingTimerInterval = null;
             
@@ -87,7 +88,7 @@ class KinesioEMGApp {
             this.setupSerialManager();
             this.setupBluetoothManager();
             this.setupAIAssistant();
-            this.initializeUI();
+            await this.initializeUI();
             
             console.log('KinesioEMG application initialized successfully');
         } catch (error) {
@@ -274,6 +275,10 @@ class KinesioEMGApp {
             item.addEventListener('click', (e) => {
                 this.handleNavigation(e.target.closest('.nav-item'));
             });
+        });
+
+        window.addEventListener('popstate', () => {
+            this.navigateToSection(this.sectionRouter.getSection(window.location.pathname), { updateHistory: false });
         });
 
         window.addEventListener('beforeunload', event => {
@@ -628,7 +633,7 @@ class KinesioEMGApp {
         });
     }
 
-    initializeUI() {
+    async initializeUI() {
         // Set initial states
         this.updateConnectionStatus('mock');
         this.updateRecordingControls(false);
@@ -668,31 +673,24 @@ class KinesioEMGApp {
             }
         });
 
-        // Set initial section
-        this.showSection('dashboard');
+        const initialSection = this.sectionRouter.getSection(window.location.pathname);
+        await this.navigateToSection(initialSection, { replaceHistory: true });
     }
 
     async handleNavigation(navItem) {
-        // Remove active class from all nav items
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('active');
-        });
+        await this.navigateToSection(navItem.dataset.section);
+    }
 
-        // Add active class to clicked item
-        navItem.classList.add('active');
-
-        // Show corresponding section
-        const section = navItem.dataset.section;
-        
-        // Special handling for patients section
-        if (section === 'patients') {
-            await this.loadPatientsSection();
+    async navigateToSection(section, options = {}) {
+        const target = this.sectionRouter.routes[section] ? section : 'dashboard';
+        if (target === 'patients') await this.loadPatientsSection();
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.section === target));
+        this.showSection(target);
+        this.updatePageTitle(target);
+        if (options.updateHistory !== false) {
+            const method = options.replaceHistory ? 'replaceState' : 'pushState';
+            window.history[method]({ section: target }, '', this.sectionRouter.getPath(target));
         }
-        
-        this.showSection(section);
-
-        // Update page title
-        this.updatePageTitle(section);
     }
 
     async loadPatientsSection() {
@@ -1008,9 +1006,7 @@ class KinesioEMGApp {
         const patient = this.patientManager?.currentPatient;
         if (!patient) {
             this.showNotification('Selecciona un participante desde la sección Pacientes', 'warning');
-            this.showSection('patients');
-            this.updatePageTitle('patients');
-            this.loadPatientsSection();
+            this.navigateToSection('patients');
             return;
         }
 

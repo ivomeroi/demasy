@@ -1316,6 +1316,57 @@ body {
   font-size: 0.875rem;
 }
 
+.history-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.session-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.session-detail-grid div,
+.session-notes,
+.replay-panel {
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 0.5rem;
+}
+
+.session-detail-grid label,
+.session-notes label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin-bottom: 0.35rem;
+}
+
+.replay-panel { margin-top: 1rem; }
+.replay-values, .replay-controls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.replay-chart-label, .replay-window-header { display: flex; justify-content: space-between; margin-top: 1rem; color: var(--text-secondary); font-size: 0.85rem; }
+.replay-overview-container { position: relative; height: 150px; margin-top: 0.5rem; background: var(--bg-primary); border-radius: 0.5rem; }
+.replay-window-slider { width: 100%; margin: 0.75rem 0; }
+.replay-chart-container { position: relative; height: 280px; margin-top: 1rem; background: var(--bg-primary); border-radius: 0.5rem; }
+.replay-track { height: 0.6rem; background: var(--border-color); border-radius: 999px; overflow: hidden; margin: 1rem 0; }
+.replay-progress { width: 0; height: 100%; background: var(--primary-color); transition: width 0.1s linear; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;

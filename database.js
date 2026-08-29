@@ -215,6 +215,7 @@ class DEMASYDatabase {
         return session;
     }
     archiveSession(id) { return this.updateSession(id, { status: 'archived' }); }
+    restoreSession(id) { return this.updateSession(id, { status: 'completed' }); }
 
     async createAnalysis(data) {
         const analysis = {
