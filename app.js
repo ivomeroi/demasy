@@ -19,6 +19,8 @@ class KinesioEMGApp {
             console.log('Bluetooth manager created:', !!this.bluetoothManager);
             
             this.aiAssistant = new KinesiologyAIAssistant();  
+            this.assistantService = null;
+            this.chatPending = false;
             console.log('AI Assistant created:', !!this.aiAssistant);
             
             // Initialize database and patient manager
@@ -470,6 +472,20 @@ class KinesioEMGApp {
             this.clearChat();
         });
 
+        document.getElementById('assistant-mode')?.addEventListener('change', async event => {
+            this.assistantService?.setMode(event.target.value);
+            await this.settingsService.set('assistantMode', event.target.value);
+            this.updateAssistantSource(event.target.value === 'auto' ? 'auto' : event.target.value === 'local' ? 'local' : event.target.value === 'mock' ? 'mock' : 'remote');
+        });
+
+        document.getElementById('assistant-health')?.addEventListener('click', async () => {
+            try {
+                const health = await this.assistantService.remote.health();
+                const message = health.geminiConfigured ? `Servicio remoto disponible (${health.model})` : 'Servidor disponible, pero Gemini no está configurado';
+                this.showNotification(message, health.geminiConfigured ? 'success' : 'warning');
+            } catch (error) { this.showNotification(`Servicio remoto no disponible: ${error.message}`, 'warning'); }
+        });
+
         // Chat suggestions
         document.querySelectorAll('.suggestion-chip').forEach(chip => {
             chip.addEventListener('click', (e) => {
@@ -692,6 +708,17 @@ class KinesioEMGApp {
                 phase: 'Inicio'
             }
         });
+        const mode = this.displayPreferences?.assistantMode || 'auto';
+        this.assistantService = new AssistantService({
+            mode,
+            local: new LocalAssistantAdapter((message, context) => this.aiAssistant.processQuery(message, context)),
+            remote: new RemoteAssistantAdapter({ timeoutMs: 8000 }),
+            mock: new MockAssistantAdapter(),
+            maximumHistory: 20
+        });
+        const modeSelect = document.getElementById('assistant-mode');
+        if (modeSelect) modeSelect.value = mode;
+        this.updateAssistantSource(mode === 'auto' ? 'auto' : mode === 'local' ? 'local' : mode === 'mock' ? 'mock' : 'remote');
     }
 
     async initializeUI() {
@@ -1910,7 +1937,7 @@ class KinesioEMGApp {
         const input = document.getElementById('chat-input-field');
         const message = input?.value.trim();
         
-        if (!message) return;
+        if (!message || this.chatPending) return;
         
         // Add user message to chat
         this.addChatMessage('user', message);
@@ -1921,25 +1948,50 @@ class KinesioEMGApp {
             document.getElementById('send-chat').disabled = true;
         }
         
+        this.chatPending = true;
+        const sendButton = document.getElementById('send-chat');
+        if (sendButton) sendButton.disabled = true;
+        const loading = this.addChatLoading();
+
         try {
-            // Get AI response
-            const response = await this.aiAssistant.processQuery(
+            const result = await this.assistantService.request(
                 message, 
                 this.getActiveSignalProvider().getStats()
             );
-            
-            // Add AI response to chat
-            setTimeout(() => {
-                this.addChatMessage('ai', response);
-            }, 1000); // Simulate thinking time
-            
+            this.addChatMessage('ai', result.content, { source: result.source, fallback: result.fallback });
+            this.updateAssistantSource(result.source, result.fallback, result.model);
         } catch (error) {
             console.error('Error getting AI response:', error);
-            this.addChatMessage('ai', 'No pude procesar la solicitud. Inténtalo nuevamente.');
+            this.addChatMessage('ai', `No pude procesar la solicitud: ${error.message}`, { source: 'error' });
+            this.updateAssistantSource('error');
+        } finally {
+            loading?.remove();
+            this.chatPending = false;
+            if (sendButton) sendButton.disabled = !input?.value.trim();
         }
     }
 
-    addChatMessage(type, content) {
+    addChatLoading() {
+        const messagesContainer = document.getElementById('chat-messages');
+        if (!messagesContainer) return null;
+        const element = document.createElement('div');
+        element.className = 'message ai-message assistant-loading';
+        element.setAttribute('role', 'status');
+        element.innerHTML = '<div class="message-avatar"><i class="fas fa-robot"></i></div><div class="message-content"><span></span><span></span><span></span><em>Procesando consulta…</em></div>';
+        messagesContainer.appendChild(element);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        return element;
+    }
+
+    updateAssistantSource(source, fallback = false, detail = null) {
+        const badge = document.getElementById('assistant-source');
+        if (!badge) return;
+        const labels = { auto: 'Modo automático', local: fallback ? 'Asistente local · respaldo' : 'Asistente local', remote: 'Asistente remoto', mock: 'Asistente simulado', error: 'Error del asistente' };
+        badge.textContent = detail && source === 'remote' ? `${labels[source]} · ${detail}` : labels[source] || 'Asistente local';
+        badge.className = `assistant-source-badge ${source}`;
+    }
+
+    addChatMessage(type, content, metadata = {}) {
         const messagesContainer = document.getElementById('chat-messages');
         if (!messagesContainer) return;
         
@@ -1953,13 +2005,15 @@ class KinesioEMGApp {
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
         
-        // Convert markdown-like formatting to HTML
-        const formattedContent = content
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/\n/g, '<br>');
-        
-        messageContent.innerHTML = `<p>${formattedContent}</p>`;
+        const paragraph = document.createElement('p');
+        paragraph.textContent = String(content ?? '');
+        messageContent.appendChild(paragraph);
+        if (type === 'ai' && metadata.source) {
+            const source = document.createElement('small');
+            source.className = 'message-source';
+            source.textContent = metadata.fallback ? 'Respuesta local de respaldo' : ({ local: 'Respuesta local', remote: 'Respuesta remota', mock: 'Respuesta simulada', error: 'Error' }[metadata.source] || 'Respuesta local');
+            messageContent.appendChild(source);
+        }
         
         messageDiv.appendChild(avatar);
         messageDiv.appendChild(messageContent);
@@ -1982,6 +2036,7 @@ class KinesioEMGApp {
         }
         
         this.aiAssistant.clearHistory();
+        this.assistantService?.clearHistory();
         console.log('Chat cleared');
     }
 

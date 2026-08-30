@@ -18,6 +18,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 const portArg = process.argv.find(arg => /^\d+$/.test(arg));
 const port = Number(process.env.PORT || portArg || 8000);
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const assistantMode = ['local', 'remote', 'auto', 'mock'].includes(process.env.ASSISTANT_MODE) ? process.env.ASSISTANT_MODE : 'auto';
 const assistantContextPath = join(root, 'docs', 'ai-assistant-context.md');
 const appRoutes = new Set(['/emg-en-vivo', '/analisis', '/pacientes', '/asistente-ia', '/configuracion']);
 
@@ -88,10 +89,26 @@ function getAssistantContext() {
     }
 }
 
+function redactAssistantText(value) {
+    return String(value ?? '')
+        .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[correo omitido]')
+        .replace(/\+?\d[\d\s().-]{7,}\d/g, '[teléfono omitido]');
+}
+
+function sanitizeAssistantContext(context) {
+    const allowed = new Set(['activity', 'muscle', 'cadence', 'resistance', 'rms', 'mav', 'peakAmplitude', 'peakToPeak', 'waveformLength', 'zeroCrossings', 'entropy', 'frequency', 'snr', 'artifacts', 'symmetryIndex', 'difference', 'activationLevel', 'quality', 'left', 'right', 'bilateral', 'cycling', 'pedalingEfficiency', 'powerImbalance']);
+    const visit = value => {
+        if (Array.isArray(value)) return value.slice(0, 50).map(visit);
+        if (!value || typeof value !== 'object') return typeof value === 'string' ? redactAssistantText(value).slice(0, 120) : value;
+        return Object.fromEntries(Object.entries(value).filter(([key]) => allowed.has(key)).map(([key, child]) => [key, visit(child)]));
+    };
+    return visit(context || {});
+}
+
 function buildGeminiContents({ message, emgContext, history }) {
     const recentHistory = Array.isArray(history) ? history.slice(-8) : [];
     const conversationText = recentHistory
-        .map(entry => `${entry.type === 'assistant' ? 'Assistant' : 'User'}: ${entry.content}`)
+        .map(entry => `${entry.type === 'assistant' ? 'Assistant' : 'User'}: ${redactAssistantText(entry.content).slice(0, 1200)}`)
         .join('\n');
 
     return [{
@@ -101,16 +118,20 @@ function buildGeminiContents({ message, emgContext, history }) {
                 getAssistantContext(),
                 '',
                 'Current app/EMG context JSON:',
-                JSON.stringify(emgContext || {}, null, 2),
+                JSON.stringify(sanitizeAssistantContext(emgContext), null, 2),
                 '',
                 conversationText ? `Recent conversation:\n${conversationText}\n` : '',
-                `User question: ${message}`
+                `User question: ${redactAssistantText(message).slice(0, 2000)}`
             ].join('\n')
         }]
     }];
 }
 
 async function handleChat(req, res) {
+    if (assistantMode === 'local' || assistantMode === 'mock') {
+        sendJson(res, 503, { error: `Remote assistant disabled in ${assistantMode} mode` });
+        return;
+    }
     if (!process.env.GEMINI_API_KEY) {
         sendJson(res, 503, {
             error: 'GEMINI_API_KEY is not configured'
@@ -190,7 +211,8 @@ const server = createServer(async (req, res) => {
         sendJson(res, 200, {
             ok: true,
             geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
-            model: geminiModel
+            model: geminiModel,
+            assistantMode
         });
         return;
     }
@@ -248,7 +270,7 @@ const server = createServer(async (req, res) => {
 
 server.listen(port, host, () => {
     console.log(`DEMASY is running at http://${host}:${port}`);
-    console.log(`AI assistant: ${process.env.GEMINI_API_KEY ? `Gemini enabled (${geminiModel})` : 'offline fallback only'}`);
+    console.log(`AI assistant: ${assistantMode}; ${process.env.GEMINI_API_KEY ? `Gemini enabled (${geminiModel})` : 'offline fallback only'}`);
     console.log('Press Ctrl+C to stop the server.');
 });
 
