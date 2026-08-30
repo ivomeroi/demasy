@@ -22,7 +22,7 @@ class KinesiologyAIAssistant {
                 ],
                 interpretation: [
                     "Mayor amplitud indica mayor activación muscular",
-                    "Desplazamientos de frecuencia hacia valores menores pueden indicar fatiga muscular",
+                    "Cambios sostenidos de amplitud deben interpretarse junto con el contexto de la sesión",
                     "Patrones irregulares podrían sugerir trastornos neuromusculares",
                     "La asimetría bilateral puede indicar patrones de compensación o lesión"
                 ]
@@ -155,7 +155,7 @@ class KinesiologyAIAssistant {
                 prevention: [
                     "Evaluación EMG bilateral regular para identificar desequilibrios",
                     "Protocolos de calentamiento monitoreados con EMG",
-                    "Monitoreo de fatiga bilateral durante sesiones de entrenamiento",
+                    "Monitoreo de simetría bilateral durante sesiones de entrenamiento",
                     "Evaluación de calidad de movimiento usando análisis EMG bilateral"
                 ]
             },
@@ -358,7 +358,7 @@ class KinesiologyAIAssistant {
         
         response += `**Pautas de monitoreo bilateral:**\n`;
         response += `• Usar retroalimentación EMG bilateral para asegurar niveles de activación apropiados\n`;
-        response += `• Monitorear patrones de fatiga bilateral durante ejercicios\n`;
+        response += `• Monitorear patrones de activación bilateral durante ejercicios\n`;
         response += `• Seguir progreso con comparaciones EMG bilaterales\n`;
         response += `• Objetivo: Mantener índice de simetría >90%`;
         
@@ -375,14 +375,14 @@ class KinesiologyAIAssistant {
                    `**Normas bilaterales:**\n${info.bilateralNorms}\n\n` +
                    `**Problemas clínicos comunes:**\n${info.commonIssues}\n\n` +
                    `**Factores de riesgo de asimetría:**\n${info.asymmetryRisks}\n\n` +
-                   `**Consideraciones de análisis EMG bilateral:**\nMonitorear patrones de activación durante movimientos funcionales, evaluar simetría bilateral, y analizar respuesta de fatiga durante contracciones sostenidas. La comparación lado a lado es esencial para detectar compensaciones tempranas.`;
+                   `**Consideraciones de análisis EMG bilateral:**\nMonitorear patrones de activación durante movimientos funcionales y evaluar simetría bilateral. La comparación lado a lado es esencial para detectar compensaciones tempranas.`;
         }
         
         return `La fisiología muscular bilateral involucra interacciones complejas entre control neural, reclutamiento de fibras y procesos metabólicos. El EMG bilateral proporciona información sobre:\n\n` +
                `• **Reclutamiento de unidades motoras:** Activación progresiva bilateral de unidades motoras pequeñas a grandes\n` +
                `• **Frecuencia de disparo:** Modulación de fuerza bilateral a través de codificación de tasa\n` +
                `• **Sincronización:** Coordinación entre unidades motoras y entre lados\n` +
-               `• **Mecanismos de fatiga:** Factores centrales y periféricos que afectan el rendimiento bilateral\n` +
+               `• **Control neuromuscular:** Factores que afectan la coordinación bilateral\n` +
                `• **Simetría funcional:** Importancia del equilibrio bilateral para función óptima\n\n` +
                `Comprender estos principios ayuda a interpretar señales EMG bilaterales en contextos clínicos y detectar asimetrías patológicas.`;
     }
@@ -482,7 +482,7 @@ class KinesiologyAIAssistant {
             
             `Como tu asistente IA de kinesiología, puedo ayudarte a comprender patrones EMG bilaterales, desarrollar protocolos de tratamiento e interpretar datos de activación muscular. ¿Qué aspecto específico te gustaría explorar?`,
             
-            `Puedo asistir con varios aspectos del análisis EMG bilateral incluyendo interpretación de señales, prescripción de ejercicios, evaluación de fatiga y planificación de tratamientos. ¿Cómo puedo ayudarte hoy?`
+            `Puedo asistir con varios aspectos del análisis EMG bilateral, incluyendo interpretación de señales, asimetrías y planificación de tratamientos. ¿Cómo puedo ayudarte hoy?`
         ];
         
         return this.selectContextualResponse(generalResponses) + this.addSuggestionsFooter();
@@ -608,7 +608,7 @@ class KinesiologyAIAssistant {
     }
 
     addSuggestionsFooter() {
-        return `\n\n**Temas populares con los que puedo ayudar:**\n• Interpretación de señales EMG bilaterales\n• Fisiología y función muscular\n• Protocolos de ejercicio y rehabilitación\n• Evaluación y manejo de fatiga bilateral\n• Análisis de asimetrías y compensaciones`;
+        return `\n\n**Temas populares con los que puedo ayudar:**\n• Interpretación de señales EMG bilaterales\n• Fisiología y función muscular\n• Protocolos de ejercicio y rehabilitación\n• Comparación de activación bilateral\n• Análisis de asimetrías y compensaciones`;
     }
 
     getInterpretationRecommendations() {

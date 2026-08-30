@@ -1,4 +1,4 @@
-# KinesioEMG - Plataforma de Análisis EMG para Bicicleta Fija
+# DEMASY — Evaluación dinámica de asimetrías musculoesqueléticas
 
 Una aplicación web especializada para monitoreo y análisis de señales EMG bilaterales durante ciclismo en bicicleta fija, diseñada específicamente para kinesiológos y profesionales de fisioterapia.
 
@@ -449,4 +449,4 @@ For questions about this thesis project, please contact the development team.
 
 ---
 
-**Note**: This is a prototype for educational and research purposes. Not intended for clinical use without proper validation and regulatory approval.
+**Nota:** Este es un prototipo académico y de investigación. No está destinado al uso clínico sin la validación correspondiente y la aprobación regulatoria aplicable.

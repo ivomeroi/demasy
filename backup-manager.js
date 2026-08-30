@@ -1,21 +1,48 @@
 /** Backup, preview and restore UI for local DEMASY data. */
 class BackupManager {
-    constructor(database) { this.database = database; this.service = new BackupService(); this.pendingPayload = null; }
+    constructor(database, settingsService, onPreferencesChanged) { this.database = database; this.settingsService = settingsService; this.onPreferencesChanged = onPreferencesChanged; this.service = new BackupService(); this.pendingPayload = null; }
 
-    render() {
+    async render() {
         const container = document.getElementById('settings-content');
         if (!container) return;
+        const preferences = await this.settingsService.getAll();
         container.innerHTML = `<div class="settings-dashboard"><h2>Configuración y datos locales</h2><div class="settings-grid">
+            <div class="card settings-preferences"><h3>Visualización de la señal</h3><p>Estas preferencias se guardan únicamente en este navegador.</p>
+                <div class="form-group"><label for="setting-window">Ventana temporal</label><select id="setting-window"><option value="1">1 segundo</option><option value="5">5 segundos</option><option value="10">10 segundos</option><option value="30">30 segundos</option></select></div>
+                <fieldset class="settings-fieldset"><legend>Escala vertical</legend><label><input type="radio" name="setting-scale" value="fixed"> Fija y comparable</label><label><input type="radio" name="setting-scale" value="auto"> Automática</label></fieldset>
+                <fieldset class="settings-fieldset"><legend>Series visibles</legend><label><input type="checkbox" id="setting-left"> Señal izquierda</label><label><input type="checkbox" id="setting-right"> Señal derecha</label><label><input type="checkbox" id="setting-rms"> Curvas RMS</label></fieldset>
+                <button class="btn-control primary" id="settings-save">Guardar preferencias</button>
+            </div>
             <div class="card"><h3>Respaldo completo</h3><p>Exporta participantes, sesiones, análisis y configuración en un JSON versionado.</p><button class="btn-control primary" id="backup-export">Exportar respaldo</button></div>
-            <div class="card"><h3>Importar o restaurar</h3><p>Máximo 50 MB. El contenido se valida antes de modificar IndexedDB.</p><input type="file" id="backup-file" accept="application/json,.json"><div id="backup-file-error" class="form-error"></div></div>
+            <div class="card"><h3>Importar o restaurar</h3><p>Máximo 50 MB. El contenido se valida antes de modificar IndexedDB.</p><label class="file-input-label" for="backup-file">Seleccionar respaldo JSON</label><input type="file" id="backup-file" accept="application/json,.json"><div id="backup-file-error" class="form-error" role="alert"></div></div>
             <div class="card"><h3>Datos de demostración</h3><p>Crea o actualiza únicamente los participantes DEMO-* y sus sesiones sintéticas.</p><button class="btn-outline" id="demo-data-action">Crear o actualizar demos</button></div>
+            <div class="card prototype-notice"><h3>Alcance de esta versión</h3><p>DEMASY v1 es un prototipo académico. Los datos se guardan localmente en este navegador y no están cifrados.</p><p>Utiliza códigos de participante, evita datos sensibles y conserva respaldos periódicos.</p></div>
         </div></div>`;
+        document.getElementById('setting-window').value = String(preferences.chartWindowSeconds);
+        document.querySelector(`input[name="setting-scale"][value="${preferences.chartScaleMode}"]`).checked = true;
+        document.getElementById('setting-left').checked = preferences.showLeftSignal;
+        document.getElementById('setting-right').checked = preferences.showRightSignal;
+        document.getElementById('setting-rms').checked = preferences.showRms;
+        document.getElementById('settings-save').addEventListener('click', () => this.savePreferences());
         document.getElementById('backup-export').addEventListener('click', () => this.exportBackup());
         document.getElementById('backup-file').addEventListener('change', event => this.readFile(event.target.files[0]));
         document.getElementById('demo-data-action').addEventListener('click', async () => {
             await window.dbUtils.initializeSampleData({ force: true });
             window.app?.showNotification('Datos demo creados o actualizados', 'success');
         });
+    }
+
+    async savePreferences() {
+        const preferences = {
+            chartWindowSeconds: Number(document.getElementById('setting-window').value),
+            chartScaleMode: document.querySelector('input[name="setting-scale"]:checked').value,
+            showLeftSignal: document.getElementById('setting-left').checked,
+            showRightSignal: document.getElementById('setting-right').checked,
+            showRms: document.getElementById('setting-rms').checked
+        };
+        await Promise.all(Object.entries(preferences).map(([key, value]) => this.settingsService.set(key, value)));
+        this.onPreferencesChanged?.(preferences);
+        window.app?.showNotification('Preferencias guardadas', 'success');
     }
 
     async exportBackup() {
@@ -41,8 +68,8 @@ class BackupManager {
 
     showPreview(preview, filename) {
         document.getElementById('backup-preview-modal')?.remove();
-        document.body.insertAdjacentHTML('beforeend', `<div class="modal-overlay" id="backup-preview-modal"><div class="modal-content">
-            <div class="modal-header"><h3>Previsualizar respaldo</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button></div>
+        document.body.insertAdjacentHTML('beforeend', `<div class="modal-overlay" id="backup-preview-modal" role="dialog" aria-modal="true" aria-labelledby="backup-preview-title"><div class="modal-content">
+            <div class="modal-header"><h3 id="backup-preview-title">Previsualizar respaldo</h3><button class="modal-close" aria-label="Cerrar previsualización" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" aria-hidden="true"></i></button></div>
             <p>${this.escape(filename)}</p><div class="summary-grid">
                 <div class="summary-item"><label>Participantes</label><strong>${preview.patients}</strong></div><div class="summary-item"><label>Sesiones</label><strong>${preview.sessions}</strong></div>
                 <div class="summary-item"><label>Análisis</label><strong>${preview.analyses}</strong></div><div class="summary-item"><label>Preferencias</label><strong>${preview.settings}</strong></div>

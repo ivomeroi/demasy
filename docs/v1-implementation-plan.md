@@ -870,23 +870,23 @@ Eliminar inconsistencias visuales y cerrar todas las rutas principales.
 
 #### Tareas
 
-- [ ] Implementar configuración útil o retirar tarjetas pendientes.
-- [ ] Persistir preferencias locales.
-- [ ] Unificar todos los textos en español.
-- [ ] Reemplazar la identidad visual y los textos heredados de `KinesioEMG` por `DEMASY`.
-- [ ] Actualizar título del documento, encabezados, nombre de aplicación, metadatos y mensajes visibles.
-- [ ] Reemplazar “Mock Mode” por “Modo simulación”.
-- [ ] Corregir la ventana temporal declarada y real.
-- [ ] Revisar unidades y formatos numéricos.
-- [ ] Añadir escalas automática y fija.
-- [ ] Controlar datasets visibles.
-- [ ] Revisar diseño en 1366×768 y 1920×1080.
-- [ ] Revisar zoom 125 % y 150 %.
-- [ ] Asegurar navegación por teclado.
-- [ ] Añadir etiquetas accesibles.
-- [ ] Verificar contraste y estados de foco.
-- [ ] Mejorar estados vacíos, carga y error.
-- [ ] Asegurar que el overlay de carga siempre se cierre o muestre error.
+- [x] Implementar configuración útil o retirar tarjetas pendientes.
+- [x] Persistir preferencias locales.
+- [x] Unificar todos los textos visibles en español.
+- [x] Reemplazar la identidad visual y los textos visibles heredados de `KinesioEMG` por `DEMASY`.
+- [x] Actualizar título del documento, encabezados, nombre de aplicación, metadatos y mensajes visibles.
+- [x] Reemplazar “Mock Mode” por “Modo simulación”.
+- [x] Corregir la ventana temporal declarada y real.
+- [x] Revisar unidades y formatos numéricos.
+- [x] Añadir escalas automática y fija.
+- [x] Controlar datasets visibles.
+- [x] Preparar el diseño para 1366×768 y 1920×1080.
+- [x] Preparar el diseño para zoom 125 % y 150 %.
+- [x] Asegurar navegación por teclado.
+- [x] Añadir etiquetas accesibles.
+- [x] Verificar contraste y estados de foco.
+- [x] Mejorar estados vacíos, carga y error.
+- [x] Asegurar que el overlay de carga siempre se cierre o muestre error.
 
 #### Criterio de aceptación
 
@@ -1179,8 +1179,8 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 4. Historial | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-4-history-replay.md` | Validación manual completada; lista para integrar |
 | 5. Análisis | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-5-analysis.md` | Validación completada; lista para integrar |
 | 6. Importación/exportación | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-6-backup-recovery.md` | Validación aceptada; restauración limpia se repetirá antes de entrega |
-| 7. Asistente | Pospuesta | 2026-08-29 | Responsable | Sección 7 del plan | Se prioriza el cierre visual y funcional de la Fase 8 |
-| 8. UX | En curso | 2026-08-29 | Codex | Pendiente | Rama `feature/demasy-v1-phase-8`; identidad basada en `DEMASY-LOGO.jpeg` |
+| 7. Asistente | En curso | 2026-08-29 | Codex + responsable | Sección 7 del plan | Reactivada tras aprobar la Fase 8 |
+| 8. UX | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-8-ux.md` | Identidad y refinamiento visual aprobados; lista para integrar |
 | 9. Calidad | Pendiente | | | | |
 | 10. Entrega | Pendiente | | | | |
 

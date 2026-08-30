@@ -27,9 +27,15 @@ test('settings service applies defaults and validation', async () => {
     const settings = new SettingsService(storage);
 
     assert.equal(await settings.get('cadenceRpm'), 80);
+    assert.equal(await settings.get('chartScaleMode'), 'fixed');
+    assert.equal(await settings.get('showRms'), true);
     assert.equal(await settings.set('cadenceRpm', 95), 95);
+    assert.equal(await settings.set('chartScaleMode', 'auto'), 'auto');
+    assert.equal(await settings.set('showLeftSignal', false), false);
     assert.equal(await settings.get('cadenceRpm'), 95);
     await assert.rejects(() => settings.set('cadenceRpm', 500), RangeError);
+    await assert.rejects(() => settings.set('chartScaleMode', 'dynamic'), RangeError);
+    await assert.rejects(() => settings.set('showRms', 'yes'), TypeError);
 });
 
 test('replay source satisfies the signal source contract', () => {

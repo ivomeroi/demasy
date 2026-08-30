@@ -1,11 +1,11 @@
 /**
- * KinesioEMG - Main Application Controller
+ * DEMASY - Main Application Controller
  * Manages EMG simulation, real-time visualization, AI assistant, and user interface
  */
 
 class KinesioEMGApp {
     constructor() {
-        console.log('Initializing KinesioEMG App...');
+        console.log('Inicializando DEMASY…');
         
         try {
             // Initialize core components
@@ -26,6 +26,8 @@ class KinesioEMGApp {
             this.patientManager = null; // Will be initialized after database
             this.analysisManager = null;
             this.backupManager = null;
+            this.settingsService = null;
+            this.displayPreferences = null;
             this.recordingController = new RecordingController();
             this.sessionConfigurationService = new SessionConfigurationService();
             this.sectionRouter = new SectionRouter();
@@ -47,9 +49,9 @@ class KinesioEMGApp {
                 max: null
             };
             
-            console.log('KinesioEMG App constructor completed successfully');
+            console.log('Controlador DEMASY creado correctamente');
         } catch (error) {
-            console.error('Error in KinesioEMG App constructor:', error);
+            console.error('Error al crear el controlador DEMASY:', error);
         }
         
         // Chart configuration
@@ -82,6 +84,8 @@ class KinesioEMGApp {
         try {
             // Initialize database first
             await this.initializeDatabase();
+            this.displayPreferences = await this.settingsService.getAll();
+            this.chartConfig.timeWindow = this.displayPreferences.chartWindowSeconds;
             
             // Initialize other components
             await this.initializeChart();
@@ -92,10 +96,10 @@ class KinesioEMGApp {
             this.setupAIAssistant();
             await this.initializeUI();
             
-            console.log('KinesioEMG application initialized successfully');
+            console.log('DEMASY se inicializó correctamente');
         } catch (error) {
-            console.error('Failed to initialize application:', error);
-            this.showError('Failed to initialize application. Please refresh and try again.');
+            console.error('No se pudo inicializar la aplicación:', error);
+            this.showError('No se pudo inicializar DEMASY. Recarga la página e inténtalo nuevamente.');
         } finally {
             this.hideLoading();
         }
@@ -110,7 +114,8 @@ class KinesioEMGApp {
             this.patientManager = new PatientManager(this.database);
             await this.patientManager.initialize();
             this.analysisManager = new AnalysisManager(this.database);
-            this.backupManager = new BackupManager(this.database);
+            this.settingsService = new SettingsService(this.database);
+            this.backupManager = new BackupManager(this.database, this.settingsService, preferences => this.applyDisplayPreferences(preferences));
             
             console.log('Database and patient manager initialized successfully');
         } catch (error) {
@@ -215,7 +220,7 @@ class KinesioEMGApp {
                         intersect: false,
                         callbacks: {
                             title: function(tooltipItems) {
-                                return `Time: ${tooltipItems[0].parsed.x.toFixed(2)}s`;
+                                return `Tiempo: ${tooltipItems[0].parsed.x.toFixed(2)} s`;
                             },
                             label: function(context) {
                                 return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} mV`;
@@ -257,6 +262,24 @@ class KinesioEMGApp {
                 }
             }
         });
+        this.applyDisplayPreferences(this.displayPreferences);
+    }
+
+    applyDisplayPreferences(preferences = {}) {
+        this.displayPreferences = { ...(this.displayPreferences || {}), ...preferences };
+        this.chartConfig.timeWindow = Number(this.displayPreferences.chartWindowSeconds || 1);
+        const label = document.getElementById('chart-window-label');
+        if (label) label.textContent = `Ventana temporal: ${this.chartConfig.timeWindow} s`;
+        if (!this.emgChart) return;
+        const fixed = this.displayPreferences.chartScaleMode !== 'auto';
+        this.emgChart.options.scales.y.min = fixed ? this.chartConfig.fixedYMin : undefined;
+        this.emgChart.options.scales.y.max = fixed ? this.chartConfig.fixedYMax : undefined;
+        this.emgChart.data.datasets[0].hidden = this.displayPreferences.showLeftSignal === false;
+        this.emgChart.data.datasets[1].hidden = this.displayPreferences.showRightSignal === false;
+        this.emgChart.data.datasets[2].hidden = this.displayPreferences.showRms === false || this.displayPreferences.showLeftSignal === false;
+        this.emgChart.data.datasets[3].hidden = this.displayPreferences.showRms === false || this.displayPreferences.showRightSignal === false;
+        this.emgChart.options.scales.x.max = this.chartConfig.timeWindow;
+        this.emgChart.update('none');
     }
 
     updateChartMode() {
@@ -270,7 +293,7 @@ class KinesioEMGApp {
         this.emgChart.data.datasets[1].label = isExternal ? 'Señal ESP32 Derecha' : 'EMG Lado Derecho';
         this.emgChart.data.datasets[2].label = isExternal ? 'RMS ESP32 Izquierdo' : 'RMS Izquierdo';
         this.emgChart.data.datasets[3].label = isExternal ? 'RMS ESP32 Derecho' : 'RMS Derecho';
-        this.emgChart.update('none');
+        this.applyDisplayPreferences(this.displayPreferences);
     }
 
     setupEventListeners() {
@@ -279,7 +302,41 @@ class KinesioEMGApp {
             item.addEventListener('click', (e) => {
                 this.handleNavigation(e.target.closest('.nav-item'));
             });
+            item.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    this.handleNavigation(item);
+                }
+            });
         });
+
+        document.getElementById('mobile-menu-button')?.addEventListener('click', event => {
+            const open = document.querySelector('.sidebar')?.classList.toggle('open') || false;
+            event.currentTarget.setAttribute('aria-expanded', String(open));
+            event.currentTarget.setAttribute('aria-label', open ? 'Cerrar menú principal' : 'Abrir menú principal');
+        });
+
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape') return;
+            const modal = [...document.querySelectorAll('.modal-overlay')].at(-1);
+            if (modal) modal.remove();
+            document.querySelector('.sidebar')?.classList.remove('open');
+            const menuButton = document.getElementById('mobile-menu-button');
+            menuButton?.setAttribute('aria-expanded', 'false');
+            menuButton?.setAttribute('aria-label', 'Abrir menú principal');
+        });
+
+        const annotateModal = modal => {
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            const closeButton = modal.querySelector('.modal-close');
+            if (closeButton && !closeButton.hasAttribute('aria-label')) closeButton.setAttribute('aria-label', 'Cerrar diálogo');
+        };
+        new MutationObserver(mutations => mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+            if (!(node instanceof Element)) return;
+            if (node.matches('.modal-overlay')) annotateModal(node);
+            node.querySelectorAll?.('.modal-overlay').forEach(annotateModal);
+        }))).observe(document.body, { childList: true, subtree: true });
 
         window.addEventListener('popstate', () => {
             this.navigateToSection(this.sectionRouter.getSection(window.location.pathname), { updateHistory: false });
@@ -683,14 +740,22 @@ class KinesioEMGApp {
 
     async handleNavigation(navItem) {
         await this.navigateToSection(navItem.dataset.section);
+        document.querySelector('.sidebar')?.classList.remove('open');
+        const menuButton = document.getElementById('mobile-menu-button');
+        menuButton?.setAttribute('aria-expanded', 'false');
+        menuButton?.setAttribute('aria-label', 'Abrir menú principal');
     }
 
     async navigateToSection(section, options = {}) {
         const target = this.sectionRouter.routes[section] ? section : 'dashboard';
         if (target === 'patients') await this.loadPatientsSection();
         if (target === 'analysis') await this.analysisManager?.render();
-        if (target === 'settings') this.backupManager?.render();
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.section === target));
+        if (target === 'settings') await this.backupManager?.render();
+        document.querySelectorAll('.nav-item').forEach(item => {
+            const active = item.dataset.section === target;
+            item.classList.toggle('active', active);
+            if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
+        });
         this.showSection(target);
         this.updatePageTitle(target);
         const emgHeaderActions = document.getElementById('emg-header-actions');
@@ -1828,16 +1893,16 @@ class KinesioEMGApp {
         
         if (statusText) {
             const statusTexts = {
-                mock: 'Mock Mode',
-                recording: 'Recording',
+                mock: 'Modo simulación',
+                recording: 'Grabando simulación',
                 serial: 'ESP32 USB',
                 bluetooth: 'ESP32 Bluetooth',
-                'recording-serial': 'Recording ESP32',
-                'recording-bluetooth': 'Recording Bluetooth',
-                connected: 'ESP32 Connected',
-                disconnected: 'Disconnected'
+                'recording-serial': 'Grabando ESP32',
+                'recording-bluetooth': 'Grabando Bluetooth',
+                connected: 'ESP32 conectado',
+                disconnected: 'Desconectado'
             };
-            statusText.textContent = statusTexts[status] || 'Unknown';
+            statusText.textContent = statusTexts[status] || 'Estado desconocido';
         }
     }
 
@@ -1870,7 +1935,7 @@ class KinesioEMGApp {
             
         } catch (error) {
             console.error('Error getting AI response:', error);
-            this.addChatMessage('ai', 'I apologize, but I encountered an error processing your request. Please try again.');
+            this.addChatMessage('ai', 'No pude procesar la solicitud. Inténtalo nuevamente.');
         }
     }
 
