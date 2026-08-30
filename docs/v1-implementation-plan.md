@@ -1179,8 +1179,8 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 4. Historial | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-4-history-replay.md` | Validación manual completada; lista para integrar |
 | 5. Análisis | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-5-analysis.md` | Validación completada; lista para integrar |
 | 6. Importación/exportación | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-6-backup-recovery.md` | Validación aceptada; restauración limpia se repetirá antes de entrega |
-| 7. Asistente | Pospuesta | 2026-08-29 | Responsable | Sección 7 del plan | Se prioriza el cierre visual y funcional de la Fase 8 |
-| 8. UX | En validación | 2026-08-29 | Codex + responsable | `docs/v1-phase-8-ux.md` | Rama `feature/demasy-v1-phase-8`; recorrido visual pendiente de aprobación |
+| 7. Asistente | En curso | 2026-08-29 | Codex + responsable | Sección 7 del plan | Reactivada tras aprobar la Fase 8 |
+| 8. UX | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-8-ux.md` | Identidad y refinamiento visual aprobados; lista para integrar |
 | 9. Calidad | Pendiente | | | | |
 | 10. Entrega | Pendiente | | | | |
 

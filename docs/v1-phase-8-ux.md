@@ -1,6 +1,6 @@
 # DEMASY v1 — Fase 8: configuración, UX y accesibilidad
 
-**Estado:** En validación  
+**Estado:** Aprobada  
 **Rama:** `feature/demasy-v1-phase-8`
 
 ## Objetivo
