@@ -310,10 +310,11 @@
                     <div class="ai-chat-container">
                         <div class="chat-header">
                             <div class="chat-title">
-                                <h3><i class="fas fa-robot"></i> Asistente IA de Kinesiología</h3>
-                                <p>Haz preguntas sobre análisis EMG bilateral, función muscular o recomendaciones de tratamiento</p>
+                                <h3><i class="fas fa-robot"></i> Asistente DEMASY <span class="assistant-source-badge remote" id="assistant-source">Asistente remoto</span></h3>
+                                <p>Consulta conceptos y descripciones educativas sobre EMG bilateral y asimetrías.</p>
                             </div>
                             <div class="chat-actions">
+                                <button class="btn-small" id="assistant-health" title="Comprobar servicio remoto"><i class="fas fa-heart-pulse"></i> Comprobar</button>
                                 <button class="btn-small" id="clear-chat">
                                     <i class="fas fa-broom"></i> Limpiar Chat
                                 </button>
@@ -326,40 +327,41 @@
                                     <i class="fas fa-robot"></i>
                                 </div>
                                 <div class="message-content">
-                                    <p>¡Hola! Soy tu asistente IA de kinesiología. Puedo ayudarte con:</p>
+                                    <p>¡Hola! Soy el asistente educativo de DEMASY. Puedo ayudarte con:</p>
                                     <ul>
                                         <li>Interpretar patrones de señales EMG bilaterales</li>
-                                        <li>Sugerir protocolos de tratamiento</li>
+                                        <li>Explicar métricas y conceptos de la señal</li>
                                         <li>Analizar asimetrías musculares</li>
-                                        <li>Recomendar ejercicios basados en datos EMG</li>
+                                        <li>Brindar orientación general no diagnóstica</li>
                                         <li>Explicar conceptos de fisiología muscular</li>
                                         <li>Evaluar índices de simetría y compensaciones</li>
                                     </ul>
                                     <p>¿Cómo puedo asistirte hoy?</p>
+                                    <small>Prototipo académico: no constituye diagnóstico ni reemplaza una evaluación profesional.</small>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="chat-input">
                             <input type="text" id="chat-input-field" placeholder="Pregunta sobre análisis EMG bilateral, asimetrías, tratamientos..." maxlength="500">
-                            <button id="send-chat" disabled>
+                            <button id="send-chat" aria-label="Enviar consulta" disabled>
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
                         
                         <div class="chat-suggestions">
-                            <div class="suggestion-chip" data-suggestion="¿Qué indica esta asimetría bilateral?">
+                            <button type="button" class="suggestion-chip" data-suggestion="¿Qué indica esta asimetría bilateral?">
                                 <i class="fas fa-chart-line"></i>
                                 Análisis de Asimetría
-                            </div>
-                            <div class="suggestion-chip" data-suggestion="¿Cómo puedo mejorar la simetría muscular?">
+                            </button>
+                            <button type="button" class="suggestion-chip" data-suggestion="¿Cómo puedo interpretar la simetría muscular?">
                                 <i class="fas fa-balance-scale"></i>
                                 Simetría Muscular
-                            </div>
-                            <div class="suggestion-chip" data-suggestion="¿Qué ejercicios ayudan con la compensación?">
-                                <i class="fas fa-dumbbell"></i>
-                                Ejercicios Correctivos
-                            </div>
+                            </button>
+                            <button type="button" class="suggestion-chip" data-suggestion="¿Cómo reviso la calidad de la señal?">
+                                <i class="fas fa-wave-square"></i>
+                                Calidad de señal
+                            </button>
                         </div>
                     </div>
                 </section>
@@ -409,6 +411,8 @@
     <script src="services/data-normalization-service.js"></script>
     <script src="services/session-history-service.js"></script>
     <script src="services/backup-service.js"></script>
+    <script src="services/assistant-service.js"></script>
+    <script src="services/chat-transcript-service.js"></script>
     <script src="database.js"></script>
     <script src="patient-manager.js"></script>
     <script src="analysis-manager.js"></script>

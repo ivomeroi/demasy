@@ -18,6 +18,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 const portArg = process.argv.find(arg => /^\d+$/.test(arg));
 const port = Number(process.env.PORT || portArg || 8000);
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const assistantMode = 'remote';
 const assistantContextPath = join(root, 'docs', 'ai-assistant-context.md');
 const appRoutes = new Set(['/emg-en-vivo', '/analisis', '/pacientes', '/asistente-ia', '/configuracion']);
 
@@ -88,10 +89,26 @@ function getAssistantContext() {
     }
 }
 
+function redactAssistantText(value) {
+    return String(value ?? '')
+        .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[correo omitido]')
+        .replace(/\+?\d[\d\s().-]{7,}\d/g, '[teléfono omitido]');
+}
+
+function sanitizeAssistantContext(context) {
+    const allowed = new Set(['activity', 'muscle', 'cadence', 'resistance', 'rms', 'mav', 'peakAmplitude', 'peakToPeak', 'waveformLength', 'zeroCrossings', 'entropy', 'frequency', 'snr', 'artifacts', 'symmetryIndex', 'difference', 'activationLevel', 'quality', 'left', 'right', 'bilateral', 'cycling', 'pedalingEfficiency', 'powerImbalance']);
+    const visit = value => {
+        if (Array.isArray(value)) return value.slice(0, 50).map(visit);
+        if (!value || typeof value !== 'object') return typeof value === 'string' ? redactAssistantText(value).slice(0, 120) : value;
+        return Object.fromEntries(Object.entries(value).filter(([key]) => allowed.has(key)).map(([key, child]) => [key, visit(child)]));
+    };
+    return visit(context || {});
+}
+
 function buildGeminiContents({ message, emgContext, history }) {
     const recentHistory = Array.isArray(history) ? history.slice(-8) : [];
     const conversationText = recentHistory
-        .map(entry => `${entry.type === 'assistant' ? 'Assistant' : 'User'}: ${entry.content}`)
+        .map(entry => `${entry.type === 'assistant' ? 'Assistant' : 'User'}: ${redactAssistantText(entry.content).slice(0, 1200)}`)
         .join('\n');
 
     return [{
@@ -101,10 +118,10 @@ function buildGeminiContents({ message, emgContext, history }) {
                 getAssistantContext(),
                 '',
                 'Current app/EMG context JSON:',
-                JSON.stringify(emgContext || {}, null, 2),
+                JSON.stringify(sanitizeAssistantContext(emgContext), null, 2),
                 '',
                 conversationText ? `Recent conversation:\n${conversationText}\n` : '',
-                `User question: ${message}`
+                `User question: ${redactAssistantText(message).slice(0, 2000)}`
             ].join('\n')
         }]
     }];
@@ -146,8 +163,16 @@ async function handleChat(req, res) {
         const data = await geminiResponse.json();
 
         if (!geminiResponse.ok) {
+            const retryAfterHeader = geminiResponse.headers.get('retry-after');
+            const retryDelay = data.error?.details
+                ?.find(detail => detail['@type']?.endsWith('RetryInfo'))?.retryDelay;
+            const retryAfterSeconds = retryAfterHeader
+                ? Number.parseInt(retryAfterHeader, 10)
+                : retryDelay?.endsWith('s') ? Math.ceil(Number.parseFloat(retryDelay)) : null;
             sendJson(res, geminiResponse.status, {
-                error: data.error?.message || 'Gemini request failed'
+                error: data.error?.message || 'Gemini request failed',
+                code: geminiResponse.status === 429 ? 'RATE_LIMIT' : 'REMOTE_ERROR',
+                retryAfterSeconds: Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : null
             });
             return;
         }
@@ -190,7 +215,8 @@ const server = createServer(async (req, res) => {
         sendJson(res, 200, {
             ok: true,
             geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
-            model: geminiModel
+            model: geminiModel,
+            assistantMode
         });
         return;
     }
@@ -248,7 +274,7 @@ const server = createServer(async (req, res) => {
 
 server.listen(port, host, () => {
     console.log(`DEMASY is running at http://${host}:${port}`);
-    console.log(`AI assistant: ${process.env.GEMINI_API_KEY ? `Gemini enabled (${geminiModel})` : 'offline fallback only'}`);
+    console.log(`AI assistant: ${assistantMode}; ${process.env.GEMINI_API_KEY ? `Gemini enabled (${geminiModel})` : 'GEMINI_API_KEY missing'}`);
     console.log('Press Ctrl+C to stop the server.');
 });
 

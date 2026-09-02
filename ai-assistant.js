@@ -45,7 +45,7 @@ class KinesiologyAIAssistant {
                 clinicalSignificance: [
                     "Asimetría persistente puede predecir futuras lesiones",
                     "Monitoreo bilateral ayuda en la rehabilitación",
-                    "Comparación lado a lado mejora la precisión diagnóstica",
+                    "Comparación lado a lado mejora la descripción de diferencias",
                     "La progresión hacia simetría indica recuperación exitosa"
                 ]
             },
@@ -111,7 +111,7 @@ class KinesiologyAIAssistant {
                     normalCycling: "Activación alternada 180° desfasada entre piernas",
                     asymmetricPedaling: "Compensación en una pierna por debilidad o lesión en la otra",
                     inefficientPedaling: "Activación muscular descoordinada, pérdida de potencia en puntos muertos",
-                    fatiguedPedaling: "Disminución progresiva de amplitud y coordinación bilateral"
+                    variablePedaling: "Variaciones progresivas de amplitud y coordinación bilateral"
                 },
                 parameters: {
                     cadence: {
@@ -165,33 +165,12 @@ class KinesiologyAIAssistant {
                 buena: "SNR 30-40 dB, artefactos menores ocasionales, ruido de línea base aceptable",
                 regular: "SNR 20-30 dB, artefactos moderados presentes, puede afectar interpretación",
                 pobre: "SNR < 20 dB, artefactos significativos, inestabilidad de línea base, datos no confiables"
-            },
-
-            fatigueAssessment: {
-                indicators: [
-                    "Disminución en frecuencia mediana a lo largo del tiempo",
-                    "Incremento en amplitud con niveles de fuerza mantenidos",
-                    "Cambios en el tiempo de activación muscular y coordinación",
-                    "Desplazamiento en espectro de potencia hacia frecuencias menores"
-                ],
-                bilateralIndicators: [
-                    "Fatiga asimétrica puede indicar compensación",
-                    "Diferencias en declive de frecuencia mediana entre lados",
-                    "Variabilidad aumentada en activación bilateral",
-                    "Pérdida progresiva de simetría durante ejercicio sostenido"
-                ],
-                interpretation: [
-                    "Fatiga central: Reducción del impulso neural, reclutamiento reducido de unidades motoras",
-                    "Fatiga periférica: Cambios metabólicos, alteración del acoplamiento excitación-contracción",
-                    "Fatiga neuromuscular: Combinación de factores centrales y periféricos",
-                    "Fatiga asimétrica: Posible indicador de disfunción unilateral o compensación"
-                ]
             }
         };
     }
 
     async processQuery(userInput, emgContext = null) {
-        this.currentEMGContext = emgContext;
+        if (emgContext) this.currentEMGContext = emgContext;
         const query = userInput.toLowerCase();
         
         // Add to conversation history
@@ -205,34 +184,23 @@ class KinesiologyAIAssistant {
         // Extract keywords
         this.updateContextKeywords(query);
 
-        const apiResponse = await this.tryRemoteAssistant(userInput, emgContext);
-        if (apiResponse) {
-            this.conversationHistory.push({
-                type: 'assistant',
-                content: apiResponse,
-                timestamp: new Date(),
-                context: emgContext,
-                source: 'gemini'
-            });
-
-            return apiResponse;
-        }
-
         // Generate response based on query type
         let response;
         
-        if (this.isSignalInterpretationQuery(query)) {
-            response = this.generateSignalInterpretation(query);
-        } else if (this.isTreatmentQuery(query)) {
+        if (this.isFatigueQuery(query)) {
+            response = 'DEMASY v1 no realiza análisis de fatiga. Puedo ayudarte a describir amplitud, simetría, activación y calidad de la señal sin generar conclusiones diagnósticas.';
+        } else if (this.isTreatmentQuery(query) || this.isExerciseQuery(query)) {
             response = this.generateTreatmentRecommendation(query);
-        } else if (this.isMusclePhysiologyQuery(query)) {
-            response = this.generateMusclePhysiologyResponse(query);
-        } else if (this.isExerciseQuery(query)) {
-            response = this.generateExerciseRecommendation(query);
-        } else if (this.isFatigueQuery(query)) {
-            response = this.generateFatigueAnalysis(query);
         } else if (this.isSignalQualityQuery(query)) {
             response = this.generateSignalQualityAdvice(query);
+        } else if (this.isSymmetryQuery(query)) {
+            response = this.generateSymmetryResponse();
+        } else if (this.isMetricQuery(query)) {
+            response = this.generateMetricExplanation(query);
+        } else if (this.isMusclePhysiologyQuery(query)) {
+            response = this.generateMusclePhysiologyResponse(query);
+        } else if (this.isSignalInterpretationQuery(query)) {
+            response = this.generateSignalInterpretation(query);
         } else {
             response = this.generateGeneralResponse(query);
         }
@@ -244,6 +212,7 @@ class KinesiologyAIAssistant {
             timestamp: new Date(),
             context: emgContext
         });
+        if (this.conversationHistory.length > 20) this.conversationHistory.splice(0, this.conversationHistory.length - 20);
 
         return response;
     }
@@ -292,77 +261,74 @@ class KinesiologyAIAssistant {
     }
 
     isSignalInterpretationQuery(query) {
-        const signalKeywords = ['pattern', 'signal', 'interpret', 'mean', 'indicate', 'amplitude', 'frequency'];
+        const signalKeywords = ['pattern', 'signal', 'interpret', 'mean', 'indicate', 'amplitude', 'frequency', 'patrón', 'señal', 'interpretar', 'indica', 'amplitud', 'frecuencia', 'asimetría', 'simetría'];
         return signalKeywords.some(keyword => query.includes(keyword));
     }
 
+    isSymmetryQuery(query) {
+        return ['simetría', 'simetria', 'asimetría', 'asimetria', 'bilateral', 'diferencia entre'].some(keyword => query.includes(keyword));
+    }
+
+    isMetricQuery(query) {
+        return ['rms', 'mav', 'pico', 'peak', 'entropía', 'entropia', 'cruces por cero', 'longitud de onda'].some(keyword => query.includes(keyword));
+    }
+
     isTreatmentQuery(query) {
-        const treatmentKeywords = ['treatment', 'therapy', 'rehabilitation', 'protocol', 'help', 'fix'];
+        const treatmentKeywords = ['treatment', 'therapy', 'rehabilitation', 'protocol', 'help', 'fix', 'tratamiento', 'terapia', 'rehabilitación', 'protocolo'];
         return treatmentKeywords.some(keyword => query.includes(keyword));
     }
 
     isMusclePhysiologyQuery(query) {
-        const physiologyKeywords = ['muscle', 'function', 'anatomy', 'physiology', 'work', 'role'];
+        const physiologyKeywords = ['muscle', 'function', 'anatomy', 'physiology', 'work', 'role', 'músculo', 'función', 'anatomía', 'fisiología'];
         return physiologyKeywords.some(keyword => query.includes(keyword));
     }
 
     isExerciseQuery(query) {
-        const exerciseKeywords = ['exercise', 'strengthen', 'workout', 'train', 'activity'];
+        const exerciseKeywords = ['exercise', 'strengthen', 'workout', 'train', 'activity', 'ejercicio', 'fortalecer', 'entrenar', 'actividad'];
         return exerciseKeywords.some(keyword => query.includes(keyword));
     }
 
     isFatigueQuery(query) {
-        const fatigueKeywords = ['fatigue', 'tired', 'weak', 'endurance', 'exhausted'];
+        const fatigueKeywords = ['fatigue', 'tired', 'endurance', 'exhausted', 'fatiga', 'cansancio', 'agotamiento'];
         return fatigueKeywords.some(keyword => query.includes(keyword));
     }
 
     isSignalQualityQuery(query) {
-        const qualityKeywords = ['quality', 'noise', 'artifact', 'improve', 'better', 'clear'];
+        const qualityKeywords = ['quality', 'noise', 'artifact', 'improve', 'better', 'clear', 'calidad', 'ruido', 'artefacto', 'mejorar', 'limpia'];
         return qualityKeywords.some(keyword => query.includes(keyword));
     }
 
     generateSignalInterpretation(query) {
-        const responses = [
-            `Basándome en los datos EMG bilaterales actuales, puedo observar ${this.describeCurrentSignal()}. ${this.getSignalInterpretationAdvice()}.`,
-            
-            `El patrón EMG bilateral muestra ${this.getCurrentActivationDescription()}. Esto sugiere ${this.getPhysiologicalInterpretation()}.`,
-            
-            `Analizando las características de señal bilateral: ${this.getDetailedSignalAnalysis()}. ${this.getInterpretationRecommendations()}.`
+        return `Descripción de los datos disponibles: ${this.describeCurrentSignal()}. Esta comparación es orientativa y debe revisarse junto con la calidad de señal, la colocación de electrodos y las condiciones de la sesión.` + this.addTechnicalDetails();
+    }
+
+    generateSymmetryResponse() {
+        const bilateral = this.currentEMGContext?.bilateral || {};
+        const symmetry = Number(bilateral.symmetryIndex);
+        const difference = Number(bilateral.difference);
+        if (!Number.isFinite(symmetry)) {
+            return 'No hay un índice de simetría disponible todavía. Inicia la simulación o abre una sesión guardada para comparar la activación izquierda y derecha.';
+        }
+        const level = symmetry >= 90 ? 'simetría alta' : symmetry >= 75 ? 'diferencia leve' : symmetry >= 60 ? 'diferencia moderada' : 'diferencia marcada';
+        const differenceText = Number.isFinite(difference) ? ` La diferencia bilateral registrada es ${difference.toFixed(1)}%.` : '';
+        return `El índice de simetría actual es ${symmetry.toFixed(1)}%, clasificado como ${level}.${differenceText} Describe cuán próximas son ambas activaciones; por sí solo no identifica la causa de la diferencia.`;
+    }
+
+    generateMetricExplanation(query) {
+        const metrics = [
+            { keys: ['rms'], name: 'RMS', text: 'resume la amplitud efectiva de la señal dentro de una ventana y permite comparar el nivel de activación registrado' },
+            { keys: ['mav'], name: 'MAV', text: 'es el promedio del valor absoluto de la señal y representa su amplitud media' },
+            { keys: ['entropía', 'entropia'], name: 'Entropía', text: 'describe la distribución o complejidad relativa de las amplitudes; no es un diagnóstico' },
+            { keys: ['cruces por cero'], name: 'Cruces por cero', text: 'cuenta cambios de signo que superan el umbral configurado y aporta una descripción temporal de la señal' },
+            { keys: ['longitud de onda'], name: 'Longitud de onda', text: 'acumula los cambios entre muestras consecutivas y combina información de amplitud y variación' },
+            { keys: ['pico', 'peak'], name: 'Pico', text: 'indica la mayor amplitud absoluta observada; debe revisarse junto con posibles artefactos o saturación' }
         ];
-        
-        return this.selectContextualResponse(responses) + this.addTechnicalDetails();
+        const metric = metrics.find(item => item.keys.some(key => query.includes(key)));
+        return metric ? `${metric.name}: ${metric.text}. Para comparar sesiones, conserva músculo, cadencia, resistencia y configuración equivalentes.` : 'Puedo explicar RMS, MAV, pico, entropía, cruces por cero y longitud de onda.';
     }
 
     generateTreatmentRecommendation(query) {
-        const muscle = this.identifyMuscleInQuery(query);
-        const issue = this.identifyIssueInQuery(query);
-        
-        const treatments = this.knowledgeBase.treatments;
-        const muscleInfo = this.knowledgeBase.muscles[muscle];
-        
-        let response = `Para ${muscle || 'el músculo objetivo'} con ${issue || 'las preocupaciones actuales'}, recomiendo:\n\n`;
-        
-        response += `**Intervenciones inmediatas:**\n`;
-        response += `• ${treatments.bilateralStrengthening[0]}\n`;
-        response += `• ${treatments.rehabilitation[0]}\n\n`;
-        
-        response += `**Enfoque de tratamiento progresivo:**\n`;
-        response += `• ${treatments.bilateralStrengthening[1]}\n`;
-        response += `• ${treatments.asymmetryCorrection[1]}\n`;
-        response += `• ${treatments.bilateralStrengthening[2]}\n\n`;
-        
-        if (muscleInfo) {
-            response += `**Ejercicios específicos para ${muscle} (bilateral):**\n${muscleInfo.exercises}\n\n`;
-            response += `**Consideraciones de asimetría:**\n${muscleInfo.asymmetryRisks}\n\n`;
-        }
-        
-        response += `**Pautas de monitoreo bilateral:**\n`;
-        response += `• Usar retroalimentación EMG bilateral para asegurar niveles de activación apropiados\n`;
-        response += `• Monitorear patrones de activación bilateral durante ejercicios\n`;
-        response += `• Seguir progreso con comparaciones EMG bilaterales\n`;
-        response += `• Objetivo: Mantener índice de simetría >90%`;
-        
-        return response;
+        return 'No puedo prescribir tratamientos ni indicar ejercicios personalizados. DEMASY puede describir las métricas observadas y ayudarte a preparar preguntas para que un profesional defina la intervención según la evaluación completa.';
     }
 
     generateMusclePhysiologyResponse(query) {
@@ -384,108 +350,34 @@ class KinesiologyAIAssistant {
                `• **Sincronización:** Coordinación entre unidades motoras y entre lados\n` +
                `• **Control neuromuscular:** Factores que afectan la coordinación bilateral\n` +
                `• **Simetría funcional:** Importancia del equilibrio bilateral para función óptima\n\n` +
-               `Comprender estos principios ayuda a interpretar señales EMG bilaterales en contextos clínicos y detectar asimetrías patológicas.`;
+               `Comprender estos principios ayuda a describir señales EMG bilaterales y sus diferencias observables.`;
     }
 
     generateExerciseRecommendation(query) {
-        const muscle = this.identifyMuscleInQuery(query) || 'target muscle';
-        const issue = this.identifyIssueInQuery(query);
-        
-        let response = `**EMG-Guided Exercise Protocol for ${muscle}:**\n\n`;
-        
-        response += `**Phase 1 - Activation (Weeks 1-2):**\n`;
-        response += `• Isometric contractions at 30-50% EMG max\n`;
-        response += `• Hold for 5-10 seconds, monitor EMG feedback\n`;
-        response += `• Focus on proper activation patterns\n\n`;
-        
-        response += `**Phase 2 - Strengthening (Weeks 3-6):**\n`;
-        response += `• Progressive resistance with EMG monitoring\n`;
-        response += `• Target 70-85% EMG max during exercises\n`;
-        response += `• Include both concentric and eccentric phases\n\n`;
-        
-        response += `**Phase 3 - Functional Integration (Weeks 7+):**\n`;
-        response += `• Sport/activity-specific movements\n`;
-        response += `• EMG analysis of movement patterns\n`;
-        response += `• Fatigue resistance training with EMG monitoring\n\n`;
-        
-        response += `**EMG Targets:**\n`;
-        response += `• Activation symmetry: >90% between sides\n`;
-        response += `• Fatigue threshold: <20% amplitude increase over time\n`;
-        response += `• Quality: Maintain clean signal patterns throughout exercises`;
-        
-        return response;
-    }
-
-    generateFatigueAnalysis(query) {
-        const indicators = this.knowledgeBase.fatigueAssessment.indicators;
-        const interpretation = this.knowledgeBase.fatigueAssessment.interpretation;
-        
-        let response = `**EMG Fatigue Analysis:**\n\n`;
-        
-        if (this.currentEMGContext) {
-            response += `Current fatigue level appears to be ${this.currentEMGContext.fatigueLevel || 'low'} based on signal characteristics.\n\n`;
-        }
-        
-        response += `**Key EMG Fatigue Indicators:**\n`;
-        indicators.forEach(indicator => {
-            response += `• ${indicator}\n`;
-        });
-        
-        response += `\n**Clinical Interpretation:**\n`;
-        interpretation.forEach(interp => {
-            response += `• ${interp}\n`;
-        });
-        
-        response += `\n**Recommendations:**\n`;
-        response += `• Monitor median frequency trends during sustained contractions\n`;
-        response += `• Use EMG amplitude normalization for fatigue assessment\n`;
-        response += `• Consider work-to-rest ratios based on EMG fatigue patterns\n`;
-        response += `• Implement fatigue-resistant training protocols`;
-        
-        return response;
+        return this.generateTreatmentRecommendation(query);
     }
 
     generateSignalQualityAdvice(query) {
-        let currentQuality = 'good';
+        let currentQuality = 'buena';
         if (this.currentEMGContext) {
-            const snr = parseFloat(this.currentEMGContext.snr) || 45;
-            if (snr > 40) currentQuality = 'excellent';
-            else if (snr > 30) currentQuality = 'good';
-            else if (snr > 20) currentQuality = 'fair';
-            else currentQuality = 'poor';
+            const snr = parseFloat(this.currentEMGContext.bilateral?.snr ?? this.currentEMGContext.snr) || 45;
+            if (snr > 40) currentQuality = 'excelente';
+            else if (snr > 30) currentQuality = 'buena';
+            else if (snr > 20) currentQuality = 'regular';
+            else currentQuality = 'pobre';
         }
         
         const qualityInfo = this.knowledgeBase.signalQuality[currentQuality];
         
-        let response = `**Current Signal Quality Assessment:** ${currentQuality.toUpperCase()}\n`;
-        response += `${qualityInfo}\n\n`;
-        
-        response += `**Signal Quality Optimization Tips:**\n`;
-        response += `• **Electrode placement:** Clean skin, proper inter-electrode distance (2-3cm)\n`;
-        response += `• **Skin preparation:** Light abrasion, alcohol cleaning, low impedance (<5kΩ)\n`;
-        response += `• **Noise reduction:** Avoid power lines, mobile devices, fluorescent lights\n`;
-        response += `• **Motion artifacts:** Secure electrode attachment, minimize cable movement\n`;
-        response += `• **Baseline stability:** Allow signal settling time, check for drift\n\n`;
-        
-        response += `**Troubleshooting Common Issues:**\n`;
-        response += `• High noise: Check electrode contact and environmental interference\n`;
-        response += `• Baseline drift: Verify amplifier settings and electrode stability\n`;
-        response += `• Low amplitude: Confirm muscle activation and electrode positioning\n`;
-        response += `• Artifacts: Identify source (motion, electrical, physiological)`;
-        
-        return response;
+        return `Calidad actual de la señal: ${currentQuality.toUpperCase()}\n${qualityInfo}\n\n` +
+            `Revisión sugerida:\n• Preparar y limpiar la piel antes de colocar electrodos.\n` +
+            `• Verificar contacto, fijación y separación consistente entre electrodos.\n` +
+            `• Alejar cables de fuentes eléctricas y reducir su movimiento.\n` +
+            `• Comprobar deriva de línea base, saturación y artefactos antes de interpretar métricas.`;
     }
 
     generateGeneralResponse(query) {
-        const generalResponses = [
-            `Estoy aquí para ayudar con interpretación de señales EMG bilaterales, fisiología muscular y planificación de tratamientos. ¿Podrías proporcionar más detalles específicos sobre lo que te gustaría analizar?`,
-            
-            `Como tu asistente IA de kinesiología, puedo ayudarte a comprender patrones EMG bilaterales, desarrollar protocolos de tratamiento e interpretar datos de activación muscular. ¿Qué aspecto específico te gustaría explorar?`,
-            
-            `Puedo asistir con varios aspectos del análisis EMG bilateral, incluyendo interpretación de señales, asimetrías y planificación de tratamientos. ¿Cómo puedo ayudarte hoy?`
-        ];
-        
-        return this.selectContextualResponse(generalResponses) + this.addSuggestionsFooter();
+        return `No identifiqué una consulta específica sobre los datos EMG. Puedo describir la simetría actual, explicar RMS, MAV, pico, entropía, cruces por cero o longitud de onda, y ayudarte a revisar la calidad de la señal.${this.addSuggestionsFooter()}`;
     }
 
     // Helper methods
@@ -574,7 +466,7 @@ class KinesiologyAIAssistant {
     }
 
     interpretFrequency(freq) {
-        if (freq < 40) return "potential fatigue or slow-twitch fiber dominance";
+        if (freq < 40) return "contenido predominante en frecuencias bajas";
         if (freq < 80) return "typical muscle fiber recruitment";
         return "fast-twitch fiber activation";
     }
@@ -589,8 +481,7 @@ class KinesiologyAIAssistant {
             'pain': 'pain management',
             'weak': 'weakness',
             'tight': 'tightness',
-            'injury': 'injury recovery',
-            'fatigue': 'fatigue issues'
+            'injury': 'injury recovery'
         };
         
         for (const [keyword, issue] of Object.entries(issues)) {
@@ -614,7 +505,7 @@ class KinesiologyAIAssistant {
     getInterpretationRecommendations() {
         const recommendations = [
             "Consider comparing bilateral signals for symmetry assessment",
-            "Monitor fatigue patterns during sustained contractions",
+            "Comparar patrones de activación entre ambos lados",
             "Evaluate signal quality and potential artifacts",
             "Assess activation timing relative to movement phases"
         ];
@@ -637,4 +528,5 @@ class KinesiologyAIAssistant {
 }
 
 // Export for use in main application
-window.KinesiologyAIAssistant = KinesiologyAIAssistant;
+if (typeof module !== 'undefined' && module.exports) module.exports = KinesiologyAIAssistant;
+if (typeof window !== 'undefined') window.KinesiologyAIAssistant = KinesiologyAIAssistant;

@@ -1,88 +1,102 @@
 # Punto de reanudación de DEMASY
 
-**Actualizado:** 2026-08-29  
-**Rama actual:** `feature/demasy-v1-phase-6`
-**Última integración:** `39c3e9e Merge DEMASY v1 phase 5 analysis`
+- **Actualizado:** 2026-09-02
+- **Rama actual:** `feature/demasy-v1-phase-7`
+- **Último commit de trabajo:** `0085a0b Implement DEMASY v1 phase 7 assistant adapters`
+**Última integración:** `3c09d04 Merge DEMASY v1 phase 8 UX and accessibility`
 
-## Estado del trabajo
+## Estado general
 
-- Fase 0 aprobada.
-- Fase 1 aprobada e integrada en `feature/demasy-v1`.
-- Fase 2 aprobada e integrada en `feature/demasy-v1`.
-- Fase 3 aprobada manualmente por el responsable el 2026-08-29.
-- Fase 3 integrada en `feature/demasy-v1`.
-- Fase 4 aprobada por el responsable el 2026-08-29 y lista para integrar.
-- Fases 4 y 5 aprobadas; Fase 5 lista para integrar antes de iniciar la Fase 6.
-- Fase 6 aprobada; Fase 7 pospuesta por decisión del responsable; siguiente trabajo: Fase 8.
+- Fases 0 a 6 aprobadas e integradas en `feature/demasy-v1`.
+- Fase 8 aprobada e integrada antes de retomar la Fase 7.
+- Fase 7 **Aprobada**, pendiente de integración en `feature/demasy-v1`.
+- Fases 9 y 10 pendientes.
+- El análisis de fatiga continúa excluido de DEMASY v1. Solo permanecen patrones del simulador, sin métricas ni conclusiones de fatiga.
 
-## Qué incluye la Fase 3
+## Estado de Git
 
-- Base física `DEMASYDB`.
-- Migración automática, idempotente y no destructiva desde `KinesioEMGDB`.
-- Normalización de participantes y sesiones.
-- Código único de participante.
-- Creación, edición, búsqueda, selección, archivado y restauración.
-- Guardado transaccional de sesiones simuladas.
-- Manejo de errores de cuota y conservación de la sesión en memoria ante fallas.
-- Datos de demostración compatibles con el nuevo esquema.
-- Cambio de referencias visibles principales a DEMASY.
-- Eliminación de la tarjeta visible de análisis de fatiga; los patrones de fatiga permanecen solo como escenarios del simulador.
+- Rama de integración: `feature/demasy-v1` en `3c09d04`.
+- Rama actual y remota: `feature/demasy-v1-phase-7` en `0085a0b`.
+- La Fase 7 todavía no debe integrarse: falta aprobación manual de sus textos y modos.
+- El árbol estaba limpio antes de actualizar este handoff.
 
-## Validación obtenida
+## Fase 7 implementada
+
+- Servicio desacoplado en `services/assistant-service.js`.
+- La interfaz utiliza exclusivamente el adaptador remoto de Gemini.
+- Los adaptadores local y mock permanecen como soporte de pruebas internas.
+- Timeout remoto de 8 segundos y health check en `/api/health`.
+- Estado remoto y errores de conexión o cuota visibles.
+- Indicador de carga sin demora artificial.
+- Prevención de solicitudes simultáneas duplicadas.
+- Historial limitado a 20 mensajes.
+- Contexto anonimizado mediante lista explícita de métricas permitidas.
+- Filtrado redundante en cliente y servidor; correos y teléfonos se redactan.
+- Respuestas insertadas con `textContent`, sin HTML dinámico.
+- Descargo de responsabilidad en todas las respuestas.
+- Rechazo de diagnóstico, tratamientos, ejercicios personalizados y análisis de fatiga.
+- Configuración opcional documentada en `.env.example`.
+
+## Configuración remota opcional
+
+Crear `.env.local` a partir de `.env.example`:
+
+```env
+# El asistente de la interfaz utiliza exclusivamente el servicio remoto.
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Las claves reales nunca deben confirmarse en Git, almacenarse en IndexedDB ni incluirse en respaldos.
+
+## Validación automática obtenida
 
 - `npm test`: aprobado.
-- 23 pruebas unitarias aprobadas.
-- Lint aprobado.
-- Smoke test aprobado.
-- Carga inicial comprobada con Chrome headless.
-- El navegador integrado de Codex no estaba conectado.
-- El árbol de trabajo estaba limpio después del commit y push.
+- 44 pruebas unitarias aprobadas.
+- Lint aprobado sobre 26 archivos JavaScript.
+- Smoke test HTTP aprobado.
+- `/api/health` respondió `ok`, modo `auto`, Gemini no configurado y modelo `gemini-2.5-flash`.
+- `/asistente-ia` respondió HTTP 200.
+- El navegador visual integrado no estaba disponible; falta la revisión visual manual.
 
-## Validación manual completada
+## Validación manual completada de la Fase 7
 
-El responsable confirmó el punto de validación 3 de `docs/v1-phase-3-persistence.md` el 2026-08-29.
+Abrir `http://127.0.0.1:8000/asistente-ia` y seguir `docs/v1-phase-7-assistant.md`:
 
-1. abrir **Pacientes** y comprobar los códigos de demostración;
-2. crear un participante sin nombre;
-3. editarlo y agregar datos;
-4. seleccionarlo y guardar una simulación corta;
-5. recargar y comprobar que la sesión permanezca;
-6. exportar y revisar el esquema;
-7. archivar y verificar que no acepte nuevas sesiones;
-8. mostrar archivados, restaurar y volver a seleccionar;
-9. si existía información histórica, comprobar que ambas bases y sus registros permanezcan.
+El responsable validó el funcionamiento remoto, la conservación del historial y los textos. El selector de modos fue retirado por decisión de producto; los errores de cuota muestran un aviso y el tiempo de reintento cuando está disponible.
 
-## Próximo paso después de validar la Fase 4
+## Próximo paso al reanudar
 
-Si el responsable aprueba la validación de la Fase 4:
+1. integrar con merge `--no-ff` sobre `feature/demasy-v1`;
+2. publicar la rama de integración;
+3. crear `feature/demasy-v1-phase-9` desde la integración;
+4. comenzar calidad, seguridad y rendimiento.
 
-1. actualizar Fase 4 a `Aprobada` en la documentación;
-2. integrar `feature/demasy-v1-phase-4` en `feature/demasy-v1` con merge `--no-ff`;
-3. publicar `feature/demasy-v1`;
-4. crear y publicar `feature/demasy-v1-phase-5` desde la rama de integración;
-5. implementar la Fase 5: análisis determinista y comparación.
+## Servidor local
 
-Si la validación falla, corregir primero sobre `feature/demasy-v1-phase-4`, repetir `npm test` y volver al mismo punto de validación.
+El servidor estaba ejecutándose en `http://127.0.0.1:8000` al cerrar la sesión. Después de apagar o reiniciar el equipo deberá levantarse nuevamente:
+
+```bash
+npm start
+```
+
+## Comandos recomendados mañana
+
+```bash
+git switch feature/demasy-v1-phase-7
+git status --short
+git log -1 --oneline
+npm test
+npm start
+```
 
 ## Referencias principales
 
 - `docs/v1-implementation-plan.md`
-- `docs/v1-phase-3-persistence.md`
-- `docs/v1-phase-4-history-replay.md`
-- `docs/v1-phase-2-recording.md`
-- `services/data-normalization-service.js`
-- `services/session-history-service.js`
-- `services/replay-signal-source.js`
-- `database.js`
-- `patient-manager.js`
-
-## Comando recomendado al reanudar
-
-```bash
-git switch feature/demasy-v1-phase-4
-git status --short
-git log -1 --oneline
-npm test
-```
-
-Este archivo se actualiza en cada punto de validación para facilitar la reanudación.
+- `docs/v1-phase-7-assistant.md`
+- `docs/v1-phase-8-ux.md`
+- `services/assistant-service.js`
+- `ai-assistant.js`
+- `scripts/serve.mjs`
+- `.env.example`
+- `tests/assistant-service.test.cjs`
