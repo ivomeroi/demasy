@@ -170,7 +170,7 @@ class KinesiologyAIAssistant {
     }
 
     async processQuery(userInput, emgContext = null) {
-        this.currentEMGContext = emgContext;
+        if (emgContext) this.currentEMGContext = emgContext;
         const query = userInput.toLowerCase();
         
         // Add to conversation history
@@ -187,18 +187,20 @@ class KinesiologyAIAssistant {
         // Generate response based on query type
         let response;
         
-        if (this.isSignalInterpretationQuery(query)) {
-            response = this.generateSignalInterpretation(query);
-        } else if (this.isTreatmentQuery(query)) {
-            response = this.generateTreatmentRecommendation(query);
-        } else if (this.isMusclePhysiologyQuery(query)) {
-            response = this.generateMusclePhysiologyResponse(query);
-        } else if (this.isExerciseQuery(query)) {
-            response = this.generateExerciseRecommendation(query);
-        } else if (this.isFatigueQuery(query)) {
+        if (this.isFatigueQuery(query)) {
             response = 'DEMASY v1 no realiza análisis de fatiga. Puedo ayudarte a describir amplitud, simetría, activación y calidad de la señal sin generar conclusiones diagnósticas.';
+        } else if (this.isTreatmentQuery(query) || this.isExerciseQuery(query)) {
+            response = this.generateTreatmentRecommendation(query);
         } else if (this.isSignalQualityQuery(query)) {
             response = this.generateSignalQualityAdvice(query);
+        } else if (this.isSymmetryQuery(query)) {
+            response = this.generateSymmetryResponse();
+        } else if (this.isMetricQuery(query)) {
+            response = this.generateMetricExplanation(query);
+        } else if (this.isMusclePhysiologyQuery(query)) {
+            response = this.generateMusclePhysiologyResponse(query);
+        } else if (this.isSignalInterpretationQuery(query)) {
+            response = this.generateSignalInterpretation(query);
         } else {
             response = this.generateGeneralResponse(query);
         }
@@ -263,6 +265,14 @@ class KinesiologyAIAssistant {
         return signalKeywords.some(keyword => query.includes(keyword));
     }
 
+    isSymmetryQuery(query) {
+        return ['simetría', 'simetria', 'asimetría', 'asimetria', 'bilateral', 'diferencia entre'].some(keyword => query.includes(keyword));
+    }
+
+    isMetricQuery(query) {
+        return ['rms', 'mav', 'pico', 'peak', 'entropía', 'entropia', 'cruces por cero', 'longitud de onda'].some(keyword => query.includes(keyword));
+    }
+
     isTreatmentQuery(query) {
         const treatmentKeywords = ['treatment', 'therapy', 'rehabilitation', 'protocol', 'help', 'fix', 'tratamiento', 'terapia', 'rehabilitación', 'protocolo'];
         return treatmentKeywords.some(keyword => query.includes(keyword));
@@ -290,6 +300,31 @@ class KinesiologyAIAssistant {
 
     generateSignalInterpretation(query) {
         return `Descripción de los datos disponibles: ${this.describeCurrentSignal()}. Esta comparación es orientativa y debe revisarse junto con la calidad de señal, la colocación de electrodos y las condiciones de la sesión.` + this.addTechnicalDetails();
+    }
+
+    generateSymmetryResponse() {
+        const bilateral = this.currentEMGContext?.bilateral || {};
+        const symmetry = Number(bilateral.symmetryIndex);
+        const difference = Number(bilateral.difference);
+        if (!Number.isFinite(symmetry)) {
+            return 'No hay un índice de simetría disponible todavía. Inicia la simulación o abre una sesión guardada para comparar la activación izquierda y derecha.';
+        }
+        const level = symmetry >= 90 ? 'simetría alta' : symmetry >= 75 ? 'diferencia leve' : symmetry >= 60 ? 'diferencia moderada' : 'diferencia marcada';
+        const differenceText = Number.isFinite(difference) ? ` La diferencia bilateral registrada es ${difference.toFixed(1)}%.` : '';
+        return `El índice de simetría actual es ${symmetry.toFixed(1)}%, clasificado como ${level}.${differenceText} Describe cuán próximas son ambas activaciones; por sí solo no identifica la causa de la diferencia.`;
+    }
+
+    generateMetricExplanation(query) {
+        const metrics = [
+            { keys: ['rms'], name: 'RMS', text: 'resume la amplitud efectiva de la señal dentro de una ventana y permite comparar el nivel de activación registrado' },
+            { keys: ['mav'], name: 'MAV', text: 'es el promedio del valor absoluto de la señal y representa su amplitud media' },
+            { keys: ['entropía', 'entropia'], name: 'Entropía', text: 'describe la distribución o complejidad relativa de las amplitudes; no es un diagnóstico' },
+            { keys: ['cruces por cero'], name: 'Cruces por cero', text: 'cuenta cambios de signo que superan el umbral configurado y aporta una descripción temporal de la señal' },
+            { keys: ['longitud de onda'], name: 'Longitud de onda', text: 'acumula los cambios entre muestras consecutivas y combina información de amplitud y variación' },
+            { keys: ['pico', 'peak'], name: 'Pico', text: 'indica la mayor amplitud absoluta observada; debe revisarse junto con posibles artefactos o saturación' }
+        ];
+        const metric = metrics.find(item => item.keys.some(key => query.includes(key)));
+        return metric ? `${metric.name}: ${metric.text}. Para comparar sesiones, conserva músculo, cadencia, resistencia y configuración equivalentes.` : 'Puedo explicar RMS, MAV, pico, entropía, cruces por cero y longitud de onda.';
     }
 
     generateTreatmentRecommendation(query) {
@@ -325,7 +360,7 @@ class KinesiologyAIAssistant {
     generateSignalQualityAdvice(query) {
         let currentQuality = 'buena';
         if (this.currentEMGContext) {
-            const snr = parseFloat(this.currentEMGContext.snr) || 45;
+            const snr = parseFloat(this.currentEMGContext.bilateral?.snr ?? this.currentEMGContext.snr) || 45;
             if (snr > 40) currentQuality = 'excelente';
             else if (snr > 30) currentQuality = 'buena';
             else if (snr > 20) currentQuality = 'regular';
@@ -342,15 +377,7 @@ class KinesiologyAIAssistant {
     }
 
     generateGeneralResponse(query) {
-        const generalResponses = [
-            `Estoy aquí para ayudar con interpretación de señales EMG bilaterales, fisiología muscular y planificación de tratamientos. ¿Podrías proporcionar más detalles específicos sobre lo que te gustaría analizar?`,
-            
-            `Como tu asistente IA de kinesiología, puedo ayudarte a comprender patrones EMG bilaterales, desarrollar protocolos de tratamiento e interpretar datos de activación muscular. ¿Qué aspecto específico te gustaría explorar?`,
-            
-            `Puedo asistir con varios aspectos del análisis EMG bilateral, incluyendo interpretación de señales, asimetrías y planificación de tratamientos. ¿Cómo puedo ayudarte hoy?`
-        ];
-        
-        return this.selectContextualResponse(generalResponses) + this.addSuggestionsFooter();
+        return `No identifiqué una consulta específica sobre los datos EMG. Puedo describir la simetría actual, explicar RMS, MAV, pico, entropía, cruces por cero o longitud de onda, y ayudarte a revisar la calidad de la señal.${this.addSuggestionsFooter()}`;
     }
 
     // Helper methods
@@ -501,4 +528,5 @@ class KinesiologyAIAssistant {
 }
 
 // Export for use in main application
-window.KinesiologyAIAssistant = KinesiologyAIAssistant;
+if (typeof module !== 'undefined' && module.exports) module.exports = KinesiologyAIAssistant;
+if (typeof window !== 'undefined') window.KinesiologyAIAssistant = KinesiologyAIAssistant;

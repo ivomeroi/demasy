@@ -57,3 +57,4 @@ Sin clave, `auto` cae al asistente local. `remote` muestra el error de configura
 - Timeout remoto.
 - Respuesta mock determinista.
 - Historial limitado.
+- Enrutamiento local diferenciado para simetría, métricas, calidad de señal, fisiología y límites clínicos.
