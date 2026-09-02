@@ -21,6 +21,8 @@ class KinesioEMGApp {
             this.aiAssistant = new KinesiologyAIAssistant();  
             this.assistantService = null;
             this.chatPending = false;
+            this.chatTranscriptService = new ChatTranscriptService(window.sessionStorage);
+            this.chatTranscript = [];
             console.log('AI Assistant created:', !!this.aiAssistant);
             
             // Initialize database and patient manager
@@ -716,6 +718,13 @@ class KinesioEMGApp {
             mock: new MockAssistantAdapter(),
             maximumHistory: 20
         });
+        this.chatTranscript = this.chatTranscriptService.load();
+        this.assistantService.restoreHistory(this.chatTranscript);
+        this.chatTranscript.forEach(entry => this.addChatMessage(entry.type === 'assistant' ? 'ai' : 'user', entry.content, {
+            source: entry.source,
+            fallback: entry.fallback,
+            restoring: true
+        }));
         const modeSelect = document.getElementById('assistant-mode');
         if (modeSelect) modeSelect.value = mode;
         this.updateAssistantSource(mode === 'auto' ? 'auto' : mode === 'local' ? 'local' : mode === 'mock' ? 'mock' : 'remote');
@@ -2019,6 +2028,16 @@ class KinesioEMGApp {
         messageDiv.appendChild(messageContent);
         
         messagesContainer.appendChild(messageDiv);
+
+        if (!metadata.restoring) {
+            this.chatTranscript.push({
+                type: type === 'ai' ? 'assistant' : 'user',
+                content: String(content ?? ''),
+                source: metadata.source || null,
+                fallback: Boolean(metadata.fallback)
+            });
+            this.chatTranscript = this.chatTranscriptService.save(this.chatTranscript);
+        }
         
         // Scroll to bottom
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -2037,6 +2056,8 @@ class KinesioEMGApp {
         
         this.aiAssistant.clearHistory();
         this.assistantService?.clearHistory();
+        this.chatTranscript = [];
+        this.chatTranscriptService.clear();
         console.log('Chat cleared');
     }
 

@@ -140,6 +140,13 @@
 
         clearHistory() { this.history = []; }
         getHistory() { return this.history.map(entry => ({ ...entry })); }
+        restoreHistory(entries) {
+            this.history = (Array.isArray(entries) ? entries : [])
+                .filter(entry => ['user', 'assistant'].includes(entry?.type) && typeof entry.content === 'string')
+                .slice(-this.maximumHistory)
+                .map(entry => ({ type: entry.type, content: redactText(entry.content), source: entry.source || null, timestamp: new Date().toISOString() }));
+            return this.getHistory();
+        }
     }
 
     return { AssistantService, LocalAssistantAdapter, RemoteAssistantAdapter, MockAssistantAdapter, anonymizeContext, redactText, ASSISTANT_DISCLAIMER: DISCLAIMER };

@@ -61,3 +61,14 @@ test('adaptador remoto informa timeout y mock es determinista', async () => {
     const mock = await new MockAssistantAdapter().request({ context: { bilateral: { symmetryIndex: 91.25 } } });
     assert.match(mock.content, /91.3%/);
 });
+
+test('restaura historial previo respetando límite y redacción', () => {
+    const service = new AssistantService({ mode: 'local', maximumHistory: 2, local: {}, remote: {} });
+    const restored = service.restoreHistory([
+        { type: 'user', content: 'descartar' },
+        { type: 'user', content: 'mi correo es demo@example.com' },
+        { type: 'assistant', content: 'respuesta', source: 'local' }
+    ]);
+    assert.equal(restored.length, 2);
+    assert.match(restored[0].content, /\[correo omitido\]/);
+});

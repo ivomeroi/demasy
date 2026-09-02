@@ -58,3 +58,4 @@ Sin clave, `auto` cae al asistente local. `remote` muestra el error de configura
 - Respuesta mock determinista.
 - Historial limitado.
 - Enrutamiento local diferenciado para simetría, métricas, calidad de señal, fisiología y límites clínicos.
+- Conversación restaurada tras recargar mediante `sessionStorage`, limitada a 20 mensajes y excluida de los respaldos clínicos.
