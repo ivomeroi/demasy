@@ -71,7 +71,11 @@
             }));
             if (!response.ok) {
                 const body = await response.json().catch(() => ({}));
-                throw new Error(body.error || `Asistente remoto: HTTP ${response.status}`);
+                const error = new Error(body.error || `Asistente remoto: HTTP ${response.status}`);
+                error.status = response.status;
+                error.code = body.code || (response.status === 429 ? 'RATE_LIMIT' : 'REMOTE_ERROR');
+                error.retryAfterSeconds = Number.isFinite(body.retryAfterSeconds) ? body.retryAfterSeconds : null;
+                throw error;
             }
             const data = await response.json();
             if (!data.response || typeof data.response !== 'string') throw new Error('El asistente remoto devolvió una respuesta vacía');
@@ -128,6 +132,8 @@
                     result = await this.local.request({ message, context, history });
                     result.fallback = true;
                     result.remoteError = error.message;
+                    result.remoteErrorCode = error.code;
+                    result.retryAfterSeconds = error.retryAfterSeconds;
                 }
             }
             result.content = `${normalizeOutput(result.content)}\n\n${DISCLAIMER}`;

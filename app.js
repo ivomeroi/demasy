@@ -474,12 +474,6 @@ class KinesioEMGApp {
             this.clearChat();
         });
 
-        document.getElementById('assistant-mode')?.addEventListener('change', async event => {
-            this.assistantService?.setMode(event.target.value);
-            await this.settingsService.set('assistantMode', event.target.value);
-            this.updateAssistantSource(event.target.value === 'auto' ? 'auto' : event.target.value === 'local' ? 'local' : event.target.value === 'mock' ? 'mock' : 'remote');
-        });
-
         document.getElementById('assistant-health')?.addEventListener('click', async () => {
             try {
                 const health = await this.assistantService.remote.health();
@@ -710,9 +704,8 @@ class KinesioEMGApp {
                 phase: 'Inicio'
             }
         });
-        const mode = this.displayPreferences?.assistantMode || 'auto';
         this.assistantService = new AssistantService({
-            mode,
+            mode: 'remote',
             local: new LocalAssistantAdapter((message, context) => this.aiAssistant.processQuery(message, context)),
             remote: new RemoteAssistantAdapter({ timeoutMs: 8000 }),
             mock: new MockAssistantAdapter(),
@@ -725,9 +718,7 @@ class KinesioEMGApp {
             fallback: entry.fallback,
             restoring: true
         }));
-        const modeSelect = document.getElementById('assistant-mode');
-        if (modeSelect) modeSelect.value = mode;
-        this.updateAssistantSource(mode === 'auto' ? 'auto' : mode === 'local' ? 'local' : mode === 'mock' ? 'mock' : 'remote');
+        this.updateAssistantSource('remote');
     }
 
     async initializeUI() {
@@ -1967,17 +1958,35 @@ class KinesioEMGApp {
                 message, 
                 this.getActiveSignalProvider().getStats()
             );
+            if (result.remoteErrorCode === 'RATE_LIMIT') {
+                this.addChatMessage('ai', this.formatAssistantRateLimit(result.retryAfterSeconds), { source: 'error' });
+            }
             this.addChatMessage('ai', result.content, { source: result.source, fallback: result.fallback });
             this.updateAssistantSource(result.source, result.fallback, result.model);
         } catch (error) {
             console.error('Error getting AI response:', error);
-            this.addChatMessage('ai', `No pude procesar la solicitud: ${error.message}`, { source: 'error' });
+            const content = error.code === 'RATE_LIMIT'
+                ? this.formatAssistantRateLimit(error.retryAfterSeconds)
+                : `No pude procesar la solicitud: ${error.message}`;
+            this.addChatMessage('ai', content, { source: 'error' });
             this.updateAssistantSource('error');
         } finally {
             loading?.remove();
             this.chatPending = false;
             if (sendButton) sendButton.disabled = !input?.value.trim();
         }
+    }
+
+    formatAssistantRateLimit(retryAfterSeconds) {
+        const seconds = Number(retryAfterSeconds);
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+            return 'Se alcanzó el límite de uso del asistente remoto. Vuelve a intentarlo más tarde.';
+        }
+        const roundedMinutes = Math.ceil(seconds / 60);
+        const wait = seconds < 60
+            ? `${Math.ceil(seconds)} segundo${Math.ceil(seconds) === 1 ? '' : 's'}`
+            : `${roundedMinutes} minuto${roundedMinutes === 1 ? '' : 's'}`;
+        return `Se alcanzó el límite de uso del asistente remoto. Vuelve a intentarlo en aproximadamente ${wait}.`;
     }
 
     addChatLoading() {

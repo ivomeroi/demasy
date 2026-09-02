@@ -1,6 +1,6 @@
 # Punto de reanudación de DEMASY
 
-- **Actualizado:** 2026-08-30
+- **Actualizado:** 2026-09-02
 - **Rama actual:** `feature/demasy-v1-phase-7`
 - **Último commit de trabajo:** `0085a0b Implement DEMASY v1 phase 7 assistant adapters`
 **Última integración:** `3c09d04 Merge DEMASY v1 phase 8 UX and accessibility`
@@ -9,7 +9,7 @@
 
 - Fases 0 a 6 aprobadas e integradas en `feature/demasy-v1`.
 - Fase 8 aprobada e integrada antes de retomar la Fase 7.
-- Fase 7 implementada y actualmente **En validación**.
+- Fase 7 **Aprobada**, pendiente de integración en `feature/demasy-v1`.
 - Fases 9 y 10 pendientes.
 - El análisis de fatiga continúa excluido de DEMASY v1. Solo permanecen patrones del simulador, sin métricas ni conclusiones de fatiga.
 
@@ -23,10 +23,10 @@
 ## Fase 7 implementada
 
 - Servicio desacoplado en `services/assistant-service.js`.
-- Adaptadores `local`, `remote`, `auto` y `mock`.
-- El modo automático intenta `/api/chat` y usa el asistente local ante error o timeout.
+- La interfaz utiliza exclusivamente el adaptador remoto de Gemini.
+- Los adaptadores local y mock permanecen como soporte de pruebas internas.
 - Timeout remoto de 8 segundos y health check en `/api/health`.
-- Estado visible: asistente local, remoto, simulado, respaldo o error.
+- Estado remoto y errores de conexión o cuota visibles.
 - Indicador de carga sin demora artificial.
 - Prevención de solicitudes simultáneas duplicadas.
 - Historial limitado a 20 mensajes.
@@ -42,7 +42,7 @@
 Crear `.env.local` a partir de `.env.example`:
 
 ```env
-ASSISTANT_MODE=auto
+# El asistente de la interfaz utiliza exclusivamente el servicio remoto.
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
 ```
@@ -59,32 +59,18 @@ Las claves reales nunca deben confirmarse en Git, almacenarse en IndexedDB ni in
 - `/asistente-ia` respondió HTTP 200.
 - El navegador visual integrado no estaba disponible; falta la revisión visual manual.
 
-## Validación manual pendiente de la Fase 7
+## Validación manual completada de la Fase 7
 
 Abrir `http://127.0.0.1:8000/asistente-ia` y seguir `docs/v1-phase-7-assistant.md`:
 
-1. Probar una consulta de simetría en modo `Local`.
-2. Preguntar por fatiga y tratamiento; verificar los límites de alcance.
-3. Probar `Automático` sin clave y confirmar el respaldo local.
-4. Probar `Remoto` sin clave y confirmar un error visible sin afectar otras rutas.
-5. Probar `Simulado` y verificar su etiqueta.
-6. Pulsar `Comprobar` y revisar el health check.
-7. Intentar enviar rápidamente dos veces la misma consulta.
-8. Limpiar el chat y comprobar que solo quede el mensaje inicial.
-9. Revisar y aprobar los textos definitivos.
+El responsable validó el funcionamiento remoto, la conservación del historial y los textos. El selector de modos fue retirado por decisión de producto; los errores de cuota muestran un aviso y el tiempo de reintento cuando está disponible.
 
 ## Próximo paso al reanudar
 
-Si la validación es aprobada:
-
-1. cambiar Fase 7 a `Aprobada` en el plan y su documento;
-2. confirmar y publicar la aprobación en `feature/demasy-v1-phase-7`;
-3. integrar con merge `--no-ff` sobre `feature/demasy-v1`;
-4. publicar la rama de integración;
-5. crear `feature/demasy-v1-phase-9` desde la integración;
-6. comenzar calidad, seguridad y rendimiento.
-
-Si falla, corregir en `feature/demasy-v1-phase-7`, ejecutar `npm test` y repetir la validación.
+1. integrar con merge `--no-ff` sobre `feature/demasy-v1`;
+2. publicar la rama de integración;
+3. crear `feature/demasy-v1-phase-9` desde la integración;
+4. comenzar calidad, seguridad y rendimiento.
 
 ## Servidor local
 

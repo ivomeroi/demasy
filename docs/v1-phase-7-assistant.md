@@ -1,19 +1,18 @@
 # DEMASY v1 — Fase 7: asistente y servicios externos
 
-**Estado:** En validación  
+**Estado:** Aprobada
 **Rama:** `feature/demasy-v1-phase-7`
 
 ## Objetivo
 
-Ofrecer orientación educativa sobre señales EMG sin convertir el asistente ni la API externa en una dependencia de DEMASY. El modo local funciona sin internet y el modo automático lo utiliza como respaldo ante cualquier falla remota.
+Ofrecer orientación educativa sobre señales EMG mediante Gemini, manteniendo la clave fuera del navegador y aislando cualquier falla remota del resto de DEMASY.
 
 ## Arquitectura implementada
 
-- `AssistantService`: selecciona el adaptador, evita solicitudes duplicadas y limita el historial a 20 mensajes.
-- `LocalAssistantAdapter`: utiliza la base de conocimiento incluida en el navegador y nunca llama a la red.
+- `AssistantService`: evita solicitudes duplicadas y limita el historial a 20 mensajes.
 - `RemoteAssistantAdapter`: consume `/api/chat`, cancela a los 8 segundos y expone `/api/health` para diagnóstico de configuración.
-- `MockAssistantAdapter`: genera una respuesta remota determinista sin utilizar servicios externos.
-- Modo `auto`: intenta el remoto y devuelve una respuesta local identificada como respaldo si falla.
+- La interfaz utiliza exclusivamente el adaptador remoto y muestra errores de conexión o cuota sin afectar las demás secciones.
+- Los adaptadores local y mock permanecen disponibles únicamente para pruebas internas.
 
 ## Privacidad y seguridad
 
@@ -25,28 +24,27 @@ Ofrecer orientación educativa sobre señales EMG sin convertir el asistente ni 
 - DEMASY v1 rechaza análisis de fatiga, diagnósticos, tratamientos y ejercicios personalizados.
 - La clave Gemini se lee solo en el servidor y no forma parte de IndexedDB ni de los respaldos.
 
-## Configuración opcional
+## Configuración
 
 Copiar `.env.example` como `.env.local` y completar únicamente en el equipo local:
 
 ```env
-ASSISTANT_MODE=auto
+# El asistente de la interfaz utiliza exclusivamente el servicio remoto.
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
 ```
 
-Sin clave, `auto` cae al asistente local. `remote` muestra el error de configuración. `mock` permite validar toda la interfaz sin red ni credenciales.
+Sin clave o sin conexión, la sección del asistente muestra un error; las demás funciones de DEMASY continúan disponibles. Ante un límite `429`, se informa el tiempo aproximado de reintento cuando Gemini lo proporciona.
 
 ## Validación solicitada
 
-1. Seleccionar `Local`, preguntar por simetría y confirmar la etiqueta “Respuesta local”.
+1. Preguntar por simetría y confirmar una respuesta remota identificada.
 2. Preguntar por fatiga o por un tratamiento y confirmar que el asistente explica el límite de DEMASY.
-3. Seleccionar `Automático` sin clave y confirmar “Asistente local · respaldo”.
-4. Seleccionar `Remoto` sin clave y comprobar un error visible sin afectar otras secciones.
-5. Seleccionar `Simulado` y comprobar una respuesta marcada como simulada.
-6. Pulsar “Comprobar” y revisar el estado del servidor/Gemini.
-7. Enviar dos veces la misma consulta rápidamente y verificar que no se duplique.
-8. Limpiar el chat y confirmar que se conserva únicamente el mensaje inicial.
+3. Pulsar “Comprobar” y revisar el estado del servidor/Gemini.
+4. Verificar que un error remoto o de cuota sea visible sin afectar otras secciones.
+5. Enviar dos veces la misma consulta rápidamente y verificar que no se duplique.
+6. Recargar y comprobar que el historial se conserva durante la sesión.
+7. Limpiar el chat y confirmar que se conserva únicamente el mensaje inicial.
 
 ## Pruebas automatizadas
 

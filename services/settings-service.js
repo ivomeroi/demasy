@@ -26,7 +26,6 @@
                 resistancePercent: 50,
                 muscleType: 'quadriceps',
                 chartWindowSeconds: config?.signal?.defaultChartWindowSeconds || 1,
-                assistantMode: 'auto',
                 chartScaleMode: 'fixed',
                 showLeftSignal: true,
                 showRightSignal: true,
@@ -70,10 +69,6 @@
 
             if (['showLeftSignal', 'showRightSignal', 'showRms'].includes(key) && typeof value !== 'boolean') {
                 throw new TypeError(`${key} must be a boolean`);
-            }
-
-            if (key === 'assistantMode' && !['local', 'remote', 'auto', 'mock'].includes(value)) {
-                throw new RangeError('assistantMode must be local, remote, auto or mock');
             }
 
             if (key === 'muscleType' && (typeof value !== 'string' || value.trim() === '')) {

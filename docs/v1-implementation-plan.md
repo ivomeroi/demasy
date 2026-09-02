@@ -59,7 +59,7 @@ El asistente remoto, el despliegue público y cualquier servicio en la nube ser�
 - Métricas temporales bilaterales.
 - Comparación básica entre sesiones.
 - Exportación e importación con formato versionado.
-- Asistente local y asistente remoto opcional.
+- Asistente remoto Gemini aislado del resto de la aplicación.
 - Configuración persistente de la aplicación.
 - Estados de carga, error y funcionamiento degradado.
 - Pruebas unitarias, de integración y de recorrido principal.
@@ -820,12 +820,12 @@ Ensayo documentado de respaldo y restauración.
 
 #### Objetivo
 
-Hacer que el asistente sea opcional, transparente y seguro.
+Hacer que el asistente remoto sea transparente y seguro, sin comprometer el resto de la aplicación ante una falla externa.
 
 #### Tareas del asistente
 
 - [x] Crear selector automático de adaptador.
-- [x] Mostrar “Asistente local” o “Asistente remoto”.
+- [x] Mostrar claramente el estado del asistente remoto.
 - [x] Añadir estado de carga.
 - [x] Evitar mensajes duplicados.
 - [x] Eliminar la demora artificial.
@@ -844,7 +844,7 @@ La API local de Gemini deberá configurarse mediante variables:
 ```env
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
-ASSISTANT_MODE=auto
+# El asistente de la interfaz utiliza exclusivamente el servicio remoto.
 ```
 
 Modos previstos:
@@ -856,7 +856,7 @@ Modos previstos:
 
 #### Criterio de aceptación
 
-El asistente funciona sin internet, y una falla remota no afecta el resto de la aplicación ni expone información personal.
+El asistente remoto funciona con Gemini; una falla o límite de cuota se comunica claramente y no afecta el resto de la aplicación ni expone información personal.
 
 #### Punto de validación 7
 
@@ -995,7 +995,7 @@ Nunca se debe incluir `GEMINI_API_KEY` en JavaScript del navegador.
 | local | IndexedDB | local o Gemini vía Node | desarrollo y defensa |
 | test | memoria/IndexedDB aislada | mock | CI |
 | demo estática | IndexedDB | local | publicación sin secretos |
-| demo completa | IndexedDB | remoto con fallback local | demostración opcional |
+| demo completa | IndexedDB | Gemini remoto | demostración con API configurada |
 
 #### Criterio de aceptación
 
@@ -1028,7 +1028,7 @@ Cubrirán:
 - grabación y guardado;
 - migraciones;
 - exportación e importación;
-- fallback remoto-local;
+- manejo aislado de errores remotos;
 - reproducción desde una sesión persistida.
 
 ### 13.3 Pruebas end-to-end
@@ -1093,7 +1093,7 @@ Para llamadas al asistente remoto:
 | pérdida de datos en IndexedDB | alta | exportación versionada y restauración probada |
 | sesión demasiado grande | alta | muestreo de almacenamiento, límites y advertencias |
 | métricas mal interpretadas | alta | fórmulas documentadas y lenguaje no diagnóstico |
-| API remota caída | medio | fallback local y estado visible |
+| API remota caída | medio | error visible sin bloquear el resto de la aplicación |
 | clave expuesta | alta | proxy servidor; nunca incluir secreto en frontend |
 | CDN no disponible | medio | dependencias locales o fallback |
 | migración rompe datos existentes | alta | migración no destructiva y respaldo previo |
@@ -1179,7 +1179,7 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 4. Historial | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-4-history-replay.md` | Validación manual completada; lista para integrar |
 | 5. Análisis | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-5-analysis.md` | Validación completada; lista para integrar |
 | 6. Importación/exportación | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-6-backup-recovery.md` | Validación aceptada; restauración limpia se repetirá antes de entrega |
-| 7. Asistente | En validación | 2026-08-29 | Codex + responsable | `docs/v1-phase-7-assistant.md` | Modos local, remoto, automático y mock listos para revisión |
+| 7. Asistente | Aprobada | 2026-09-02 | Codex + responsable | `docs/v1-phase-7-assistant.md` | Gemini remoto validado; errores y límites de cuota visibles |
 | 8. UX | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-8-ux.md` | Identidad y refinamiento visual aprobados; lista para integrar |
 | 9. Calidad | Pendiente | | | | |
 | 10. Entrega | Pendiente | | | | |
@@ -1192,7 +1192,7 @@ Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Posp
 
 - [ ] El flujo principal funciona completamente con simulación.
 - [ ] Se puede trabajar sin internet.
-- [ ] Se puede trabajar sin claves de API.
+- [ ] La aplicación, excepto el asistente, funciona sin claves de API.
 - [ ] Se puede trabajar sin ESP32.
 - [ ] No hay botones principales sin función.
 - [ ] Toda sesión indica que su origen es simulado.
@@ -1220,7 +1220,7 @@ Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Posp
 ### Servicios
 
 - [ ] IndexedDB posee adaptador de memoria para pruebas.
-- [ ] Gemini posee fallback local.
+- [x] Una falla de Gemini no bloquea el resto de la aplicación.
 - [ ] Pruebas usan asistente mock.
 - [ ] Ningún secreto llega al frontend.
 - [ ] Despliegue estático funciona sin API.

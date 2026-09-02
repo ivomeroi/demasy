@@ -18,7 +18,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 const portArg = process.argv.find(arg => /^\d+$/.test(arg));
 const port = Number(process.env.PORT || portArg || 8000);
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const assistantMode = ['local', 'remote', 'auto', 'mock'].includes(process.env.ASSISTANT_MODE) ? process.env.ASSISTANT_MODE : 'auto';
+const assistantMode = 'remote';
 const assistantContextPath = join(root, 'docs', 'ai-assistant-context.md');
 const appRoutes = new Set(['/emg-en-vivo', '/analisis', '/pacientes', '/asistente-ia', '/configuracion']);
 
@@ -128,10 +128,6 @@ function buildGeminiContents({ message, emgContext, history }) {
 }
 
 async function handleChat(req, res) {
-    if (assistantMode === 'local' || assistantMode === 'mock') {
-        sendJson(res, 503, { error: `Remote assistant disabled in ${assistantMode} mode` });
-        return;
-    }
     if (!process.env.GEMINI_API_KEY) {
         sendJson(res, 503, {
             error: 'GEMINI_API_KEY is not configured'
@@ -167,8 +163,16 @@ async function handleChat(req, res) {
         const data = await geminiResponse.json();
 
         if (!geminiResponse.ok) {
+            const retryAfterHeader = geminiResponse.headers.get('retry-after');
+            const retryDelay = data.error?.details
+                ?.find(detail => detail['@type']?.endsWith('RetryInfo'))?.retryDelay;
+            const retryAfterSeconds = retryAfterHeader
+                ? Number.parseInt(retryAfterHeader, 10)
+                : retryDelay?.endsWith('s') ? Math.ceil(Number.parseFloat(retryDelay)) : null;
             sendJson(res, geminiResponse.status, {
-                error: data.error?.message || 'Gemini request failed'
+                error: data.error?.message || 'Gemini request failed',
+                code: geminiResponse.status === 429 ? 'RATE_LIMIT' : 'REMOTE_ERROR',
+                retryAfterSeconds: Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : null
             });
             return;
         }
@@ -270,7 +274,7 @@ const server = createServer(async (req, res) => {
 
 server.listen(port, host, () => {
     console.log(`DEMASY is running at http://${host}:${port}`);
-    console.log(`AI assistant: ${assistantMode}; ${process.env.GEMINI_API_KEY ? `Gemini enabled (${geminiModel})` : 'offline fallback only'}`);
+    console.log(`AI assistant: ${assistantMode}; ${process.env.GEMINI_API_KEY ? `Gemini enabled (${geminiModel})` : 'GEMINI_API_KEY missing'}`);
     console.log('Press Ctrl+C to stop the server.');
 });
 

@@ -73,6 +73,20 @@ test('adaptador remoto invoca fetch sin ligarlo a la instancia', async () => {
     assert.deepEqual(await remote.health(), { ok: true });
 });
 
+test('adaptador remoto expone límite y tiempo de reintento', async () => {
+    const remote = new RemoteAssistantAdapter({
+        fetch: async () => ({
+            ok: false,
+            status: 429,
+            json: async () => ({ error: 'Quota exceeded', code: 'RATE_LIMIT', retryAfterSeconds: 42 })
+        })
+    });
+    await assert.rejects(
+        () => remote.request({ message: 'hola', context: {}, history: [] }),
+        error => error.code === 'RATE_LIMIT' && error.retryAfterSeconds === 42
+    );
+});
+
 test('restaura historial previo respetando límite y redacción', () => {
     const service = new AssistantService({ mode: 'local', maximumHistory: 2, local: {}, remote: {} });
     const restored = service.restoreHistory([
