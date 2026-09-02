@@ -62,6 +62,17 @@ test('adaptador remoto informa timeout y mock es determinista', async () => {
     assert.match(mock.content, /91.3%/);
 });
 
+test('adaptador remoto invoca fetch sin ligarlo a la instancia', async () => {
+    function strictFetch(url) {
+        'use strict';
+        assert.equal(this, undefined);
+        assert.equal(url, '/api/health');
+        return Promise.resolve({ ok: true, json: async () => ({ ok: true }) });
+    }
+    const remote = new RemoteAssistantAdapter({ fetch: strictFetch });
+    assert.deepEqual(await remote.health(), { ok: true });
+});
+
 test('restaura historial previo respetando límite y redacción', () => {
     const service = new AssistantService({ mode: 'local', maximumHistory: 2, local: {}, remote: {} });
     const restored = service.restoreHistory([

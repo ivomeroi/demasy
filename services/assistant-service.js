@@ -53,7 +53,9 @@
             this.endpoint = options.endpoint || '/api/chat';
             this.healthEndpoint = options.healthEndpoint || '/api/health';
             this.timeoutMs = options.timeoutMs || 8000;
-            this.fetch = options.fetch || globalThis.fetch;
+            const fetchImplementation = options.fetch || globalThis.fetch;
+            if (typeof fetchImplementation !== 'function') throw new Error('Fetch no está disponible en este entorno');
+            this.fetch = (...args) => fetchImplementation(...args);
         }
 
         async health() {
