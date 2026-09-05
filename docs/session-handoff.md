@@ -3,12 +3,12 @@
 - **Actualizado:** 2026-09-05
 - **Rama actual:** `feature/demasy-v1-phase-10`
 - **Base integrada:** `feature/demasy-v1` con Fases 0 a 9
-- **Fase actual:** Fase 10 — documentación y despliegue (en validación)
+- **Fase actual:** Fase 10 — documentación y despliegue (aprobada)
 
 ## Estado general
 
 - Fases 0 a 9 aprobadas, confirmadas e integradas en `feature/demasy-v1`.
-- Fase 10 iniciada y con su primera iteración implementada.
+- Fase 10 aprobada por el responsable después de validar el Preview de Vercel.
 - La aplicación funciona íntegramente con simulación y persistencia local.
 - Gemini continúa siendo opcional y requiere un servidor que proteja `GEMINI_API_KEY`.
 - El análisis de fatiga permanece fuera del alcance de DEMASY v1.
@@ -32,12 +32,11 @@
 - Instalación limpia con `npm ci`: aprobada en un directorio temporal.
 - JSON, sintaxis Bash y diferencias Git: validados.
 
-## Pendiente para cerrar Fase 10
+## Pendiente para publicar la versión
 
-1. Publicar en un entorno objetivo y validar inicio, recursos y las cinco subrutas.
-2. Ejecutar la revisión manual final del responsable.
-3. Confirmar y publicar la rama de Fase 10.
-4. Integrar en `feature/demasy-v1` y crear la etiqueta `v1.0.0` tras la aprobación.
+1. Integrar y publicar la Fase 10 en `feature/demasy-v1`.
+2. Confirmar que Vercel completa el deployment de producción.
+3. Crear y publicar la etiqueta `v1.0.0` después de validar producción.
 
 No incluir `/home/ivomeroi/.env.local` ni ninguna clave Gemini en Git.
 

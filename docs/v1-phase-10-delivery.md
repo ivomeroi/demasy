@@ -1,6 +1,6 @@
 # DEMASY v1 — Fase 10: documentación y despliegue
 
-**Estado:** En validación
+**Estado:** Aprobada
 **Rama:** `feature/demasy-v1-phase-10`
 
 ## Objetivo
@@ -33,6 +33,11 @@ Entregar una versión reproducible, documentada y desplegable que pueda recorrer
 
 ## Pendiente de validación
 
-- Validar al menos un despliegue objetivo y sus subrutas.
-- Revisar el checklist final con el responsable.
-- Aprobar, integrar y crear la etiqueta `v1.0.0`.
+- Confirmar que el deployment de producción queda en estado `Ready`.
+- Crear la etiqueta `v1.0.0` después de validar producción.
+
+## Aprobación manual
+
+- Preview de Vercel validado por el responsable el 2026-09-05.
+- Navegación, subrutas, simulación, persistencia, modo offline y conexión HTTPS comprobados.
+- Fase autorizada para integración y despliegue de producción.

@@ -1183,7 +1183,7 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 7. Asistente | Aprobada | 2026-09-02 | Codex + responsable | `docs/v1-phase-7-assistant.md` | Gemini remoto validado; errores y límites de cuota visibles |
 | 8. UX | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-8-ux.md` | Identidad y refinamiento visual aprobados; lista para integrar |
 | 9. Calidad | Aprobada | 2026-09-05 | Codex + responsable | `docs/v1-phase-9-quality.md` | Pruebas automáticas y validación local completadas; lista para integrar |
-| 10. Entrega | En validación | 2026-09-05 | Codex + responsable | `docs/v1-phase-10-delivery.md` | Documentación y configuración de despliegue listas para revisión final |
+| 10. Entrega | Aprobada | 2026-09-05 | Codex + responsable | `docs/v1-phase-10-delivery.md` | Preview validado y autorizado para producción |
 
 Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Pospuesta`, `Bloqueada`.
 
@@ -1224,7 +1224,7 @@ Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Posp
 - [x] Una falla de Gemini no bloquea el resto de la aplicación.
 - [x] Pruebas usan asistente mock.
 - [x] Ningún secreto llega al frontend.
-- [ ] Despliegue estático funciona sin API.
+- [x] Despliegue estático funciona sin API.
 - [x] El modo de cada servicio es visible o diagnosticable.
 
 ### Calidad
