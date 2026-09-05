@@ -69,7 +69,7 @@ class BackupManager {
     showPreview(preview, filename) {
         document.getElementById('backup-preview-modal')?.remove();
         document.body.insertAdjacentHTML('beforeend', `<div class="modal-overlay" id="backup-preview-modal" role="dialog" aria-modal="true" aria-labelledby="backup-preview-title"><div class="modal-content">
-            <div class="modal-header"><h3 id="backup-preview-title">Previsualizar respaldo</h3><button class="modal-close" aria-label="Cerrar previsualización" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" aria-hidden="true"></i></button></div>
+            <div class="modal-header"><h3 id="backup-preview-title">Previsualizar respaldo</h3><button class="modal-close" id="backup-preview-close" aria-label="Cerrar previsualización"><i class="fas fa-times" aria-hidden="true"></i></button></div>
             <p>${this.escape(filename)}</p><div class="summary-grid">
                 <div class="summary-item"><label>Participantes</label><strong>${preview.patients}</strong></div><div class="summary-item"><label>Sesiones</label><strong>${preview.sessions}</strong></div>
                 <div class="summary-item"><label>Análisis</label><strong>${preview.analyses}</strong></div><div class="summary-item"><label>Preferencias</label><strong>${preview.settings}</strong></div>
@@ -78,6 +78,7 @@ class BackupManager {
         </div></div>`);
         document.getElementById('backup-merge').addEventListener('click', () => this.importPending('merge'));
         document.getElementById('backup-replace').addEventListener('click', () => this.confirmReplace());
+        document.getElementById('backup-preview-close').addEventListener('click', () => document.getElementById('backup-preview-modal')?.remove());
     }
 
     async confirmReplace() {
@@ -90,8 +91,8 @@ class BackupManager {
         try {
             const report = await this.database.importAllData(this.pendingPayload, strategy);
             document.getElementById('backup-preview-modal')?.remove();
-            window.app?.showNotification(`Importación ${strategy} completada`, 'success');
-            console.log('DEMASY import report', report);
+            const total = values => Object.values(values || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+            window.app?.showNotification(`Importación ${strategy} completada: ${total(report.created)} creados y ${total(report.skipped)} omitidos`, 'success');
         } catch (error) { window.app?.showNotification(`Importación fallida: ${error.message}`, 'error'); }
     }
 

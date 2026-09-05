@@ -48,10 +48,21 @@ class KinesioEMGApp {
             this.lastSessionCaptureAt = 0;
             this.lastReadoutUpdateAt = 0;
             this.pendingChartData = [];
+            this.recordingMarkers = [];
+            this.lastDraftPersistedAt = 0;
+            this.draftPersistPending = false;
             this.signalExtremes = {
                 min: null,
                 max: null
             };
+            this.envelopeDisplay = {
+                left: this.createEnvelopeDisplayState(),
+                right: this.createEnvelopeDisplayState()
+            };
+            this.calibrationInProgress = false;
+            this.calibrationTimer = null;
+            this.calibrationDurationMs = 5000;
+            this.envelopeDisplaySource = null;
             
             console.log('Controlador DEMASY creado correctamente');
         } catch (error) {
@@ -72,9 +83,11 @@ class KinesioEMGApp {
             timeWindow: signalConfig.defaultChartWindowSeconds || 1,
             adcReferenceVoltage: 3.3,
             adcMaxCount: 4095,
-            yAxisAdcEquivalent: 1500,
-            fixedYMin: -1500 * 3.3 * 1000 / 4095,
-            fixedYMax: 1500 * 3.3 * 1000 / 4095,
+            simulatorYRange: 3,
+            externalYRange: 50,
+            activityVisualGain: 2.5,
+            fixedYMin: -3,
+            fixedYMax: 3,
             signalUnit: 'mV'
         };
         
@@ -99,6 +112,7 @@ class KinesioEMGApp {
             this.setupBluetoothManager();
             this.setupAIAssistant();
             await this.initializeUI();
+            await this.restoreRecordingDraft();
             
             console.log('DEMASY se inicializó correctamente');
         } catch (error) {
@@ -156,15 +170,38 @@ class KinesioEMGApp {
             y: 0
         }));
 
+        const recordingMarkerPlugin = {
+            id: 'recordingMarkers',
+            afterDraw: chart => {
+                if (!this.recordingMarkers.length || !chart.chartArea) return;
+                const { ctx: chartContext, chartArea, scales } = chart;
+                chartContext.save();
+                this.recordingMarkers.forEach(marker => {
+                    const x = scales.x.getPixelForValue(marker.time);
+                    if (x < chartArea.left || x > chartArea.right) return;
+                    chartContext.strokeStyle = marker.type === 'pause' ? '#b45309' : '#047857';
+                    chartContext.fillStyle = chartContext.strokeStyle;
+                    chartContext.setLineDash([5, 4]);
+                    chartContext.beginPath();
+                    chartContext.moveTo(x, chartArea.top);
+                    chartContext.lineTo(x, chartArea.bottom);
+                    chartContext.stroke();
+                    chartContext.setLineDash([]);
+                    chartContext.font = '11px sans-serif';
+                    chartContext.fillText(marker.type === 'pause' ? 'Pausa' : 'Reanudación', x + 4, chartArea.top + 13);
+                });
+                chartContext.restore();
+            }
+        };
         this.emgChart = new Chart(ctx, {
             type: 'line',
             data: {
                 datasets: [{
                     label: 'EMG Lado Izquierdo',
                     data: [...initialData],
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    borderWidth: 2,
+                    borderColor: 'rgba(37, 99, 235, 0.32)',
+                    backgroundColor: 'rgba(37, 99, 235, 0.04)',
+                    borderWidth: 1,
                     pointRadius: 0,
                     pointHoverRadius: 0,
                     tension: 0.1,
@@ -172,35 +209,36 @@ class KinesioEMGApp {
                 }, {
                     label: 'EMG Lado Derecho',
                     data: [...initialData],
-                    borderColor: '#dc2626',
-                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                    borderWidth: 2,
+                    borderColor: 'rgba(220, 38, 38, 0.30)',
+                    backgroundColor: 'rgba(220, 38, 38, 0.04)',
+                    borderWidth: 1,
                     pointRadius: 0,
                     pointHoverRadius: 0,
                     tension: 0.1,
                     fill: false
                 }, {
-                    label: 'RMS Izquierdo',
+                    label: 'Envolvente izquierda',
                     data: [...initialData],
                     borderColor: '#10b981',
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderWidth: 2,
+                    borderWidth: 3,
                     pointRadius: 0,
                     pointHoverRadius: 0,
-                    tension: 0.25,
-                    fill: false
+                    tension: 0.35,
+                    fill: 'origin'
                 }, {
-                    label: 'RMS Derecho',
+                    label: 'Envolvente derecha',
                     data: [...initialData],
                     borderColor: '#f59e0b',
                     backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                    borderWidth: 2,
+                    borderWidth: 3,
                     pointRadius: 0,
                     pointHoverRadius: 0,
-                    tension: 0.25,
-                    fill: false
+                    tension: 0.35,
+                    fill: 'origin'
                 }]
             },
+            plugins: [recordingMarkerPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -292,11 +330,22 @@ class KinesioEMGApp {
         const isSerial = this.signalSource === 'serial';
         const isBluetooth = this.signalSource === 'bluetooth';
         const isExternal = isSerial || isBluetooth;
+        const yRange = isExternal ? this.chartConfig.externalYRange : this.chartConfig.simulatorYRange;
+        this.chartConfig.fixedYMin = -yRange;
+        this.chartConfig.fixedYMax = yRange;
+        this.emgChart.data.datasets[0].borderColor = isExternal ? 'rgba(37, 99, 235, 0.32)' : '#2563eb';
+        this.emgChart.data.datasets[0].borderWidth = isExternal ? 1 : 2;
+        this.emgChart.data.datasets[1].borderColor = isExternal ? 'rgba(220, 38, 38, 0.30)' : '#dc2626';
+        this.emgChart.data.datasets[1].borderWidth = isExternal ? 1 : 2;
         this.emgChart.data.datasets[0].label = isExternal ? 'Señal ESP32' : 'EMG Lado Izquierdo';
         this.emgChart.data.datasets[1].hidden = false;
         this.emgChart.data.datasets[1].label = isExternal ? 'Señal ESP32 Derecha' : 'EMG Lado Derecho';
-        this.emgChart.data.datasets[2].label = isExternal ? 'RMS ESP32 Izquierdo' : 'RMS Izquierdo';
-        this.emgChart.data.datasets[3].label = isExternal ? 'RMS ESP32 Derecho' : 'RMS Derecho';
+        this.emgChart.data.datasets[2].label = isExternal ? 'Actividad corregida izquierda (×2,5)' : 'RMS Izquierdo';
+        this.emgChart.data.datasets[3].label = isExternal ? 'Actividad corregida derecha (×2,5)' : 'RMS Derecho';
+        if (this.envelopeDisplaySource !== this.signalSource) {
+            this.envelopeDisplaySource = this.signalSource;
+            this.resetEnvelopeDisplay();
+        }
         this.applyDisplayPreferences(this.displayPreferences);
     }
 
@@ -433,6 +482,10 @@ class KinesioEMGApp {
 
         document.getElementById('clear-chart')?.addEventListener('click', () => {
             this.clearChart();
+        });
+
+        document.getElementById('calibrate-signal')?.addEventListener('click', () => {
+            this.startSignalCalibration();
         });
 
         // Phase shifting controls
@@ -806,9 +859,10 @@ class KinesioEMGApp {
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Error al cargar pacientes</h3>
                         <p>${error.message}</p>
-                        <button class="btn-control" onclick="location.reload()">Reintentar</button>
+                        <button class="btn-control" id="retry-patients">Reintentar</button>
                     </div>
                 `;
+                document.getElementById('retry-patients')?.addEventListener('click', () => window.location.reload());
             }
         }
     }
@@ -859,6 +913,7 @@ class KinesioEMGApp {
             this.lastSessionCaptureAt = 0;
             this.lastReadoutUpdateAt = 0;
             this.pendingChartData = [];
+            this.recordingMarkers = [];
             this.resetSignalReadout();
             this.signalSource = this.getConnectedSignalSource();
             const configuration = this.recordingController.configuration;
@@ -990,13 +1045,19 @@ class KinesioEMGApp {
 
     toggleRecordingPause() {
         try {
+            const lastPoint = this.emgChart?.data.datasets[0]?.data.at(-1);
+            const markerTime = Number(lastPoint?.x);
             if (this.recordingController.state === 'recording') {
                 this.recordingController.pause();
+                if (Number.isFinite(markerTime)) this.recordingMarkers.push({ type: 'pause', time: markerTime });
                 this.showNotification('Grabación pausada; la previsualización continúa', 'info');
             } else if (this.recordingController.state === 'paused') {
                 this.recordingController.resume();
+                if (Number.isFinite(markerTime)) this.recordingMarkers.push({ type: 'resume', time: markerTime });
                 this.showNotification('Grabación reanudada', 'success');
             }
+            this.emgChart?.update('none');
+            this.persistRecordingDraft(true);
         } catch (error) {
             this.showNotification(error.message, 'error');
         }
@@ -1012,6 +1073,7 @@ class KinesioEMGApp {
             if (this.signalSource === 'bluetooth') this.bluetoothManager.stop();
 
             this.sessionReview = this.createSessionReview();
+            this.persistRecordingDraft(true);
             this.updateConnectionStatus(this.getConnectedSignalSource() === 'simulator' ? 'mock' : this.getConnectedSignalSource());
             this.showSessionReview();
             this.showNotification('Grabación finalizada. Revisa los resultados antes de guardar.', 'success');
@@ -1029,6 +1091,8 @@ class KinesioEMGApp {
         this.sessionData = [];
         this.sessionReview = null;
         this.sessionStartTime = null;
+        this.recordingMarkers = [];
+        this.clearRecordingDraft();
         this.resetSignalReadout();
         this.showNotification('Sesión descartada', 'info');
     }
@@ -1361,6 +1425,7 @@ class KinesioEMGApp {
             
             if (session) {
                 this.recordingController.markSaved();
+                await this.clearRecordingDraft();
                 document.getElementById('session-review-modal')?.remove();
                 // Reset save button
                 setTimeout(() => {
@@ -1409,6 +1474,7 @@ class KinesioEMGApp {
         document.body.removeChild(a);
         if (this.recordingController.can('save')) {
             this.recordingController.markSaved();
+            this.clearRecordingDraft();
             document.getElementById('session-review-modal')?.remove();
         }
         URL.revokeObjectURL(url);
@@ -1652,14 +1718,21 @@ class KinesioEMGApp {
                 y: Number.isFinite(data.right.amplitude) ? data.right.amplitude : null
             });
 
+            const leftEnvelope = Number.isFinite(data.envelopeLeft)
+                ? this.smoothEnvelope('left', data.envelopeLeft, data.time)
+                : this.calculateRMSFromDataset(leftEMGDataset);
+            const rightEnvelope = Number.isFinite(data.envelopeRight)
+                ? this.smoothEnvelope('right', data.envelopeRight, data.time)
+                : this.calculateRMSFromDataset(rightEMGDataset);
+
             leftRmsDataset.data.push({
                 x: data.time,
-                y: Number.isFinite(data.envelopeLeft) ? data.envelopeLeft : this.calculateRMSFromDataset(leftEMGDataset)
+                y: leftEnvelope
             });
 
             rightRmsDataset.data.push({
                 x: data.time,
-                y: Number.isFinite(data.envelopeRight) ? data.envelopeRight : this.calculateRMSFromDataset(rightEMGDataset)
+                y: rightEnvelope
             });
         });
 
@@ -1679,6 +1752,155 @@ class KinesioEMGApp {
 
         // Update chart
         this.emgChart.update('none');
+    }
+
+    createEnvelopeDisplayState() {
+        return {
+            smoothed: null,
+            baselineSamples: [],
+            baseline: null,
+            calibrated: false,
+            active: false,
+            candidate: null,
+            candidateSince: null
+        };
+    }
+
+    resetEnvelopeDisplay() {
+        this.envelopeDisplay = {
+            left: this.createEnvelopeDisplayState(),
+            right: this.createEnvelopeDisplayState()
+        };
+        this.updateActivityBadge('left', 'uncalibrated');
+        this.updateActivityBadge('right', 'uncalibrated');
+    }
+
+    startSignalCalibration() {
+        if (!this.isExternalSignalSource()) {
+            this.showNotification('Conecta el ESP32 por USB o Bluetooth antes de calibrar.', 'warning');
+            return;
+        }
+        if (this.calibrationInProgress) return;
+
+        this.resetEnvelopeDisplay();
+        this.calibrationInProgress = true;
+        const startedAt = performance.now();
+        const overlay = document.getElementById('calibration-overlay');
+        const button = document.getElementById('calibrate-signal');
+        if (overlay) overlay.hidden = false;
+        if (button) button.disabled = true;
+        this.updateActivityBadge('left', 'calibrating');
+        this.updateActivityBadge('right', 'calibrating');
+
+        const updateCountdown = () => {
+            const elapsed = performance.now() - startedAt;
+            const remaining = Math.max(0, this.calibrationDurationMs - elapsed);
+            const countdown = document.getElementById('calibration-countdown');
+            const progress = document.getElementById('calibration-progress-fill');
+            if (countdown) countdown.textContent = `${(remaining / 1000).toFixed(1)} s`;
+            if (progress) progress.style.width = `${Math.min(100, elapsed / this.calibrationDurationMs * 100)}%`;
+            if (remaining <= 0) this.finishSignalCalibration();
+        };
+
+        updateCountdown();
+        this.calibrationTimer = window.setInterval(updateCountdown, 100);
+    }
+
+    finishSignalCalibration() {
+        if (!this.calibrationInProgress) return;
+        this.calibrationInProgress = false;
+        window.clearInterval(this.calibrationTimer);
+        this.calibrationTimer = null;
+
+        let calibratedChannels = 0;
+        ['left', 'right'].forEach(side => {
+            const state = this.envelopeDisplay[side];
+            if (state.baselineSamples.length > 0) {
+                const ordered = [...state.baselineSamples].sort((a, b) => a - b);
+                state.baseline = ordered[Math.floor(ordered.length / 2)];
+                state.calibrated = true;
+                calibratedChannels++;
+                this.updateActivityBadge(side, 'rest');
+            } else {
+                this.updateActivityBadge(side, 'uncalibrated');
+            }
+            state.baselineSamples = [];
+        });
+
+        const overlay = document.getElementById('calibration-overlay');
+        const button = document.getElementById('calibrate-signal');
+        if (overlay) overlay.hidden = true;
+        if (button) button.disabled = false;
+        this.showNotification(
+            calibratedChannels > 0 ? 'Calibración completada. Ya puedes realizar contracciones.' : 'No se recibieron datos para calibrar.',
+            calibratedChannels > 0 ? 'success' : 'warning'
+        );
+    }
+
+    smoothEnvelope(side, value, time) {
+        const state = this.envelopeDisplay[side];
+        const alpha = 0.08;
+        state.smoothed = state.smoothed === null
+            ? Math.max(0, value)
+            : state.smoothed + alpha * (Math.max(0, value) - state.smoothed);
+
+        if (this.calibrationInProgress) {
+            state.baselineSamples.push(state.smoothed);
+            this.updateActivityBadge(side, 'calibrating');
+            return 0;
+        }
+
+        if (state.calibrated && !state.active) {
+            state.baseline += 0.002 * (state.smoothed - state.baseline);
+        }
+
+        if (!state.calibrated || state.baseline === null) {
+            this.updateActivityBadge(side, 'uncalibrated');
+            return this.isExternalSignalSource() ? 0 : state.smoothed;
+        }
+
+        const activationThreshold = Math.max(state.baseline * 1.65, state.baseline + 2.5);
+        const releaseThreshold = Math.max(state.baseline * 1.30, state.baseline + 1.0);
+        const desiredState = state.active
+            ? state.smoothed > releaseThreshold
+            : state.smoothed >= activationThreshold;
+
+        if (desiredState !== state.active) {
+            if (state.candidate !== desiredState) {
+                state.candidate = desiredState;
+                state.candidateSince = time;
+            } else if (time - state.candidateSince >= 0.2) {
+                state.active = desiredState;
+                state.candidate = null;
+                state.candidateSince = null;
+            }
+        } else {
+            state.candidate = null;
+            state.candidateSince = null;
+        }
+
+        this.updateActivityBadge(side, state.active ? 'active' : 'rest');
+        if (!this.isExternalSignalSource()) return state.smoothed;
+
+        // Display-only transformation. The original sample and envelope remain
+        // untouched for recording, export and analysis.
+        const noiseFloor = Math.max(0.5, state.baseline * 0.15);
+        const correctedActivity = Math.max(0, state.smoothed - state.baseline - noiseFloor);
+        return correctedActivity * this.chartConfig.activityVisualGain;
+    }
+
+    isExternalSignalSource() {
+        return this.signalSource === 'serial' || this.signalSource === 'bluetooth';
+    }
+
+    updateActivityBadge(side, status) {
+        const badge = document.getElementById(`activity-state-${side}`);
+        if (!badge || badge.dataset.status === status) return;
+        badge.dataset.status = status;
+        badge.textContent = status === 'active'
+            ? 'Contracción'
+            : status === 'rest' ? 'Reposo'
+                : status === 'calibrating' ? 'Calibrando…' : 'Sin calibrar';
     }
 
     calculateRMSFromDataset(dataset) {
@@ -1709,6 +1931,7 @@ class KinesioEMGApp {
         ) {
             this.lastSessionCaptureAt = now;
             this.sessionData.push(data);
+            this.persistRecordingDraft();
 
             if (this.sessionData.length > this.chartConfig.maxSessionDataPoints) {
                 this.sessionData.length = this.chartConfig.maxSessionDataPoints;
@@ -1727,6 +1950,51 @@ class KinesioEMGApp {
             this.lastReadoutUpdateAt = now;
             this.updateCurrentSignalReadout(data.left.amplitude);
         }
+    }
+
+    persistRecordingDraft(force = false) {
+        if (!this.settingsService || !['recording', 'paused', 'review'].includes(this.recordingController.state)) return;
+        const now = Date.now();
+        if (!force && (now - this.lastDraftPersistedAt < 2000 || this.draftPersistPending)) return;
+        this.lastDraftPersistedAt = now;
+        this.draftPersistPending = true;
+        const draft = {
+            version: 1,
+            patientId: this.patientManager?.currentPatient?.id || null,
+            configuration: this.recordingController.configuration,
+            elapsedSeconds: this.recordingController.getElapsedSeconds(),
+            samples: this.sessionData.slice(),
+            markers: this.recordingMarkers.slice(),
+            updatedAt: new Date().toISOString()
+        };
+        this.settingsService.storage.setSetting('activeRecordingDraft', draft)
+            .catch(error => console.error('No se pudo conservar el borrador de grabación:', error.message))
+            .finally(() => { this.draftPersistPending = false; });
+    }
+
+    async restoreRecordingDraft() {
+        const draft = await this.settingsService?.storage.getSetting('activeRecordingDraft', null);
+        if (!draft?.configuration || !Array.isArray(draft.samples) || draft.samples.length === 0) return;
+        if (!window.confirm(`Se encontró una grabación interrumpida con ${draft.samples.length} muestras. ¿Quieres recuperarla para revisarla y guardarla?`)) {
+            await this.clearRecordingDraft();
+            return;
+        }
+        const patient = draft.patientId ? await this.database.getPatient(draft.patientId) : null;
+        if (patient) {
+            this.patientManager.currentPatient = patient;
+            this.patientManager.updateCurrentPatientUI();
+        }
+        this.sessionData = draft.samples.slice(0, this.chartConfig.maxSessionDataPoints);
+        this.recordingMarkers = Array.isArray(draft.markers) ? draft.markers : [];
+        this.recordingController.restoreReview(draft.configuration, draft.elapsedSeconds);
+        this.sessionReview = this.createSessionReview();
+        this.showSessionReview();
+        this.showNotification('Grabación interrumpida recuperada para revisión', 'success');
+    }
+
+    async clearRecordingDraft() {
+        try { await this.settingsService?.storage.setSetting('activeRecordingDraft', null); }
+        catch (error) { console.error('No se pudo limpiar el borrador:', error.message); }
     }
 
     ingestStats(stats) {
@@ -2137,6 +2405,24 @@ class KinesioEMGApp {
 // Initialize application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new KinesioEMGApp();
+});
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').catch(error => {
+            console.error('No se pudo preparar el funcionamiento sin conexión:', error.message);
+        });
+    });
+}
+
+window.addEventListener('error', event => {
+    console.error('Error no controlado en DEMASY:', event.error?.message || event.message);
+    window.app?.showNotification('Ocurrió un error inesperado. Los datos guardados no fueron eliminados.', 'error');
+});
+
+window.addEventListener('unhandledrejection', event => {
+    console.error('Promesa no controlada en DEMASY:', event.reason?.message || String(event.reason));
+    window.app?.showNotification('Una operación no pudo completarse. Revisa el estado e inténtalo nuevamente.', 'error');
 });
 
 // Export for global access

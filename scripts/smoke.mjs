@@ -29,7 +29,7 @@ function request(path) {
                 body += chunk;
             });
             res.on('end', () => {
-                resolve({ status: res.statusCode, body });
+                resolve({ status: res.statusCode, headers: res.headers, body });
             });
         });
 
@@ -62,6 +62,39 @@ async function main() {
             throw new Error('The app shell did not load correctly.');
         }
 
+        if (index.body.includes('cdnjs.cloudflare.com')) {
+            throw new Error('The app shell must not depend on cdnjs.');
+        }
+
+        const chart = await request('/vendor/chart.min.js');
+        if (chart.status !== 200) throw new Error('Local Chart.js asset did not load.');
+        const icons = await request('/vendor/fontawesome/css/all.min.css');
+        if (icons.status !== 200) throw new Error('Local Font Awesome asset did not load.');
+        const font = await request('/vendor/fontawesome/webfonts/fa-solid-900.woff2');
+        if (font.status !== 200) throw new Error('Local Font Awesome font did not load.');
+
+        for (const privatePath of ['/.env', '/.env.local', '/node_modules/chart.js/package.json']) {
+            const response = await request(privatePath);
+            if (response.status !== 403) throw new Error(`${privatePath} was not blocked.`);
+        }
+
+        const headerProbe = await request('/styles.css');
+        if (headerProbe.status !== 200) throw new Error('Unable to inspect static response headers.');
+        if (headerProbe.headers['x-content-type-options'] !== 'nosniff' || !headerProbe.headers['content-security-policy']) {
+            throw new Error('Static security headers are missing.');
+        }
+        const csp = headerProbe.headers['content-security-policy'];
+        if (!csp.includes("script-src 'self'") || /script-src[^;]*unsafe-inline/.test(csp)) {
+            throw new Error('The script CSP must reject inline handlers.');
+        }
+
+        for (const scriptPath of ['/app.js', '/patient-manager.js', '/backup-manager.js']) {
+            const script = await request(scriptPath);
+            if (/\son(?:click|change|input)\s*=/.test(script.body)) {
+                throw new Error(`${scriptPath} still contains an inline event handler.`);
+            }
+        }
+
         const localAssets = [
             'styles.css',
             'core/demasy-config.js',
@@ -85,7 +118,9 @@ async function main() {
             'bluetooth-manager.js',
             'ai-assistant.js',
             'app.js',
-            'database-init.js'
+            'database-init.js',
+            'service-worker.js',
+            'DEMASY-LOGO.jpeg'
         ];
 
         for (const asset of localAssets) {
@@ -93,6 +128,10 @@ async function main() {
             if (response.status !== 200) {
                 throw new Error(`${asset} returned HTTP ${response.status}`);
             }
+        }
+
+        if (!index.body.includes('rel="icon"') || !index.body.includes('service-worker.js') && !(await request('/app.js')).body.includes('service-worker.js')) {
+            throw new Error('Favicon or offline service worker is not configured.');
         }
 
         const health = await request('/api/health');

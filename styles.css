@@ -856,6 +856,110 @@ input[type="range"] { accent-color: var(--primary-color); }
   min-width: 104px;
 }
 
+.signal-range .activity-state {
+  border: 1px solid var(--border-color);
+  font-weight: 700;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.activity-state::before {
+  content: "Izq · ";
+}
+
+#activity-state-right::before {
+  content: "Der · ";
+}
+
+.activity-state[data-status="calibrating"] {
+  color: var(--text-secondary);
+}
+
+.activity-state[data-status="uncalibrated"] {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.activity-state[data-status="rest"] {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #075985;
+}
+
+.activity-state[data-status="active"] {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.calibration-button {
+  color: var(--primary-dark);
+  border-color: #93c5fd;
+}
+
+.calibration-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.calibration-overlay {
+  position: absolute;
+  inset: 1rem 1.5rem;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 0.75rem;
+  background: rgba(239, 246, 255, 0.94);
+  color: #0b3159;
+  text-align: center;
+  backdrop-filter: blur(3px);
+}
+
+.calibration-overlay[hidden] {
+  display: none;
+}
+
+.calibration-overlay output {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.calibration-pulse {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1d4ed8;
+  animation: calibration-pulse 1.2s ease-in-out infinite;
+}
+
+.calibration-progress {
+  width: min(320px, 75%);
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #bfdbfe;
+}
+
+.calibration-progress div {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: #1d4ed8;
+  transition: width 0.1s linear;
+}
+
+@keyframes calibration-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.25); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+}
+
 /* AI Chat */
 .ai-chat-container {
   max-width: 800px;

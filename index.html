@@ -6,7 +6,8 @@
     <meta name="description" content="DEMASY: evaluación dinámica de asimetrías musculoesqueléticas mediante señales EMG bilaterales.">
     <meta name="theme-color" content="#0b3159">
     <title>DEMASY - Análisis bilateral de EMG</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/jpeg" href="/DEMASY-LOGO.jpeg">
+    <link href="/vendor/fontawesome/css/all.min.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
 </head>
 <body>
@@ -147,10 +148,20 @@
                                     <button class="btn-small" id="clear-chart" title="Limpiar Gráfico">
                                         <i class="fas fa-eraser"></i>
                                     </button>
+                                    <button class="btn-small calibration-button" id="calibrate-signal" title="Calibrar el nivel de reposo">
+                                        <i class="fas fa-crosshairs"></i> Calibrar
+                                    </button>
                                 </div>
                             </div>
                             <div class="chart-container">
                                 <canvas id="emg-chart"></canvas>
+                                <div class="calibration-overlay" id="calibration-overlay" hidden role="status" aria-live="polite">
+                                    <div class="calibration-pulse"><i class="fas fa-wave-square"></i></div>
+                                    <strong>Calibrando nivel de reposo</strong>
+                                    <span>Mantén los músculos relajados y evita movimientos.</span>
+                                    <output id="calibration-countdown">5.0 s</output>
+                                    <div class="calibration-progress"><div id="calibration-progress-fill"></div></div>
+                                </div>
                             </div>
                             <div class="chart-footer">
                                 <div class="time-scale">
@@ -167,11 +178,11 @@
                                     </div>
                                     <div class="legend-item">
                                         <div class="legend-color rms-left"></div>
-                                        <span>RMS Izquierdo</span>
+                                        <span>Actividad corregida izquierda</span>
                                     </div>
                                     <div class="legend-item">
                                         <div class="legend-color rms-right"></div>
-                                        <span>RMS Derecho</span>
+                                        <span>Actividad corregida derecha</span>
                                     </div>
                                 </div>
                                 <div class="cycling-info">
@@ -181,6 +192,8 @@
                                         <span id="signal-min">Min: 0</span>
                                         <span id="signal-max">Max: 0</span>
                                         <span id="signal-peak-max">Pico max: 0</span>
+                                        <span class="activity-state" id="activity-state-left" data-status="uncalibrated">Sin calibrar</span>
+                                        <span class="activity-state" id="activity-state-right" data-status="uncalibrated">Sin calibrar</span>
                                     </div>
                                     <div class="pedal-position">
                                         <small>Posición del Pedal:</small>
@@ -398,7 +411,7 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="/vendor/chart.min.js"></script>
     <script src="core/demasy-config.js"></script>
     <script src="core/signal-source-contract.js"></script>
     <script src="core/recording-controller.js"></script>

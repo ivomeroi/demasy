@@ -1,102 +1,77 @@
 # Punto de reanudación de DEMASY
 
-- **Actualizado:** 2026-09-02
-- **Rama actual:** `feature/demasy-v1-phase-7`
-- **Último commit de trabajo:** `0085a0b Implement DEMASY v1 phase 7 assistant adapters`
-**Última integración:** `3c09d04 Merge DEMASY v1 phase 8 UX and accessibility`
+- **Actualizado:** 2026-09-05
+- **Rama actual:** `feature/demasy-v1-phase-9`
+- **Base integrada:** `feature/demasy-v1` en `d13c1d1`
+- **Próxima fase:** Fase 10 — documentación y despliegue
 
 ## Estado general
 
-- Fases 0 a 6 aprobadas e integradas en `feature/demasy-v1`.
-- Fase 8 aprobada e integrada antes de retomar la Fase 7.
-- Fase 7 **Aprobada**, pendiente de integración en `feature/demasy-v1`.
-- Fases 9 y 10 pendientes.
-- El análisis de fatiga continúa excluido de DEMASY v1. Solo permanecen patrones del simulador, sin métricas ni conclusiones de fatiga.
+- Fases 0 a 8 aprobadas e integradas en `feature/demasy-v1`.
+- Fase 9 aprobada por el responsable después de las pruebas locales.
+- Los cambios de Fase 9 están listos para commit, push e integración.
+- Fase 10 permanece pendiente.
+- El análisis de fatiga continúa fuera del alcance de DEMASY v1.
+
+## Cierre de Fase 9
+
+- Dependencias visuales servidas localmente y shell disponible sin conexión.
+- Servidor endurecido contra acceso a archivos privados y rutas fuera del proyecto.
+- Cabeceras de seguridad activas, incluida CSP estricta sin scripts inline.
+- Eventos dinámicos migrados a listeners.
+- Borrador de grabación recuperable después de una recarga.
+- Marcadores visuales de pausa y reanudación.
+- Cronómetro y eje temporal sincronizados mediante reloj monotónico.
+- Límites de buffers, sesiones, importaciones y almacenamiento revisados.
+- Confirmaciones presentes en operaciones destructivas.
+- Captura Bluetooth con decimales, lotes seguros y nombre `DEMASY-Master`.
+- Escala externa de ±50 mV y señal cruda atenuada.
+- Actividad corregida respecto del basal con ganancia visual ×2,5.
+- Calibración manual de cinco segundos con animación y cuenta regresiva.
+
+## Validación
+
+- `npm test`: aprobado.
+- Lint: 28 archivos JavaScript aprobados.
+- Pruebas unitarias: 55 aprobadas.
+- Smoke test: aprobado.
+- CSP estricta y ausencia de eventos inline verificadas por el smoke test.
+- Pruebas manuales locales, funcionamiento sin conexión, respaldo limpio, recorrido end-to-end, accesibilidad básica y calibración ESP32 confirmados por el responsable.
 
 ## Estado de Git
 
-- Rama de integración: `feature/demasy-v1` en `3c09d04`.
-- Rama actual y remota: `feature/demasy-v1-phase-7` en `0085a0b`.
-- La Fase 7 todavía no debe integrarse: falta aprobación manual de sus textos y modos.
-- El árbol estaba limpio antes de actualizar este handoff.
+La rama contiene cambios aún no confirmados. Antes de iniciar Fase 10:
 
-## Fase 7 implementada
+1. revisar `git diff`;
+2. crear el commit de cierre de Fase 9;
+3. publicar `feature/demasy-v1-phase-9`;
+4. integrar mediante PR o merge `--no-ff` en `feature/demasy-v1`;
+5. crear `feature/demasy-v1-phase-10` desde la integración actualizada.
 
-- Servicio desacoplado en `services/assistant-service.js`.
-- La interfaz utiliza exclusivamente el adaptador remoto de Gemini.
-- Los adaptadores local y mock permanecen como soporte de pruebas internas.
-- Timeout remoto de 8 segundos y health check en `/api/health`.
-- Estado remoto y errores de conexión o cuota visibles.
-- Indicador de carga sin demora artificial.
-- Prevención de solicitudes simultáneas duplicadas.
-- Historial limitado a 20 mensajes.
-- Contexto anonimizado mediante lista explícita de métricas permitidas.
-- Filtrado redundante en cliente y servidor; correos y teléfonos se redactan.
-- Respuestas insertadas con `textContent`, sin HTML dinámico.
-- Descargo de responsabilidad en todas las respuestas.
-- Rechazo de diagnóstico, tratamientos, ejercicios personalizados y análisis de fatiga.
-- Configuración opcional documentada en `.env.example`.
+No incluir `/home/ivomeroi/.env.local` ni ninguna clave Gemini en Git.
 
-## Configuración remota opcional
+## Inicio recomendado de Fase 10
 
-Crear `.env.local` a partir de `.env.example`:
-
-```env
-# El asistente de la interfaz utiliza exclusivamente el servicio remoto.
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash
-```
-
-Las claves reales nunca deben confirmarse en Git, almacenarse en IndexedDB ni incluirse en respaldos.
-
-## Validación automática obtenida
-
-- `npm test`: aprobado.
-- 44 pruebas unitarias aprobadas.
-- Lint aprobado sobre 26 archivos JavaScript.
-- Smoke test HTTP aprobado.
-- `/api/health` respondió `ok`, modo `auto`, Gemini no configurado y modelo `gemini-2.5-flash`.
-- `/asistente-ia` respondió HTTP 200.
-- El navegador visual integrado no estaba disponible; falta la revisión visual manual.
-
-## Validación manual completada de la Fase 7
-
-Abrir `http://127.0.0.1:8000/asistente-ia` y seguir `docs/v1-phase-7-assistant.md`:
-
-El responsable validó el funcionamiento remoto, la conservación del historial y los textos. El selector de modos fue retirado por decisión de producto; los errores de cuota muestran un aviso y el tiempo de reintento cuando está disponible.
-
-## Próximo paso al reanudar
-
-1. integrar con merge `--no-ff` sobre `feature/demasy-v1`;
-2. publicar la rama de integración;
-3. crear `feature/demasy-v1-phase-9` desde la integración;
-4. comenzar calidad, seguridad y rendimiento.
+1. actualizar README, arquitectura y guías heredadas;
+2. retirar referencias documentales visibles a KinesioEMG, conservando únicamente identificadores de compatibilidad explícitamente documentados;
+3. documentar instalación, simulación, hardware, calibración, DEMASYDB, respaldos, métricas, asistente y privacidad;
+4. preparar despliegue estático y despliegue completo con `/api/chat`;
+5. ejecutar una instalación limpia siguiendo solamente el README;
+6. cerrar el checklist final y preparar la etiqueta `v1.0.0`.
 
 ## Servidor local
 
-El servidor estaba ejecutándose en `http://127.0.0.1:8000` al cerrar la sesión. Después de apagar o reiniciar el equipo deberá levantarse nuevamente:
-
 ```bash
 npm start
 ```
 
-## Comandos recomendados mañana
-
-```bash
-git switch feature/demasy-v1-phase-7
-git status --short
-git log -1 --oneline
-npm test
-npm start
-```
+Aplicación: `http://127.0.0.1:8000/emg-en-vivo`
 
 ## Referencias principales
 
 - `docs/v1-implementation-plan.md`
-- `docs/v1-phase-7-assistant.md`
-- `docs/v1-phase-8-ux.md`
-- `services/assistant-service.js`
-- `ai-assistant.js`
+- `docs/v1-phase-9-quality.md`
+- `ESP32/esp_base.ino`
+- `app.js`
 - `scripts/serve.mjs`
-- `.env.example`
-- `tests/assistant-service.test.cjs`
+- `scripts/smoke.mjs`

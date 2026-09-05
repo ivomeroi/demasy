@@ -55,3 +55,12 @@ test('a saved session cannot be discarded as if it were pending', () => {
     assert.equal(controller.can('discard'), false);
     assert.throws(() => controller.discard(), /No se puede descartar/);
 });
+
+test('restores an interrupted recording directly into review', () => {
+    const controller = new RecordingController({ now: () => 0 });
+    const snapshot = controller.restoreReview({ patientId: 7, label: 'Recuperada' }, 12.5);
+    assert.equal(snapshot.state, 'review');
+    assert.equal(snapshot.elapsedSeconds, 12.5);
+    assert.equal(controller.can('save'), true);
+    assert.equal(controller.configuration.patientId, 7);
+});

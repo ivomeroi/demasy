@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import { createReadStream, readFileSync, statSync } from 'fs';
-import { extname, join, normalize, resolve } from 'path';
+import { extname, join, normalize, resolve, sep } from 'path';
 
 const root = process.cwd();
 
@@ -20,6 +20,8 @@ const port = Number(process.env.PORT || portArg || 8000);
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const assistantMode = 'remote';
 const assistantContextPath = join(root, 'docs', 'ai-assistant-context.md');
+const chartAssetPath = join(root, 'node_modules', 'chart.js', 'dist', 'chart.min.js');
+const fontAwesomePath = join(root, 'node_modules', '@fortawesome', 'fontawesome-free');
 const appRoutes = new Set(['/emg-en-vivo', '/analisis', '/pacientes', '/asistente-ia', '/configuracion']);
 
 const contentTypes = {
@@ -28,7 +30,13 @@ const contentTypes = {
     '.js': 'text/javascript; charset=utf-8',
     '.json': 'application/json; charset=utf-8',
     '.md': 'text/markdown; charset=utf-8',
-    '.svg': 'image/svg+xml'
+    '.svg': 'image/svg+xml',
+    '.jpeg': 'image/jpeg',
+    '.jpg': 'image/jpeg',
+    '.png': 'image/png',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2'
 };
 
 function loadEnvFile(filename) {
@@ -57,8 +65,18 @@ function loadEnvFile(filename) {
 }
 
 function send(res, status, body, type = 'text/plain; charset=utf-8') {
-    res.writeHead(status, { 'Content-Type': type });
+    res.writeHead(status, { ...securityHeaders(), 'Content-Type': type });
     res.end(body);
+}
+
+function securityHeaders() {
+    return {
+        'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        'Referrer-Policy': 'no-referrer',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+    };
 }
 
 function sendJson(res, status, body) {
@@ -199,15 +217,28 @@ async function handleChat(req, res) {
 }
 
 function resolveRequestPath(urlPath) {
-    const decodedPath = decodeURIComponent(urlPath.split('?')[0]);
+    let decodedPath;
+    try { decodedPath = decodeURIComponent(urlPath.split('?')[0]); }
+    catch { return null; }
+    const segments = decodedPath.split(/[\\/]+/).filter(Boolean);
+    if (segments.some(segment => segment.startsWith('.') || segment === 'node_modules') || decodedPath.includes('\0')) return null;
     const normalizedPath = normalize(decodedPath).replace(/^(\.\.[/\\])+/, '');
     const requestedPath = resolve(join(root, normalizedPath));
 
-    if (!requestedPath.startsWith(root)) {
+    if (requestedPath !== root && !requestedPath.startsWith(`${root}${sep}`)) {
         return null;
     }
 
     return requestedPath;
+}
+
+function resolveFontAwesomePath(pathname) {
+    const prefix = '/vendor/fontawesome/';
+    if (!pathname.startsWith(prefix)) return null;
+    const relativePath = pathname.slice(prefix.length);
+    if (!relativePath || relativePath.split('/').some(segment => !segment || segment.startsWith('.'))) return null;
+    const requestedPath = resolve(fontAwesomePath, relativePath);
+    return requestedPath.startsWith(`${fontAwesomePath}${sep}`) ? requestedPath : null;
 }
 
 const server = createServer(async (req, res) => {
@@ -233,7 +264,9 @@ const server = createServer(async (req, res) => {
 
     const rawPathname = new URL(req.url || '/', 'http://localhost').pathname;
     const requestPathname = rawPathname.replace(/\/+$/, '') || '/';
-    let filePath = resolveRequestPath(req.url || '/');
+    let filePath = requestPathname === '/vendor/chart.min.js'
+        ? chartAssetPath
+        : resolveFontAwesomePath(requestPathname) || resolveRequestPath(req.url || '/');
 
     if (!filePath) {
         send(res, 403, 'Forbidden');
@@ -257,6 +290,7 @@ const server = createServer(async (req, res) => {
         const stat = statSync(filePath);
         const contentType = contentTypes[extname(filePath)] || 'application/octet-stream';
         res.writeHead(200, {
+            ...securityHeaders(),
             'Content-Length': stat.size,
             'Content-Type': contentType
         });

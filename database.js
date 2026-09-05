@@ -251,7 +251,7 @@ class DEMASYDatabase {
             data: {
                 patients: await this.listPatients({ includeArchived: true }),
                 sessions: await this.getAll(this.stores.sessions), analyses: await this.getAll(this.stores.analyses),
-                settings: await this.getAll(this.stores.settings)
+                settings: (await this.getAll(this.stores.settings)).filter(setting => setting.key !== 'activeRecordingDraft')
             }
         };
     }

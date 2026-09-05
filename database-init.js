@@ -169,13 +169,12 @@ async function clearSampleData() {
         console.error('Database not available');
         return;
     }
+    if (!window.confirm('¿Eliminar todos los datos locales? Esta acción no se puede deshacer sin un respaldo.')) return;
     
     try {
         await window.app.database.clearAllData();
-        console.log('All sample data cleared');
-        
         if (window.app.showNotification) {
-            window.app.showNotification('Todos los datos de ejemplo eliminados', 'success');
+            window.app.showNotification('Todos los datos locales fueron eliminados', 'success');
         }
         
         // Refresh patients section if visible

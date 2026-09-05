@@ -800,7 +800,7 @@ Evitar que IndexedDB sea un punto único de pérdida de datos.
 - [x] Implementar estrategia `replace` con confirmación reforzada.
 - [x] Detectar conflictos y duplicados.
 - [x] Informar creados, actualizados, omitidos y fallidos.
-- [ ] Probar restauración sobre una base vacía (validación manual de Fase 6).
+- [x] Probar restauración sobre una base vacía (validación manual repetida durante el cierre de Fase 9).
 - [x] Probar migración de una versión anterior.
 - [x] Añadir acción explícita para datos de demostración.
 
@@ -904,19 +904,20 @@ Preparar el proyecto para una entrega repetible.
 
 #### Tareas
 
-- [ ] Sanitizar datos dinámicos.
-- [ ] Eliminar información sensible de logs.
-- [ ] Revisar límites de memoria de sesiones largas.
-- [ ] Medir actualización del gráfico.
-- [ ] Evitar crecimiento ilimitado de arrays.
-- [ ] Probar almacenamiento lleno.
-- [ ] Probar datos corruptos.
-- [ ] Añadir manejo global de errores no controlados.
-- [ ] Verificar que las operaciones destructivas tengan confirmación.
-- [ ] Ejecutar pruebas en navegadores soportados.
-- [ ] Completar prueba end-to-end del recorrido principal.
-- [ ] Ejecutar auditoría básica de accesibilidad.
-- [ ] Revisar dependencias CDN.
+- [x] Sanitizar datos dinámicos.
+- [x] Eliminar información sensible de logs.
+- [x] Revisar límites de memoria de sesiones largas.
+- [x] Medir actualización del gráfico.
+- [x] Evitar crecimiento ilimitado de arrays.
+- [x] Probar almacenamiento lleno.
+- [x] Probar datos corruptos.
+- [x] Añadir manejo global de errores no controlados.
+- [x] Verificar que las operaciones destructivas tengan confirmación.
+- [x] Ejecutar pruebas en navegadores soportados.
+- [x] Completar prueba end-to-end del recorrido principal.
+- [x] Ejecutar auditoría básica de accesibilidad.
+- [x] Revisar dependencias CDN y distribuir Chart.js y Font Awesome localmente.
+- [x] Retirar manejadores inline heredados y restablecer una CSP sin `unsafe-inline` para scripts.
 
 #### Estrategia CDN
 
@@ -1181,7 +1182,7 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 6. Importación/exportación | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-6-backup-recovery.md` | Validación aceptada; restauración limpia se repetirá antes de entrega |
 | 7. Asistente | Aprobada | 2026-09-02 | Codex + responsable | `docs/v1-phase-7-assistant.md` | Gemini remoto validado; errores y límites de cuota visibles |
 | 8. UX | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-8-ux.md` | Identidad y refinamiento visual aprobados; lista para integrar |
-| 9. Calidad | Pendiente | | | | |
+| 9. Calidad | Aprobada | 2026-09-05 | Codex + responsable | `docs/v1-phase-9-quality.md` | Pruebas automáticas y validación local completadas; lista para integrar |
 | 10. Entrega | Pendiente | | | | |
 
 Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Pospuesta`, `Bloqueada`.

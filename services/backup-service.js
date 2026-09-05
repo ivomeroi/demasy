@@ -18,6 +18,15 @@
                 if (!Array.isArray(data?.[name])) errors.push(`Falta la colección ${name}`);
             }
             if (!errors.length) {
+                for (const name of ['patients', 'sessions', 'analyses', 'settings']) {
+                    data[name].forEach((item, index) => {
+                        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+                            errors.push(`Registro inválido en ${name}, posición ${index + 1}`);
+                        }
+                    });
+                }
+            }
+            if (!errors.length) {
                 for (const name of ['patients', 'sessions', 'analyses']) {
                     const ids = new Set();
                     data[name].forEach(item => {
