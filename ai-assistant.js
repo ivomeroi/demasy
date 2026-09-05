@@ -128,7 +128,6 @@ class KinesiologyAIAssistant {
                 commonIssues: {
                     powerImbalance: "Diferencias >10% entre piernas pueden indicar lesión o debilidad unilateral",
                     inefficiency: "Eficiencia <75% sugiere problemas de técnica o coordinación neuromuscular",
-                    asymmetricFatigue: "Fatiga unilateral puede predecir lesiones por sobrecompensación",
                     pedalingAsymmetries: "Patrones EMG descoordinados entre fases de potencia y recuperación"
                 }
             },

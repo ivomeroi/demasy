@@ -241,7 +241,7 @@ Explicar como se genero la senal simulada y que parametros controla.
 
 Contenido sugerido:
 - senales bilaterales izquierda/derecha;
-- nivel de activacion, ruido, fatiga y asimetria;
+- nivel de activacion, ruido y asimetria;
 - patron ciclico asociado al pedaleo;
 - fase entre miembros inferiores;
 - parametros de cadencia y resistencia;
@@ -307,9 +307,9 @@ Explicar el archivo `emg-simulator.js` y su funcion en el desarrollo.
 
 Contenido sugerido:
 - generacion de muestras bilaterales;
-- parametros de activacion, fatiga, asimetria, cadencia y resistencia;
+- parametros de activacion, asimetria, cadencia y resistencia;
 - perfiles musculares;
-- escenarios simulados: estado estable, asimetria, fatiga unilateral, intervalos;
+- escenarios simulados: estado estable, asimetria e intervalos;
 - uso del simulador para pruebas de interfaz.
 
 ### 9.5. Implementacion de la comunicacion con hardware
