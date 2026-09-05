@@ -28,6 +28,7 @@ Entregar una versión reproducible, documentada y desplegable que pueda recorrer
 - Smoke test HTTP aprobado.
 - Instalación limpia con `npm ci` aprobada en un directorio temporal.
 - Configuración de Vercel contrastada con la documentación oficial vigente.
+- Preview corregido para servir la raíz estática mediante `outputDirectory: "."` y sin paso de compilación.
 
 ## Pendiente de validación
 
