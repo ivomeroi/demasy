@@ -945,19 +945,19 @@ Entregar una versión reproducible localmente y desplegable.
 
 #### Documentación
 
-- [ ] Actualizar README.
-- [ ] Actualizar nombres de paquete, despliegue y metadatos públicos para utilizar DEMASY.
-- [ ] Actualizar arquitectura.
-- [ ] Documentar instalación y ejecución.
-- [ ] Documentar modo simulación.
-- [ ] Documentar escenarios.
-- [ ] Documentar fórmulas y limitaciones.
-- [ ] Documentar base de datos y respaldos.
-- [ ] Documentar asistente local/remoto.
-- [ ] Documentar variables de entorno.
-- [ ] Documentar privacidad y alcance no clínico.
-- [ ] Alinear la tesis con el estado real de implementación.
-- [ ] Preparar una guía de demostración.
+- [x] Actualizar README.
+- [x] Actualizar nombres de paquete, despliegue y metadatos públicos para utilizar DEMASY.
+- [x] Actualizar arquitectura.
+- [x] Documentar instalación y ejecución.
+- [x] Documentar modo simulación.
+- [x] Documentar escenarios.
+- [x] Documentar fórmulas y limitaciones.
+- [x] Documentar base de datos y respaldos.
+- [x] Documentar el asistente remoto y su comportamiento cuando no está disponible.
+- [x] Documentar variables de entorno.
+- [x] Documentar privacidad y alcance no clínico.
+- [x] Alinear la tesis con el estado real de implementación.
+- [x] Preparar una guía de demostración.
 
 #### Despliegue local
 
@@ -975,7 +975,7 @@ Netlify o Vercel pueden publicar:
 - IndexedDB;
 - participantes y sesiones locales;
 - análisis;
-- asistente local.
+- interfaz completa sin asistente remoto.
 
 El endpoint Node `/api/chat` no debe asumirse disponible en un despliegue puramente estático.
 
@@ -993,9 +993,9 @@ Nunca se debe incluir `GEMINI_API_KEY` en JavaScript del navegador.
 
 | Entorno | Persistencia | Asistente | Uso |
 |---|---|---|---|
-| local | IndexedDB | local o Gemini vía Node | desarrollo y defensa |
+| local | IndexedDB | Gemini vía Node, si se configura | desarrollo y defensa |
 | test | memoria/IndexedDB aislada | mock | CI |
-| demo estática | IndexedDB | local | publicación sin secretos |
+| demo estática | IndexedDB | no disponible | publicación sin secretos |
 | demo completa | IndexedDB | Gemini remoto | demostración con API configurada |
 
 #### Criterio de aceptación
@@ -1183,7 +1183,7 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 7. Asistente | Aprobada | 2026-09-02 | Codex + responsable | `docs/v1-phase-7-assistant.md` | Gemini remoto validado; errores y límites de cuota visibles |
 | 8. UX | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-8-ux.md` | Identidad y refinamiento visual aprobados; lista para integrar |
 | 9. Calidad | Aprobada | 2026-09-05 | Codex + responsable | `docs/v1-phase-9-quality.md` | Pruebas automáticas y validación local completadas; lista para integrar |
-| 10. Entrega | Pendiente | | | | |
+| 10. Entrega | Aprobada | 2026-09-05 | Codex + responsable | `docs/v1-phase-10-delivery.md` | Preview validado y autorizado para producción |
 
 Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Pospuesta`, `Bloqueada`.
 
@@ -1191,62 +1191,62 @@ Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Posp
 
 ### Producto
 
-- [ ] El flujo principal funciona completamente con simulación.
-- [ ] Se puede trabajar sin internet.
-- [ ] La aplicación, excepto el asistente, funciona sin claves de API.
-- [ ] Se puede trabajar sin ESP32.
-- [ ] No hay botones principales sin función.
-- [ ] Toda sesión indica que su origen es simulado.
-- [ ] No quedan referencias visibles al nombre anterior `KinesioEMG`.
-- [ ] Los datos creados con el nombre anterior pueden conservarse o migrarse.
+- [x] El flujo principal funciona completamente con simulación.
+- [x] Se puede trabajar sin internet.
+- [x] La aplicación, excepto el asistente, funciona sin claves de API.
+- [x] Se puede trabajar sin ESP32.
+- [x] No hay botones principales sin función.
+- [x] Toda sesión indica que su origen es simulado.
+- [x] No quedan referencias visibles al nombre anterior `KinesioEMG`.
+- [x] Los datos creados con el nombre anterior pueden conservarse o migrarse.
 
 ### Datos
 
-- [ ] CRUD de participantes completo.
-- [ ] Guardado y recuperación de sesiones probado.
-- [ ] Migraciones probadas.
-- [ ] Exportación e importación probadas.
-- [ ] Respaldo restaurado en una base limpia.
-- [ ] Operaciones destructivas confirmadas.
+- [x] CRUD de participantes completo.
+- [x] Guardado y recuperación de sesiones probado.
+- [x] Migraciones probadas.
+- [x] Exportación e importación probadas.
+- [x] Respaldo restaurado en una base limpia.
+- [x] Operaciones destructivas confirmadas.
 
 ### Análisis
 
-- [ ] Fórmulas centralizadas.
-- [ ] Métricas probadas con datos conocidos.
-- [ ] Unidades coherentes.
-- [ ] Umbrales documentados.
-- [ ] Interpretaciones no diagnósticas.
-- [ ] Comparaciones muestran condiciones de ambas sesiones.
+- [x] Fórmulas centralizadas.
+- [x] Métricas probadas con datos conocidos.
+- [x] Unidades coherentes.
+- [x] Umbrales documentados.
+- [x] Interpretaciones no diagnósticas.
+- [x] Comparaciones muestran condiciones de ambas sesiones.
 
 ### Servicios
 
-- [ ] IndexedDB posee adaptador de memoria para pruebas.
+- [x] IndexedDB posee adaptador de memoria para pruebas.
 - [x] Una falla de Gemini no bloquea el resto de la aplicación.
-- [ ] Pruebas usan asistente mock.
-- [ ] Ningún secreto llega al frontend.
-- [ ] Despliegue estático funciona sin API.
-- [ ] El modo de cada servicio es visible o diagnosticable.
+- [x] Pruebas usan asistente mock.
+- [x] Ningún secreto llega al frontend.
+- [x] Despliegue estático funciona sin API.
+- [x] El modo de cada servicio es visible o diagnosticable.
 
 ### Calidad
 
-- [ ] Pruebas unitarias en verde.
-- [ ] Pruebas de integración en verde.
-- [ ] Smoke test en verde.
-- [ ] Recorrido end-to-end en verde.
-- [ ] Funcionamiento sin red verificado.
-- [ ] Sesión máxima verificada.
-- [ ] Navegación por teclado revisada.
-- [ ] Pantallas objetivo revisadas.
+- [x] Pruebas unitarias en verde.
+- [x] Pruebas de integración en verde.
+- [x] Smoke test en verde.
+- [x] Recorrido end-to-end en verde.
+- [x] Funcionamiento sin red verificado.
+- [x] Sesión máxima verificada.
+- [x] Navegación por teclado revisada.
+- [x] Pantallas objetivo revisadas.
 
 ### Documentación y entrega
 
-- [ ] README actualizado.
-- [ ] Arquitectura actualizada.
-- [ ] Manual de uso disponible.
-- [ ] Limitaciones visibles.
-- [ ] Guía de respaldo disponible.
-- [ ] Guía de despliegue actualizada.
-- [ ] Documento de tesis alineado con la implementación.
+- [x] README actualizado.
+- [x] Arquitectura actualizada.
+- [x] Manual de uso disponible.
+- [x] Limitaciones visibles.
+- [x] Guía de respaldo disponible.
+- [x] Guía de despliegue actualizada.
+- [x] Documento de tesis alineado con la implementación.
 - [ ] Versión `1.0.0` definida y etiquetada.
 
 ## 21. Condición final de aceptación

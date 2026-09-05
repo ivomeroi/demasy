@@ -1,229 +1,77 @@
-# 🚀 Guía de Despliegue - KinesioEMG
+# Despliegue de DEMASY v1
 
-Esta guía te ayudará a publicar tu aplicación KinesioEMG en internet para acceso desde múltiples dispositivos.
+## Comprobación previa
 
-## 📋 Preparación Previa
-
-### 1. Verificar que todo funcione localmente
 ```bash
-cd tesis
-python -m http.server 8000
-# Abrir http://localhost:8000 y probar todas las funciones
+npm ci
+npm test
+npm start
 ```
 
-### 2. Optimizar para producción
+Completa el recorrido indicado en el README antes de publicar. Nunca subas `.env.local` ni una clave Gemini.
+
+## Modalidades
+
+### Servidor local completo
+
+Es la modalidad recomendada para desarrollo y defensa porque incluye rutas SPA, cabeceras de seguridad, funcionamiento offline y proxy Gemini opcional.
+
 ```bash
-# Verificar que todos los archivos estén incluidos
-ls -la
-# Deberías ver: index.html, styles.css, app.js, database.js, etc.
+HOST=127.0.0.1 PORT=8000 npm start
 ```
 
-## 🌟 Método 1: GitHub Pages (Recomendado)
+Para acceder desde otros equipos de una red confiable:
 
-### Ventajas
-- ✅ Gratuito para siempre
-- ✅ HTTPS automático
-- ✅ URL personalizable
-- ✅ Actualizaciones fáciles con git push
-
-### Pasos
-1. **Crear repositorio en GitHub:**
-   - Ve a [github.com](https://github.com) → "New repository"
-   - Nombre: `kinesio-emg` 
-   - Público (para GitHub Pages gratuito)
-
-2. **Subir código:**
-   ```bash
-   cd tesis
-   git init
-   git add .
-   git commit -m "Initial commit: KinesioEMG complete app with patient database"
-   git branch -M main
-   git remote add origin https://github.com/TU-USUARIO/kinesio-emg.git
-   git push -u origin main
-   ```
-
-3. **Activar GitHub Pages:**
-   - En GitHub: Settings → Pages
-   - Source: "Deploy from a branch"
-   - Branch: main / (root)
-   - Save
-
-4. **Tu URL será:**
-   ```
-   https://TU-USUARIO.github.io/kinesio-emg/
-   ```
-
-### Actualizaciones futuras
 ```bash
-# Hacer cambios en el código
-git add .
-git commit -m "Added new feature"
-git push
-# Se actualiza automáticamente en 1-2 minutos
+HOST=0.0.0.0 PORT=8000 npm start
 ```
 
-## 🎯 Método 2: Netlify (Drag & Drop)
+Web Bluetooth requiere un contexto seguro: `localhost` o HTTPS. Una dirección HTTP de red local no se considera equivalente a `localhost`.
 
-### Ventajas
-- ✅ Súper fácil (arrastrar y soltar)
-- ✅ Vista previa de cambios
-- ✅ URL personalizada gratuita
-- ✅ Formularios de contacto (opcional)
+### Publicación estática
 
-### Pasos
-1. Ve a [netlify.com](https://netlify.com)
-2. Registrarse gratis
-3. Arrastrar la carpeta `tesis` completa al área de "Drop"
-4. **¡Listo!** URL automática tipo: `https://wonderful-pasteur-123456.netlify.app`
+Vercel, Netlify u otro host estático ejecutan `npm run build` y publican `dist/`. El bundle incorpora las dependencias visuales locales y excluye documentación, pruebas, firmware y archivos de entorno. Esta modalidad incluye simulación, IndexedDB, análisis, respaldo y shell offline, pero no implementa `/api/chat`. El asistente remoto informará que el servicio no está disponible sin afectar el resto.
 
-### Personalizar dominio
-- Site settings → Domain management
-- Cambiar a algo como: `kinesio-emg-tu-nombre.netlify.app`
+Netlify:
 
-### Actualizaciones
-- Simplemente arrastra la carpeta actualizada de nuevo
-
-## ⚡ Método 3: Vercel (Más avanzado)
-
-### Ventajas
-- ✅ Extremadamente rápido
-- ✅ Edge computing global
-- ✅ Análisis de rendimiento
-- ✅ Integración con git
-
-### Pasos
-1. **Instalar Vercel CLI:**
-   ```bash
-   npm install -g vercel
-   ```
-
-2. **Deploy:**
-   ```bash
-   cd tesis
-   vercel
-   # Seguir las instrucciones
-   ```
-
-3. **URL automática tipo:**
-   ```
-   https://kinesio-emg-abc123.vercel.app
-   ```
-
-## 🔧 Método 4: Firebase Hosting (Google)
-
-### Ventajas
-- ✅ Infraestructura de Google
-- ✅ CDN global
-- ✅ Métricas detalladas
-- ✅ Posible integración futura con Firebase Database
-
-### Pasos
-1. **Instalar Firebase CLI:**
-   ```bash
-   npm install -g firebase-tools
-   ```
-
-2. **Configurar proyecto:**
-   ```bash
-   cd tesis
-   firebase login
-   firebase init hosting
-   # Build folder: . (punto)
-   # Single-page app: Yes
-   # Rewrite index.html: No
-   ```
-
-3. **Deploy:**
-   ```bash
-   firebase deploy
-   ```
-
-## 📱 Consideraciones para Múltiples Dispositivos
-
-### ⚠️ Importante: Datos Locales
-- **IndexedDB es local a cada navegador/dispositivo**
-- Los datos NO se sincronizan automáticamente entre dispositivos
-
-### 💡 Soluciones Actuales
-
-#### Opción A: Exportar/Importar Manual
-```javascript
-// En dispositivo principal (PC):
-window.dbUtils.exportAllData()    // Descargar JSON
-
-// En dispositivo secundario (tablet/móvil):
-// Subir el archivo JSON (requiere implementar función de importación)
+```bash
+npx netlify deploy --prod --dir .
 ```
 
-#### Opción B: Múltiples Instancias Independientes
-- Cada dispositivo mantiene su propia base de datos
-- Útil si diferentes dispositivos son para diferentes kinesiológos
-- Cada uno puede exportar sus datos independientemente
+Vercel:
 
-### 🔮 Mejoras Futuras Posibles
-1. **Google Drive Sync**: Backup automático en la nube
-2. **Firebase Database**: Sincronización en tiempo real
-3. **QR Code Sharing**: Compartir datos entre dispositivos
-4. **PWA (Progressive Web App)**: Instalación como app nativa
+```bash
+npx vercel --prod
+```
 
-## 🎨 Personalización de Dominio
+Las configuraciones `netlify.toml` y `vercel.json` incluyen fallback SPA y cabeceras de seguridad. Verifica después del despliegue las cinco subrutas mediante recarga directa.
 
-### Dominio Personalizado (Opcional)
-Si quieres algo como `mi-clinica-emg.com`:
+### Publicación completa con Gemini
 
-1. **Comprar dominio** (Google Domains, Namecheap, etc.)
-2. **Configurar DNS:**
-   - GitHub Pages: CNAME record → `tu-usuario.github.io`
-   - Netlify: Automatic setup
-   - Vercel: Automatic setup
+Requiere desplegar `scripts/serve.mjs` como proceso Node persistente o adaptar `POST /api/chat` y `GET /api/health` a funciones serverless. Configura en el proveedor:
 
-## 🔒 Seguridad y Privacidad
+```env
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.5-flash
+```
 
-### ✅ Aspectos Positivos
-- **HTTPS automático** en todos los servicios modernos
-- **Datos locales**: IndexedDB nunca sale del dispositivo del usuario
-- **Sin servidor**: No hay servidor que hackear
-- **Código abierto**: Transparente y auditable
+No uses variables públicas ni prefijos que incorporen la clave al frontend. Restringe logs, tamaño de solicitudes y acceso al entorno.
 
-### 🛡️ Recomendaciones
-- **GitHub repo privado** si manejas datos sensibles
-- **Términos de uso claros** sobre el almacenamiento local
-- **Respaldo regular** mediante exportación
+## Persistencia
 
-## 📊 Monitoreo y Análisis
+La información reside en IndexedDB dentro del navegador del usuario, no en el servidor del despliegue. Cambiar de dominio, subdominio o protocolo crea otro origen y, por tanto, otro almacenamiento. Exporta un respaldo antes de cambiar la URL publicada.
 
-### GitHub Pages
-- GitHub Insights para ver commits y actividad
+## Verificación posterior
 
-### Netlify
-- Analytics básico incluido
-- Métricas de rendimiento
+1. Recarga directamente cada subruta.
+2. Crea y guarda una sesión simulada.
+3. Consulta historial, reproducción y análisis.
+4. Exporta e importa un respaldo en un perfil limpio.
+5. Desconecta la red y recarga una ruta visitada.
+6. Confirma en DevTools que no se solicitan recursos CDN.
+7. Comprueba las cabeceras CSP y `X-Content-Type-Options`.
+8. Si existe backend, comprueba `/api/health` y un error controlado de cuota.
 
-### Vercel
-- Analytics avanzado
-- Core Web Vitals
-- Métricas de usuario
+## Reversión
 
-## 🆘 Solución de Problemas
-
-### Problema: "No se cargan los datos"
-- Verificar que IndexedDB esté habilitado
-- Abrir Developer Tools → Application → IndexedDB
-
-### Problema: "No funciona en móvil"
-- Verificar responsive design
-- Probar en diferentes navegadores
-
-### Problema: "Archivos no se encuentran"
-- Verificar estructura de carpetas
-- Todos los archivos deben estar en la raíz
-
-## 📞 Siguiente Paso Recomendado
-
-**Para empezar rápido:**
-1. Usa **Netlify drag & drop** para test inmediato
-2. Luego configura **GitHub Pages** para versión permanente
-3. Comparte la URL con colegas para feedback
-
-¿Necesitas ayuda con algún método específico?
+Conserva la etiqueta Git de la última versión estable. Si una publicación falla, vuelve a desplegar ese commit; los datos IndexedDB existentes permanecen en el navegador mientras se conserve el mismo origen y no cambie el esquema de forma incompatible.
