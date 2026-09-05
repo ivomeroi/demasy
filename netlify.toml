@@ -1,9 +1,9 @@
 [build]
-  # No build process needed - static files only
-  publish = "."
+  command = "npm run build"
+  publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "24"
 
 [[headers]]
   # Apply these headers to all routes

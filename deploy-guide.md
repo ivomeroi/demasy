@@ -30,7 +30,7 @@ Web Bluetooth requiere un contexto seguro: `localhost` o HTTPS. Una dirección H
 
 ### Publicación estática
 
-Vercel, Netlify u otro host estático pueden publicar la raíz del repositorio sin build. Esta modalidad incluye simulación, IndexedDB, análisis, respaldo y shell offline, pero no implementa `/api/chat`. El asistente remoto informará que el servicio no está disponible sin afectar el resto.
+Vercel, Netlify u otro host estático ejecutan `npm run build` y publican `dist/`. El bundle incorpora las dependencias visuales locales y excluye documentación, pruebas, firmware y archivos de entorno. Esta modalidad incluye simulación, IndexedDB, análisis, respaldo y shell offline, pero no implementa `/api/chat`. El asistente remoto informará que el servicio no está disponible sin afectar el resto.
 
 Netlify:
 

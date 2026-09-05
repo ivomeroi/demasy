@@ -28,7 +28,8 @@ Entregar una versión reproducible, documentada y desplegable que pueda recorrer
 - Smoke test HTTP aprobado.
 - Instalación limpia con `npm ci` aprobada en un directorio temporal.
 - Configuración de Vercel contrastada con la documentación oficial vigente.
-- Preview corregido para servir la raíz estática mediante `outputDirectory: "."` y sin paso de compilación.
+- Bundle estático reproducible en `dist/`, con Chart.js y Font Awesome copiados desde dependencias locales.
+- Vercel y Netlify configurados para publicar únicamente el bundle, sin documentación, pruebas ni archivos de entorno.
 
 ## Pendiente de validación
 

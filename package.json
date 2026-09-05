@@ -8,7 +8,7 @@
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
     "serve": "node scripts/serve.mjs",
-    "build": "echo 'No build process required for static app'",
+    "build": "node scripts/build.mjs",
     "test": "npm run lint && npm run test:unit && npm run smoke",
     "test:unit": "node --test tests/*.test.cjs",
     "lint": "node scripts/check-js.mjs",
