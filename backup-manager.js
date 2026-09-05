@@ -16,6 +16,7 @@ class BackupManager {
             <div class="card"><h3>Respaldo completo</h3><p>Exporta participantes, sesiones, análisis y configuración en un JSON versionado.</p><button class="btn-control primary" id="backup-export">Exportar respaldo</button></div>
             <div class="card"><h3>Importar o restaurar</h3><p>Máximo 50 MB. El contenido se valida antes de modificar IndexedDB.</p><label class="file-input-label" for="backup-file">Seleccionar respaldo JSON</label><input type="file" id="backup-file" accept="application/json,.json"><div id="backup-file-error" class="form-error" role="alert"></div></div>
             <div class="card"><h3>Datos de demostración</h3><p>Crea o actualiza únicamente los participantes DEMO-* y sus sesiones sintéticas.</p><button class="btn-outline" id="demo-data-action">Crear o actualizar demos</button></div>
+            <div class="card"><h3>Guía de usuario</h3><p>Vuelve a recorrer las funciones principales de DEMASY paso a paso.</p><button class="btn-outline" id="onboarding-restart">Iniciar tutorial</button></div>
             <div class="card prototype-notice"><h3>Alcance de esta versión</h3><p>DEMASY v1 es un prototipo académico. Los datos se guardan localmente en este navegador y no están cifrados.</p><p>Utiliza códigos de participante, evita datos sensibles y conserva respaldos periódicos.</p></div>
         </div></div>`;
         document.getElementById('setting-window').value = String(preferences.chartWindowSeconds);
@@ -30,6 +31,7 @@ class BackupManager {
             await window.dbUtils.initializeSampleData({ force: true });
             window.app?.showNotification('Datos demo creados o actualizados', 'success');
         });
+        document.getElementById('onboarding-restart').addEventListener('click', () => window.app?.startUserGuide());
     }
 
     async savePreferences() {

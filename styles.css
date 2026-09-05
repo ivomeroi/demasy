@@ -1268,6 +1268,102 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
 }
 
 /* Loading Overlay */
+.onboarding-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+}
+
+.onboarding-backdrop {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+
+.onboarding-highlight {
+  position: fixed;
+  z-index: 12001;
+  border: 3px solid #55c2e8;
+  border-radius: 0.8rem;
+  box-shadow: 0 0 0 5px rgb(85 194 232 / 0.3), 0 0 0 9999px rgb(3 18 30 / 0.72);
+  pointer-events: none;
+  transition: all 0.25s ease;
+}
+
+.onboarding-dialog {
+  position: fixed;
+  z-index: 12002;
+  padding: 1.35rem;
+  border: 1px solid #b9d6e5;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 22px 60px rgb(0 0 0 / 0.32);
+}
+
+.onboarding-dialog.is-centered {
+  width: min(420px, calc(100vw - 2rem));
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.onboarding-dialog h2 {
+  margin: 0.6rem 0 0.45rem;
+  color: var(--primary-dark);
+  font-size: 1.35rem;
+}
+
+.onboarding-dialog p {
+  margin: 0 0 1.2rem;
+  color: var(--text-secondary);
+}
+
+.onboarding-progress,
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.onboarding-progress {
+  color: var(--primary-color);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.onboarding-skip {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.onboarding-actions {
+  justify-content: flex-end;
+}
+
+.onboarding-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-highlight { transition: none; }
+}
+
+@media (max-width: 640px) {
+  .onboarding-dialog:not(.is-centered) {
+    left: 1rem !important;
+    right: 1rem;
+    bottom: 1rem;
+    top: auto !important;
+    width: auto !important;
+  }
+}
+
 .loading-overlay {
   position: fixed;
   top: 0;

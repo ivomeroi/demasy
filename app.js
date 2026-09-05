@@ -35,6 +35,9 @@ class KinesioEMGApp {
             this.recordingController = new RecordingController();
             this.sessionConfigurationService = new SessionConfigurationService();
             this.sectionRouter = new SectionRouter();
+            this.onboardingTour = new OnboardingTour({
+                onNavigate: section => this.navigateToSection(section, { replaceHistory: true })
+            });
             this.sessionReview = null;
             this.recordingTimerInterval = null;
             
@@ -113,6 +116,7 @@ class KinesioEMGApp {
             this.setupAIAssistant();
             await this.initializeUI();
             await this.restoreRecordingDraft();
+            await this.onboardingTour.start();
             
             console.log('DEMASY se inicializó correctamente');
         } catch (error) {
@@ -844,6 +848,10 @@ class KinesioEMGApp {
             const method = options.replaceHistory ? 'replaceState' : 'pushState';
             window.history[method]({ section: target }, '', this.sectionRouter.getPath(target));
         }
+    }
+
+    startUserGuide() {
+        return this.onboardingTour?.start({ force: true });
     }
 
     async loadPatientsSection() {

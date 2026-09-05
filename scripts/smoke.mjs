@@ -66,6 +66,10 @@ async function main() {
             throw new Error('The app shell must not depend on cdnjs.');
         }
 
+        if (!index.body.includes('services/onboarding-tour.js')) {
+            throw new Error('The first-visit user guide was not included in the app shell.');
+        }
+
         const chart = await request('/vendor/chart.min.js');
         if (chart.status !== 200) throw new Error('Local Chart.js asset did not load.');
         const icons = await request('/vendor/fontawesome/css/all.min.css');

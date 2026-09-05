@@ -4,6 +4,12 @@
 
 Ejecuta `npm start`, abre `http://127.0.0.1:8000` y utiliza un código anónimo por participante. DEMASY guarda los datos en el navegador actual.
 
+## Tutorial de primer ingreso
+
+En la primera visita, DEMASY abre un recorrido de ocho pasos por EMG en vivo, configuración de sesión, análisis, pacientes, asistente y respaldos. Usa **Siguiente** y **Anterior**, las flechas del teclado o **Omitir**. Al finalizar u omitir, la preferencia queda guardada en el navegador.
+
+Para repetirlo, abre **Configuración → Guía de usuario → Iniciar tutorial**.
+
 ## Crear una sesión
 
 1. En **Pacientes**, registra o selecciona un participante activo.
