@@ -16,7 +16,10 @@ class EMGSimulator {
         this.isPaused = false;
         this.currentMuscle = 'quadriceps'; // Default to quadriceps for cycling
         this.sampleRate = DEMASY_SIMULATOR_CONFIG.signal.simulationRateHz;
+        this.now = () => performance.now();
         this.time = 0;
+        this.clockStartedAtMs = null;
+        this.accumulatedTimeSeconds = 0;
         
         // Bilateral activation levels
         this.activationLevel = { left: 0, right: 0 };
@@ -305,6 +308,8 @@ class EMGSimulator {
             this.isRunning = true;
             this.isPaused = false;
             this.time = 0;
+            this.accumulatedTimeSeconds = 0;
+            this.clockStartedAtMs = this.now();
             this.fatigueLevel = { left: 0, right: 0 };
             this.signalBuffer = { left: [], right: [] };
             
@@ -323,12 +328,18 @@ class EMGSimulator {
     }
 
     stop() {
+        if (this.clockStartedAtMs !== null) {
+            this.accumulatedTimeSeconds = this.time;
+            this.clockStartedAtMs = null;
+        }
         this.isRunning = false;
         this.isPaused = false;
     }
 
     pause() {
         if (!this.isRunning) return;
+        this.accumulatedTimeSeconds = this.time;
+        this.clockStartedAtMs = null;
         this.isRunning = false;
         this.isPaused = true;
     }
@@ -337,6 +348,7 @@ class EMGSimulator {
         if (!this.isPaused) return;
         this.isPaused = false;
         this.isRunning = true;
+        this.clockStartedAtMs = this.now();
         this.generateSignal();
     }
 
@@ -352,6 +364,8 @@ class EMGSimulator {
 
     resetSignal() {
         this.time = 0;
+        this.clockStartedAtMs = null;
+        this.accumulatedTimeSeconds = 0;
         this.fatigueLevel = { left: 0, right: 0 };
         this.signalBuffer = { left: [], right: [] };
         this.updateStats();
@@ -368,6 +382,7 @@ class EMGSimulator {
             }
             
             const dt = 1 / this.sampleRate;
+            this.syncTimeToClock();
             this.updateScenarioState();
         
         // Generate bilateral signals
@@ -468,14 +483,18 @@ class EMGSimulator {
             this.callbacks.onStatsUpdate(this.stats);
         }
         
-            this.time += dt;
-            
             // Continue generation
             setTimeout(() => this.generateSignal(), dt * 1000);
         } catch (error) {
             console.error('Error in generateSignal:', error);
             this.isRunning = false; // Stop on error
         }
+    }
+
+    syncTimeToClock() {
+        if (this.clockStartedAtMs === null) this.clockStartedAtMs = this.now();
+        this.time = this.accumulatedTimeSeconds + Math.max(0, this.now() - this.clockStartedAtMs) / 1000;
+        return this.time;
     }
 
     generateActivationPattern(muscle, side) {

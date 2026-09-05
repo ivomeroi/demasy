@@ -25,3 +25,15 @@ test('planifica merge remapeando ids y omitiendo duplicados', () => {
     assert.equal(plan.report.created.sessions, 1);
     assert.equal(plan.records.sessions[0].patientId, 10);
 });
+
+test('rechaza respaldos corruptos sin lanzar errores internos', () => {
+    const service = new BackupService();
+    for (const corrupt of [null, {}, { application: 'DEMASY', schemaVersion: 1, data: {} }]) {
+        assert.doesNotThrow(() => service.validate(corrupt));
+        assert.equal(service.validate(corrupt).valid, false);
+    }
+    const invalidRecord = structuredClone(payload);
+    invalidRecord.data.patients = [null];
+    assert.doesNotThrow(() => service.validate(invalidRecord));
+    assert.match(service.validate(invalidRecord).errors.join(' '), /Registro inválido/);
+});

@@ -14,10 +14,10 @@
 #define STREAM_RATE_HZ 200
 #define STALE_TIMEOUT_MS 500
 #define STATUS_EVERY_MS 2000
-#define BLE_DEVICE_NAME "KinesioEMG-Master"
+#define BLE_DEVICE_NAME "DEMASY-Master"
 #define BLE_SERVICE_UUID "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
 #define BLE_TX_UUID "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
-#define BLE_BATCH_LINES 4
+#define BLE_BATCH_LINES 3
 #define BLE_BATCH_SIZE 180
 #define FLAG_ADC_CLIPPED 0x01
 #define FLAG_PRESSURE_ARTIFACT 0x02
@@ -269,11 +269,11 @@ void publishBleData(float leftSignal, float rightSignal, uint16_t leftEnv, uint1
   snprintf(
     bleLine,
     sizeof(bleLine),
-    "%d,%u,%u,%d,%u,%u\n",
-    (int)leftSignal,
+    "%.2f,%u,%u,%.2f,%u,%u\n",
+    leftSignal,
     (unsigned int)leftEnv,
     (unsigned int)leftFlags,
-    (int)rightSignal,
+    rightSignal,
     (unsigned int)rightEnv,
     (unsigned int)rightFlags
   );

@@ -57,6 +57,19 @@
             this.transition('recording');
         }
 
+        restoreReview(configuration, elapsedSeconds = 0) {
+            if (['recording', 'paused'].includes(this.state)) throw new Error('No se puede restaurar sobre una sesión activa');
+            this.configuration = Object.freeze({ ...configuration });
+            this.startedAtMs = 0;
+            this.pausedAtMs = null;
+            this.totalPausedMs = 0;
+            this.finishedAtMs = Math.max(0, Number(elapsedSeconds) || 0) * 1000;
+            this.state = 'review';
+            const snapshot = this.getSnapshot();
+            this.listeners.forEach(listener => listener(snapshot));
+            return snapshot;
+        }
+
         pause() {
             this.requireState('recording');
             this.pausedAtMs = this.now();

@@ -36,3 +36,11 @@ test('simulator applies configured unilateral fatigue progression', () => {
     assert.equal(simulator.fatigueLevel.left, 0.4);
     assert.equal(simulator.fatigueLevel.right, 0);
 });
+
+test('simulator timestamps follow monotonic wall time instead of callback count', () => {
+    const simulator = new EMGSimulator();
+    simulator.accumulatedTimeSeconds = 2;
+    simulator.clockStartedAtMs = 1000;
+    simulator.now = () => 3500;
+    assert.equal(simulator.syncTimeToClock(), 4.5);
+});

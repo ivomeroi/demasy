@@ -80,7 +80,6 @@ class EMGBluetoothManager extends EMGSerialManager {
         this.pendingText = lines.pop() || '';
 
         for (const line of lines) {
-            console.debug('ESP32 BLE line:', line);
             this.handleLine(line);
         }
     }
