@@ -3,7 +3,7 @@
  * Sets up sample data and ensures proper database initialization
  */
 
-const DEMO_DATASET_VERSION = 2;
+const DEMO_DATASET_VERSION = 3;
 const DEMO_DATASET_KEY = `demoDataset.v${DEMO_DATASET_VERSION}`;
 const DEMO_PROFILES = [
     {
@@ -95,7 +95,7 @@ async function initializeSampleData(options = {}) {
 
 async function createSampleSessions(db, patient, definitions) {
     const existing = await db.getPatientSessions(patient.id, { includeArchived: true });
-    const replaceable = existing.filter(session => session.source?.provider === 'legacy' || session.source?.provider === 'demasy-demo-v2');
+    const replaceable = existing.filter(session => session.source?.provider === 'legacy' || /^demasy-demo-v\d+$/.test(session.source?.provider || ''));
     for (let index = 0; index < definitions.length; index++) {
         const definition = definitions[index];
         const sessionData = buildDemoSession(patient.id, definition, `${patient.participantCode}-${index + 1}`);
@@ -109,10 +109,12 @@ function buildDemoSession(patientId, definition, seedText) {
     const samples = generateCoherentEMGData({ ...definition, durationSeconds, sampleRate: 100, seed: hashSeed(seedText) });
     const difference = 100 - definition.symmetry;
     return {
-        patientId, label: definition.label, muscleType: definition.muscleType, sessionType: 'cycling',
+        patientId, label: definition.label, muscleType: definition.muscleType, flexorMuscleType: definition.muscleType,
+        extensorMuscleType: ({ quadriceps: 'hamstring', hamstring: 'quadriceps', gastrocnemius: 'tibialis' })[definition.muscleType] || 'complementary', sessionType: 'cycling',
         date: definition.date, startedAt: definition.date, duration: durationSeconds, durationSeconds,
         cadence: definition.cadence, resistance: definition.resistance, samples,
-        source: { type: 'simulation', provider: 'demasy-demo-v2', scenario: definition.scenario, version: DEMO_DATASET_VERSION },
+        channelSchema: 'flexor-extensor-4ch',
+        source: { type: 'simulation', provider: 'demasy-demo-v3', scenario: definition.scenario, version: DEMO_DATASET_VERSION },
         configuration: {
             label: definition.label, muscleType: definition.muscleType, testType: 'cycling',
             plannedDurationSeconds: durationSeconds, cadenceRpm: definition.cadence,
@@ -120,6 +122,8 @@ function buildDemoSession(patientId, definition, seedText) {
             phaseDelayDegrees: definition.phaseDelayDegrees || 0, source: { type: 'simulation' }
         },
         statistics: {
+            flexor: { bilateral: { symmetryIndex: definition.symmetry, asymmetryLevel: difference, difference } },
+            extensor: { bilateral: { symmetryIndex: Math.min(100, definition.symmetry + 3), asymmetryLevel: Math.max(0, difference - 3), difference: Math.max(0, difference - 3) } },
             bilateral: { symmetryIndex: definition.symmetry, asymmetryLevel: difference, difference },
             pedalingEfficiency: Math.round(70 + definition.symmetry * 0.18)
         },
@@ -136,9 +140,11 @@ function generateCoherentEMGData(options) {
         const time = index / options.sampleRate;
         const leftPhase = 2 * Math.PI * cycleHz * time;
         const rightPhase = leftPhase + Math.PI + phaseDelay;
-        const left = generateEMGSide(time, leftPhase, options.leftScale, random);
-        const right = generateEMGSide(time, rightPhase, options.rightScale, random);
-        samples.push({ time, left, right });
+        const flexorLeft = generateEMGSide(time, leftPhase, options.leftScale, random);
+        const flexorRight = generateEMGSide(time, rightPhase, options.rightScale, random);
+        const extensorLeft = generateEMGSide(time, leftPhase + Math.PI, options.leftScale * 0.86, random);
+        const extensorRight = generateEMGSide(time, rightPhase + Math.PI, options.rightScale * 0.89, random);
+        samples.push({ time, channelSchema: 'flexor-extensor-4ch', flexor: { left: flexorLeft, right: flexorRight }, extensor: { left: extensorLeft, right: extensorRight } });
     }
     return samples;
 }

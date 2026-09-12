@@ -14,7 +14,7 @@ class OnboardingTour {
         this.previousFocus = null;
         this.steps = [
             { title: 'Bienvenido a DEMASY', text: 'Este recorrido presenta el flujo principal. Los datos se guardan solamente en este navegador.', selector: '.logo' },
-            { title: 'EMG en vivo', text: 'Aquí puedes simular señales o conectar el ESP32, calibrar el reposo y observar la actividad bilateral.', section: 'dashboard', selector: '[data-section="dashboard"]' },
+            { title: 'EMG en vivo', text: 'Aquí puedes simular señales o conectar la base ESP32, calibrar cuatro sensores y comparar flexores y extensores entre ambos miembros.', section: 'dashboard', selector: '[data-section="dashboard"]' },
             { title: 'Configura y registra', text: 'Selecciona un participante y las condiciones de la sesión antes de iniciar una grabación.', section: 'dashboard', selector: '#session-workflow' },
             { title: 'Análisis', text: 'Consulta métricas temporales, simetría, calidad y comparaciones entre sesiones compatibles.', section: 'analysis', selector: '[data-section="analysis"]' },
             { title: 'Pacientes', text: 'Administra participantes mediante códigos y accede a sus sesiones e historial.', section: 'patients', selector: '[data-section="patients"]' },

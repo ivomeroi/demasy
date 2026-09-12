@@ -1,11 +1,11 @@
-const CACHE_NAME = 'demasy-v1-onboarding-1';
+const CACHE_NAME = 'demasy-v1-four-channel-layout-5';
 const APP_SHELL = [
     '/', '/index.html', '/styles.css', '/DEMASY-LOGO.jpeg',
     '/vendor/chart.min.js', '/vendor/fontawesome/css/all.min.css',
     '/vendor/fontawesome/webfonts/fa-brands-400.woff2',
     '/vendor/fontawesome/webfonts/fa-regular-400.woff2',
     '/vendor/fontawesome/webfonts/fa-solid-900.woff2',
-    '/core/demasy-config.js', '/core/signal-source-contract.js',
+    '/core/demasy-config.js', '/core/emg-channel-contract.js', '/core/signal-source-contract.js',
     '/core/recording-controller.js', '/core/section-router.js',
     '/services/analysis-service.js', '/services/settings-service.js',
     '/services/memory-storage-adapter.js', '/services/replay-signal-source.js',

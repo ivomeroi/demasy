@@ -42,6 +42,7 @@ class KinesioEMGApp {
             this.recordingTimerInterval = null;
             
             this.emgChart = null;
+            this.extensorChart = null;
             this.isRecording = false;
             this.isPaused = false;
             this.sessionData = [];
@@ -58,10 +59,7 @@ class KinesioEMGApp {
                 min: null,
                 max: null
             };
-            this.envelopeDisplay = {
-                left: this.createEnvelopeDisplayState(),
-                right: this.createEnvelopeDisplayState()
-            };
+            this.envelopeDisplay = this.createEnvelopeDisplayMap();
             this.calibrationInProgress = false;
             this.calibrationTimer = null;
             this.calibrationDurationMs = 5000;
@@ -308,7 +306,52 @@ class KinesioEMGApp {
                 }
             }
         });
+        const extensorCanvas = document.getElementById('extensor-chart');
+        if (!extensorCanvas) throw new Error('Extensor chart canvas not found');
+        this.extensorChart = new Chart(extensorCanvas.getContext('2d'), {
+            type: 'line',
+            data: { datasets: this.emgChart.data.datasets.map(dataset => ({
+                label: dataset.label, data: [...initialData], borderColor: dataset.borderColor,
+                backgroundColor: dataset.backgroundColor, borderWidth: dataset.borderWidth,
+                pointRadius: 0, pointHoverRadius: 0, tension: dataset.tension, fill: dataset.fill
+            })) },
+            plugins: [recordingMarkerPlugin],
+            options: this.createLiveChartOptions()
+        });
         this.applyDisplayPreferences(this.displayPreferences);
+    }
+
+    createLiveChartOptions() {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { intersect: false, mode: 'nearest' },
+            plugins: {
+                legend: { display: true, position: 'top', labels: { boxWidth: 12, padding: 20 } },
+                tooltip: {
+                    enabled: true,
+                    mode: 'nearest',
+                    intersect: false,
+                    callbacks: {
+                        title: items => `Tiempo: ${items[0].parsed.x.toFixed(2)} s`,
+                        label: context => `${context.dataset.label}: ${context.parsed.y.toFixed(1)} mV`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear', position: 'bottom', min: 0, max: this.chartConfig.timeWindow,
+                    title: { display: true, text: 'Tiempo (segundos)' },
+                    ticks: { maxTicksLimit: 10 }, grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                },
+                y: {
+                    min: this.chartConfig.fixedYMin, max: this.chartConfig.fixedYMax,
+                    title: { display: true, text: 'Amplitud (mV)' },
+                    ticks: { maxTicksLimit: 8 }, grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                }
+            }
+        };
     }
 
     applyDisplayPreferences(preferences = {}) {
@@ -318,14 +361,16 @@ class KinesioEMGApp {
         if (label) label.textContent = `Ventana temporal: ${this.chartConfig.timeWindow} s`;
         if (!this.emgChart) return;
         const fixed = this.displayPreferences.chartScaleMode !== 'auto';
-        this.emgChart.options.scales.y.min = fixed ? this.chartConfig.fixedYMin : undefined;
-        this.emgChart.options.scales.y.max = fixed ? this.chartConfig.fixedYMax : undefined;
-        this.emgChart.data.datasets[0].hidden = this.displayPreferences.showLeftSignal === false;
-        this.emgChart.data.datasets[1].hidden = this.displayPreferences.showRightSignal === false;
-        this.emgChart.data.datasets[2].hidden = this.displayPreferences.showRms === false || this.displayPreferences.showLeftSignal === false;
-        this.emgChart.data.datasets[3].hidden = this.displayPreferences.showRms === false || this.displayPreferences.showRightSignal === false;
-        this.emgChart.options.scales.x.max = this.chartConfig.timeWindow;
-        this.emgChart.update('none');
+        this.getLiveCharts().forEach(chart => {
+            chart.options.scales.y.min = fixed ? this.chartConfig.fixedYMin : undefined;
+            chart.options.scales.y.max = fixed ? this.chartConfig.fixedYMax : undefined;
+            chart.data.datasets[0].hidden = this.displayPreferences.showLeftSignal === false;
+            chart.data.datasets[1].hidden = this.displayPreferences.showRightSignal === false;
+            chart.data.datasets[2].hidden = this.displayPreferences.showRms === false || this.displayPreferences.showLeftSignal === false;
+            chart.data.datasets[3].hidden = this.displayPreferences.showRms === false || this.displayPreferences.showRightSignal === false;
+            chart.options.scales.x.max = this.chartConfig.timeWindow;
+            chart.update('none');
+        });
     }
 
     updateChartMode() {
@@ -337,15 +382,16 @@ class KinesioEMGApp {
         const yRange = isExternal ? this.chartConfig.externalYRange : this.chartConfig.simulatorYRange;
         this.chartConfig.fixedYMin = -yRange;
         this.chartConfig.fixedYMax = yRange;
-        this.emgChart.data.datasets[0].borderColor = isExternal ? 'rgba(37, 99, 235, 0.32)' : '#2563eb';
-        this.emgChart.data.datasets[0].borderWidth = isExternal ? 1 : 2;
-        this.emgChart.data.datasets[1].borderColor = isExternal ? 'rgba(220, 38, 38, 0.30)' : '#dc2626';
-        this.emgChart.data.datasets[1].borderWidth = isExternal ? 1 : 2;
-        this.emgChart.data.datasets[0].label = isExternal ? 'Señal ESP32' : 'EMG Lado Izquierdo';
-        this.emgChart.data.datasets[1].hidden = false;
-        this.emgChart.data.datasets[1].label = isExternal ? 'Señal ESP32 Derecha' : 'EMG Lado Derecho';
-        this.emgChart.data.datasets[2].label = isExternal ? 'Actividad corregida izquierda (×2,5)' : 'RMS Izquierdo';
-        this.emgChart.data.datasets[3].label = isExternal ? 'Actividad corregida derecha (×2,5)' : 'RMS Derecho';
+        this.getLiveCharts().forEach(chart => {
+            chart.data.datasets[0].borderColor = isExternal ? 'rgba(37, 99, 235, 0.32)' : '#2563eb';
+            chart.data.datasets[0].borderWidth = isExternal ? 1 : 2;
+            chart.data.datasets[1].borderColor = isExternal ? 'rgba(220, 38, 38, 0.30)' : '#dc2626';
+            chart.data.datasets[1].borderWidth = isExternal ? 1 : 2;
+            chart.data.datasets[0].label = isExternal ? 'Señal izquierda ESP32' : 'EMG lado izquierdo';
+            chart.data.datasets[1].label = isExternal ? 'Señal derecha ESP32' : 'EMG lado derecho';
+            chart.data.datasets[2].label = isExternal ? 'Actividad corregida izquierda (×2,5)' : 'Envolvente izquierda';
+            chart.data.datasets[3].label = isExternal ? 'Actividad corregida derecha (×2,5)' : 'Envolvente derecha';
+        });
         if (this.envelopeDisplaySource !== this.signalSource) {
             this.envelopeDisplaySource = this.signalSource;
             this.resetEnvelopeDisplay();
@@ -372,6 +418,17 @@ class KinesioEMGApp {
             event.currentTarget.setAttribute('aria-expanded', String(open));
             event.currentTarget.setAttribute('aria-label', open ? 'Cerrar menú principal' : 'Abrir menú principal');
         });
+
+        document.getElementById('sidebar-collapse')?.addEventListener('click', event => {
+            this.toggleSidebarCollapse();
+            // A pointer click leaves focus on the button, which would keep the
+            // focus-within preview open after the pointer exits. Preserve focus
+            // only for keyboard activation.
+            if (event.detail > 0) event.currentTarget.blur();
+        });
+        let sidebarCollapsed = false;
+        try { sidebarCollapsed = window.localStorage.getItem('demasy.sidebarCollapsed') === 'true'; } catch {}
+        this.setSidebarCollapsed(sidebarCollapsed, { persist: false });
 
         document.addEventListener('keydown', event => {
             if (event.key !== 'Escape') return;
@@ -1204,7 +1261,7 @@ class KinesioEMGApp {
                             <input id="session-config-label" name="label" maxlength="80" value="${this.escapeHTML(current.label || 'Sesión simulada')}">
                         </div>
                         <div class="form-group">
-                            <label for="session-config-muscle">Músculo</label>
+                            <label for="session-config-muscle">Par muscular flexor ↔ extensor</label>
                             <select id="session-config-muscle" name="muscleType">${this.muscleOptions(current.muscleType)}</select>
                             <small class="form-error" data-error="muscleType"></small>
                         </div>
@@ -1337,10 +1394,10 @@ class KinesioEMGApp {
                 <div class="session-review-grid">
                     <div class="session-review-metric"><span>Duración efectiva</span><strong>${review.durationSeconds.toFixed(1)} s</strong></div>
                     <div class="session-review-metric"><span>Muestras guardables</span><strong>${review.sampleCount}</strong></div>
-                    <div class="session-review-metric"><span>Simetría</span><strong>${review.statistics.bilateral.symmetryIndex.toFixed(1)}%</strong></div>
-                    <div class="session-review-metric"><span>RMS izquierdo</span><strong>${review.statistics.left.rms.toFixed(2)} mV</strong></div>
-                    <div class="session-review-metric"><span>RMS derecho</span><strong>${review.statistics.right.rms.toFixed(2)} mV</strong></div>
-                    <div class="session-review-metric"><span>Diferencia</span><strong>${review.statistics.bilateral.difference.toFixed(1)}%</strong></div>
+                    <div class="session-review-metric"><span>Simetría flexor</span><strong>${review.statistics.flexor.bilateral.symmetryIndex.toFixed(1)}%</strong></div>
+                    <div class="session-review-metric"><span>Simetría extensor</span><strong>${review.statistics.extensor.bilateral.symmetryIndex.toFixed(1)}%</strong></div>
+                    <div class="session-review-metric"><span>RMS flexor izq./der.</span><strong>${review.statistics.flexor.left.rms.toFixed(2)} / ${review.statistics.flexor.right.rms.toFixed(2)} mV</strong></div>
+                    <div class="session-review-metric"><span>RMS extensor izq./der.</span><strong>${review.statistics.extensor.left.rms.toFixed(2)} / ${review.statistics.extensor.right.rms.toFixed(2)} mV</strong></div>
                 </div>
                 <p><small>Datos generados mediante simulación. Los resultados son descriptivos y no constituyen un diagnóstico.</small></p>
                 <div class="modal-actions">
@@ -1355,8 +1412,9 @@ class KinesioEMGApp {
 
     muscleOptions(selected = 'quadriceps') {
         const labels = {
-            quadriceps: 'Cuádriceps', gastrocnemius: 'Gastrocnemio', hamstring: 'Isquiotibiales',
-            tibialis: 'Tibial anterior', gluteus: 'Glúteo', soleus: 'Sóleo'
+            quadriceps: 'Cuádriceps ↔ Isquiotibiales', gastrocnemius: 'Gastrocnemio ↔ Tibial anterior',
+            hamstring: 'Isquiotibiales ↔ Cuádriceps', tibialis: 'Tibial anterior ↔ Gastrocnemio',
+            gluteus: 'Glúteo ↔ Flexores de cadera', soleus: 'Sóleo ↔ Tibial anterior'
         };
         return this.sessionConfigurationService.getMuscles()
             .map(value => `<option value="${value}" ${value === selected ? 'selected' : ''}>${labels[value]}</option>`)
@@ -1376,7 +1434,11 @@ class KinesioEMGApp {
     }
 
     formatMuscle(value) {
-        const labels = { quadriceps: 'Cuádriceps', gastrocnemius: 'Gastrocnemio', hamstring: 'Isquiotibiales', tibialis: 'Tibial anterior', gluteus: 'Glúteo', soleus: 'Sóleo' };
+        const labels = {
+            quadriceps: 'Cuádriceps ↔ Isquiotibiales', gastrocnemius: 'Gastrocnemio ↔ Tibial anterior',
+            hamstring: 'Isquiotibiales ↔ Cuádriceps', tibialis: 'Tibial anterior ↔ Gastrocnemio',
+            gluteus: 'Glúteo ↔ Flexores de cadera', soleus: 'Sóleo ↔ Tibial anterior'
+        };
         return labels[value] || value;
     }
 
@@ -1417,6 +1479,9 @@ class KinesioEMGApp {
 
             const sessionData = {
                 muscleType: provider.currentMuscle,
+                flexorMuscleType: configuration.flexorMuscleType || provider.currentMuscle,
+                extensorMuscleType: configuration.extensorMuscleType,
+                channelSchema: 'flexor-extensor-4ch',
                 sessionType: 'cycling',
                 duration: duration,
                 cadence: provider.cyclingParams?.cadence || 80,
@@ -1500,15 +1565,45 @@ class KinesioEMGApp {
         this.emgSimulator.setMuscle(muscleType);
         this.serialManager.setMuscle(muscleType);
         this.bluetoothManager.setMuscle(muscleType);
-        this.resetChart();
+        this.resetChart({ resetProvider: false });
         
         console.log(`Muscle changed to: ${muscleType}`);
         
         // Update AI context
         this.aiAssistant.updateEMGContext({
             ...this.aiAssistant.currentEMGContext,
-            muscle: muscleType
+            muscle: muscleType,
+            musclePair: this.getMusclePair(muscleType)
         });
+    }
+
+    getMusclePair(flexor) {
+        const pairs = {
+            quadriceps: 'hamstring', hamstring: 'quadriceps', gastrocnemius: 'tibialis',
+            tibialis: 'gastrocnemius', gluteus: 'hip-flexor', soleus: 'tibialis'
+        };
+        return { flexor, extensor: pairs[flexor] || 'complementary' };
+    }
+
+    toggleSidebarCollapse() {
+        this.setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+    }
+
+    setSidebarCollapsed(collapsed, options = {}) {
+        document.body.classList.toggle('sidebar-collapsed', collapsed);
+        document.querySelector('.app-container')?.classList.toggle('sidebar-collapsed', collapsed);
+        const button = document.getElementById('sidebar-collapse');
+        const icon = button?.querySelector('i');
+        if (button) {
+            button.setAttribute('aria-expanded', String(!collapsed));
+            button.setAttribute('aria-label', collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral');
+            button.title = collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral';
+        }
+        if (icon) icon.className = collapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+        if (options.persist !== false) {
+            try { window.localStorage.setItem('demasy.sidebarCollapsed', String(collapsed)); } catch {}
+        }
+        window.setTimeout(() => this.getLiveCharts().forEach(chart => chart.resize()), 220);
     }
 
     toggleChartFreeze() {
@@ -1529,7 +1624,7 @@ class KinesioEMGApp {
         console.log(`Chart ${this.isPaused ? 'paused' : 'resumed'}`);
     }
 
-    resetChart() {
+    resetChart(options = {}) {
         if (this.emgChart) {
             const emptyData = Array(100).fill().map((_, i) => ({
                 x: i * 0.01,
@@ -1537,30 +1632,29 @@ class KinesioEMGApp {
             }));
             
             // Reset EMG datasets (left EMG, right EMG)
-            this.emgChart.data.datasets.forEach(dataset => {
-                dataset.data = [...emptyData];
+            this.getLiveCharts().forEach(chart => {
+                chart.data.datasets.forEach(dataset => { dataset.data = [...emptyData]; });
+                chart.update('none');
             });
-            
-            this.emgChart.update('none');
         }
         
-        this.getActiveSignalProvider().reset();
+        if (options.resetProvider !== false) this.getActiveSignalProvider().reset();
         console.log('Chart reset');
     }
 
     clearChart() {
         if (!this.emgChart) return;
 
-        this.emgChart.data.datasets.forEach(dataset => {
-            dataset.data = [];
-        });
+        this.getLiveCharts().forEach(chart => chart.data.datasets.forEach(dataset => { dataset.data = []; }));
 
         this.pendingChartData = [];
         this.lastChartUpdateAt = 0;
         this.resetSignalReadout();
-        this.emgChart.options.scales.x.min = 0;
-        this.emgChart.options.scales.x.max = this.chartConfig.timeWindow;
-        this.emgChart.update('none');
+        this.getLiveCharts().forEach(chart => {
+            chart.options.scales.x.min = 0;
+            chart.options.scales.x.max = this.chartConfig.timeWindow;
+            chart.update('none');
+        });
 
         this.showNotification('Gráfico limpiado', 'success');
     }
@@ -1710,56 +1804,39 @@ class KinesioEMGApp {
         const sampleList = Array.isArray(samples) ? samples : [samples];
         if (sampleList.length === 0) return;
 
-        const leftEMGDataset = this.emgChart.data.datasets[0];
-        const rightEMGDataset = this.emgChart.data.datasets[1];
-        const leftRmsDataset = this.emgChart.data.datasets[2];
-        const rightRmsDataset = this.emgChart.data.datasets[3];
-
-        sampleList.forEach(data => {
-            leftEMGDataset.data.push({
-                x: data.time,
-                y: data.left.amplitude
+        const allDatasets = [];
+        ['flexor', 'extensor'].forEach((group, index) => {
+            const chart = this.getLiveCharts()[index];
+            const [leftSignal, rightSignal, leftEnvelopeData, rightEnvelopeData] = chart.data.datasets;
+            sampleList.forEach(raw => {
+                const data = window.EMGChannelContract.normalizeSample(raw);
+                leftSignal.data.push({ x: data.time, y: data[group].left.amplitude });
+                rightSignal.data.push({ x: data.time, y: data[group].right.amplitude });
+                const leftEnvelope = Number.isFinite(data[group].left.envelope) && data[group].left.envelope !== 0
+                    ? this.smoothEnvelope(`${group}-left`, data[group].left.envelope, data.time) : this.calculateRMSFromDataset(leftSignal);
+                const rightEnvelope = Number.isFinite(data[group].right.envelope) && data[group].right.envelope !== 0
+                    ? this.smoothEnvelope(`${group}-right`, data[group].right.envelope, data.time) : this.calculateRMSFromDataset(rightSignal);
+                leftEnvelopeData.data.push({ x: data.time, y: leftEnvelope });
+                rightEnvelopeData.data.push({ x: data.time, y: rightEnvelope });
             });
-
-            rightEMGDataset.data.push({
-                x: data.time,
-                y: Number.isFinite(data.right.amplitude) ? data.right.amplitude : null
-            });
-
-            const leftEnvelope = Number.isFinite(data.envelopeLeft)
-                ? this.smoothEnvelope('left', data.envelopeLeft, data.time)
-                : this.calculateRMSFromDataset(leftEMGDataset);
-            const rightEnvelope = Number.isFinite(data.envelopeRight)
-                ? this.smoothEnvelope('right', data.envelopeRight, data.time)
-                : this.calculateRMSFromDataset(rightEMGDataset);
-
-            leftRmsDataset.data.push({
-                x: data.time,
-                y: leftEnvelope
-            });
-
-            rightRmsDataset.data.push({
-                x: data.time,
-                y: rightEnvelope
-            });
-        });
-
-        // Maintain data point limit for EMG datasets only
-        const datasets = [leftEMGDataset, rightEMGDataset, leftRmsDataset, rightRmsDataset];
-        datasets.forEach(dataset => {
-            if (dataset.data.length > this.chartConfig.maxDataPoints) {
-                dataset.data.shift();
-            }
+            chart.data.datasets.forEach(dataset => { while (dataset.data.length > this.chartConfig.maxDataPoints) dataset.data.shift(); });
+            allDatasets.push(...chart.data.datasets);
         });
 
         // Update time window
         const latestTime = sampleList[sampleList.length - 1].time;
-        this.emgChart.options.scales.x.min = Math.max(0, latestTime - this.chartConfig.timeWindow);
-        this.emgChart.options.scales.x.max = Math.max(this.chartConfig.timeWindow, latestTime);
-        this.updateVisibleSignalRange(datasets);
+        this.getLiveCharts().forEach(chart => {
+            chart.options.scales.x.min = Math.max(0, latestTime - this.chartConfig.timeWindow);
+            chart.options.scales.x.max = Math.max(this.chartConfig.timeWindow, latestTime);
+        });
+        this.updateVisibleSignalRange(allDatasets);
 
         // Update chart
-        this.emgChart.update('none');
+        this.getLiveCharts().forEach(chart => chart.update('none'));
+    }
+
+    getLiveCharts() {
+        return [this.emgChart, this.extensorChart].filter(Boolean);
     }
 
     createEnvelopeDisplayState() {
@@ -1775,12 +1852,12 @@ class KinesioEMGApp {
     }
 
     resetEnvelopeDisplay() {
-        this.envelopeDisplay = {
-            left: this.createEnvelopeDisplayState(),
-            right: this.createEnvelopeDisplayState()
-        };
-        this.updateActivityBadge('left', 'uncalibrated');
-        this.updateActivityBadge('right', 'uncalibrated');
+        this.envelopeDisplay = this.createEnvelopeDisplayMap();
+        Object.keys(this.envelopeDisplay).forEach(key => this.updateActivityBadge(key, 'uncalibrated'));
+    }
+
+    createEnvelopeDisplayMap() {
+        return Object.fromEntries(['flexor-left', 'flexor-right', 'extensor-left', 'extensor-right'].map(key => [key, this.createEnvelopeDisplayState()]));
     }
 
     startSignalCalibration() {
@@ -1797,8 +1874,7 @@ class KinesioEMGApp {
         const button = document.getElementById('calibrate-signal');
         if (overlay) overlay.hidden = false;
         if (button) button.disabled = true;
-        this.updateActivityBadge('left', 'calibrating');
-        this.updateActivityBadge('right', 'calibrating');
+        Object.keys(this.envelopeDisplay).forEach(key => this.updateActivityBadge(key, 'calibrating'));
 
         const updateCountdown = () => {
             const elapsed = performance.now() - startedAt;
@@ -1821,16 +1897,16 @@ class KinesioEMGApp {
         this.calibrationTimer = null;
 
         let calibratedChannels = 0;
-        ['left', 'right'].forEach(side => {
-            const state = this.envelopeDisplay[side];
+        Object.keys(this.envelopeDisplay).forEach(channel => {
+            const state = this.envelopeDisplay[channel];
             if (state.baselineSamples.length > 0) {
                 const ordered = [...state.baselineSamples].sort((a, b) => a - b);
                 state.baseline = ordered[Math.floor(ordered.length / 2)];
                 state.calibrated = true;
                 calibratedChannels++;
-                this.updateActivityBadge(side, 'rest');
+                this.updateActivityBadge(channel, 'rest');
             } else {
-                this.updateActivityBadge(side, 'uncalibrated');
+                this.updateActivityBadge(channel, 'uncalibrated');
             }
             state.baselineSamples = [];
         });
@@ -1845,8 +1921,8 @@ class KinesioEMGApp {
         );
     }
 
-    smoothEnvelope(side, value, time) {
-        const state = this.envelopeDisplay[side];
+    smoothEnvelope(channel, value, time) {
+        const state = this.envelopeDisplay[channel];
         const alpha = 0.08;
         state.smoothed = state.smoothed === null
             ? Math.max(0, value)
@@ -1854,7 +1930,7 @@ class KinesioEMGApp {
 
         if (this.calibrationInProgress) {
             state.baselineSamples.push(state.smoothed);
-            this.updateActivityBadge(side, 'calibrating');
+            this.updateActivityBadge(channel, 'calibrating');
             return 0;
         }
 
@@ -1863,7 +1939,7 @@ class KinesioEMGApp {
         }
 
         if (!state.calibrated || state.baseline === null) {
-            this.updateActivityBadge(side, 'uncalibrated');
+            this.updateActivityBadge(channel, 'uncalibrated');
             return this.isExternalSignalSource() ? 0 : state.smoothed;
         }
 
@@ -1887,7 +1963,7 @@ class KinesioEMGApp {
             state.candidateSince = null;
         }
 
-        this.updateActivityBadge(side, state.active ? 'active' : 'rest');
+        this.updateActivityBadge(channel, state.active ? 'active' : 'rest');
         if (!this.isExternalSignalSource()) return state.smoothed;
 
         // Display-only transformation. The original sample and envelope remain
@@ -1901,8 +1977,8 @@ class KinesioEMGApp {
         return this.signalSource === 'serial' || this.signalSource === 'bluetooth';
     }
 
-    updateActivityBadge(side, status) {
-        const badge = document.getElementById(`activity-state-${side}`);
+    updateActivityBadge(channel, status) {
+        const badge = document.getElementById(`activity-state-${channel}`);
         if (!badge || badge.dataset.status === status) return;
         badge.dataset.status = status;
         badge.textContent = status === 'active'
@@ -1925,12 +2001,16 @@ class KinesioEMGApp {
 
     ingestSignalData(data) {
         const now = performance.now();
+        data = window.EMGChannelContract.normalizeSample(data);
 
         if (!this.sessionStartTime) {
             this.sessionStartTime = new Date();
         }
 
-        this.trackSignalValue(data.left.amplitude);
+        this.trackSignalValue(data.flexor.left.amplitude);
+        this.trackSignalValue(data.flexor.right.amplitude);
+        this.trackSignalValue(data.extensor.left.amplitude);
+        this.trackSignalValue(data.extensor.right.amplitude);
         this.pendingChartData.push(data);
 
         if (
@@ -1956,7 +2036,10 @@ class KinesioEMGApp {
 
         if (now - this.lastReadoutUpdateAt >= this.chartConfig.readoutUpdateInterval) {
             this.lastReadoutUpdateAt = now;
-            this.updateCurrentSignalReadout(data.left.amplitude);
+            this.updateCurrentSignalReadout(Math.max(
+                Math.abs(data.flexor.left.amplitude), Math.abs(data.flexor.right.amplitude),
+                Math.abs(data.extensor.left.amplitude), Math.abs(data.extensor.right.amplitude)
+            ));
         }
     }
 
@@ -1967,7 +2050,7 @@ class KinesioEMGApp {
         this.lastDraftPersistedAt = now;
         this.draftPersistPending = true;
         const draft = {
-            version: 1,
+            version: 2,
             patientId: this.patientManager?.currentPatient?.id || null,
             configuration: this.recordingController.configuration,
             elapsedSeconds: this.recordingController.getElapsedSeconds(),
@@ -2074,21 +2157,23 @@ class KinesioEMGApp {
     }
 
     updateStatistics(stats) {
-        // Update bilateral statistics
-        this.updateElement('rms-left', this.formatVoltageStat(stats.left.rms));
-        this.updateElement('rms-right', this.formatVoltageStat(stats.right.rms));
-        this.updateElement('peak-left', this.formatVoltageStat(stats.left.peakAmplitude));
-        this.updateElement('peak-right', this.formatVoltageStat(stats.right.peakAmplitude));
+        const flexor = stats.flexor || { left: stats.left, right: stats.right, bilateral: stats.bilateral };
+        const extensor = stats.extensor || flexor;
+        ['flexor', 'extensor'].forEach(group => ['left', 'right'].forEach(side => {
+            const value = group === 'flexor' ? flexor[side] : extensor[side];
+            this.updateElement(`rms-${group}-${side}`, this.formatVoltageStat(value?.rms || 0));
+            this.updateElement(`peak-${group}-${side}`, this.formatVoltageStat(value?.peakAmplitude || 0));
+        }));
         
         // Update comparison statistics
-        this.updateElement('symmetry-index', `${stats.bilateral.symmetryIndex.toFixed(0)}%`);
-        this.updateElement('asymmetry-level', stats.bilateral.asymmetryLevel);
+        this.updateElement('symmetry-flexor', `${flexor.bilateral.symmetryIndex.toFixed(0)}%`);
+        this.updateElement('symmetry-extensor', `${extensor.bilateral.symmetryIndex.toFixed(0)}%`);
         this.updateElement('bilateral-difference', `${stats.bilateral.difference.toFixed(1)}%`);
         
         // Update activation levels for both sides
         const activationReference = Math.max(1, this.chartConfig.fixedYMax);
-        const leftActivation = (stats.left.rms / activationReference) * 100;
-        const rightActivation = (stats.right.rms / activationReference) * 100;
+        const leftActivation = (flexor.left.rms / activationReference) * 100;
+        const rightActivation = (flexor.right.rms / activationReference) * 100;
         
         this.updateElement('activation-percent-left', `${Math.min(100, leftActivation).toFixed(0)}%`);
         this.updateElement('activation-percent-right', `${Math.min(100, rightActivation).toFixed(0)}%`);

@@ -3,11 +3,12 @@
  */
 (function exposeDataNormalization(root, factory) {
     const DataNormalizationService = factory(
-        root?.DEMASY_CONFIG || (typeof require === 'function' ? require('../core/demasy-config.js') : null)
+        root?.DEMASY_CONFIG || (typeof require === 'function' ? require('../core/demasy-config.js') : null),
+        root?.EMGChannelContract || (typeof require === 'function' ? require('../core/emg-channel-contract.js') : null)
     );
     if (typeof module !== 'undefined' && module.exports) module.exports = DataNormalizationService;
     if (root) root.DataNormalizationService = DataNormalizationService;
-})(typeof window !== 'undefined' ? window : null, function createDataNormalization(config) {
+})(typeof window !== 'undefined' ? window : null, function createDataNormalization(config, channelContract) {
     class DataNormalizationService {
         normalizeParticipant(input, existing = null) {
             const now = new Date().toISOString();
@@ -54,10 +55,15 @@
             if (!Number.isInteger(patientId) || patientId <= 0) throw new Error('La sesión requiere un participante válido');
             const startedAt = input.startedAt || input.date || now;
             const durationSeconds = Math.max(0, Number(input.durationSeconds ?? input.duration ?? 0));
-            const samples = Array.isArray(input.samples) ? input.samples : Array.isArray(input.emgData) ? input.emgData : [];
+            const sourceSamples = Array.isArray(input.samples) ? input.samples : Array.isArray(input.emgData) ? input.emgData : [];
+            const samples = sourceSamples.map(sample => {
+                if (channelContract?.normalizeSample) return channelContract.normalizeSample(sample);
+                return sample;
+            });
             return {
                 ...(input.id !== undefined ? { id: input.id } : {}),
                 schemaVersion: config.schema.version,
+                channelSchema: input.channelSchema || (samples.some(sample => sample?.channelSchema === 'flexor-extensor-4ch') ? 'flexor-extensor-4ch' : 'legacy-2ch'),
                 patientId,
                 label: String(input.label || input.configuration?.label || 'Sesión simulada').trim(),
                 startedAt,
@@ -67,6 +73,8 @@
                 duration: durationSeconds,
                 status: input.status || 'completed',
                 muscleType: input.muscleType || input.configuration?.muscleType || 'quadriceps',
+                flexorMuscleType: input.flexorMuscleType || input.configuration?.flexorMuscleType || input.muscleType || input.configuration?.muscleType || 'quadriceps',
+                extensorMuscleType: input.extensorMuscleType || input.configuration?.extensorMuscleType || null,
                 sessionType: input.sessionType || input.configuration?.testType || 'cycling',
                 cadence: Number(input.cadence ?? input.configuration?.cadenceRpm ?? 80),
                 resistance: Number(input.resistance ?? input.configuration?.resistancePercent ?? 50),

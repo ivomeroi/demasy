@@ -23,7 +23,7 @@ Toda funcionalidad que dependa de un servicio externo deberá disponer de uno de
 
 ## 2. Definición de producto para la v1
 
-DEMASY v1 será una aplicación web en español para simular, registrar, visualizar, almacenar y analizar sesiones bilaterales de EMG durante ciclismo en bicicleta fija.
+DEMASY v1 será una aplicación web en español para simular, registrar, visualizar, almacenar y analizar sesiones EMG de cuatro canales durante ciclismo en bicicleta fija: flexor y extensor de cada miembro, comparados bilateralmente por grupo muscular.
 
 La versión se considerará terminada cuando un usuario pueda ejecutar, sin hardware ni servicios externos obligatorios, el siguiente recorrido:
 

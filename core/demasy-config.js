@@ -20,11 +20,13 @@
             version: '1.0.0'
         },
         schema: {
-            version: 1,
+            version: 2,
             databaseName: 'DEMASYDB',
             legacyDatabaseName: 'KinesioEMGDB'
         },
         signal: {
+            channelSchema: 'flexor-extensor-4ch',
+            channels: ['flexorLeft', 'flexorRight', 'extensorLeft', 'extensorRight'],
             simulationRateHz: 1000,
             storageRateHz: 100,
             chartUpdateIntervalMs: 50,

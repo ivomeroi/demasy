@@ -137,6 +137,7 @@ class EMGSimulator {
             left: [],
             right: []
         };
+        this.extensorBuffer = { left: [], right: [] };
         this.maxBufferSize = 10000; // 10 seconds at 1000Hz
         
         // Bilateral statistics tracking
@@ -368,6 +369,7 @@ class EMGSimulator {
         this.accumulatedTimeSeconds = 0;
         this.fatigueLevel = { left: 0, right: 0 };
         this.signalBuffer = { left: [], right: [] };
+        this.extensorBuffer = { left: [], right: [] };
         this.updateStats();
     }
 
@@ -466,21 +468,34 @@ class EMGSimulator {
         
         // Trigger callbacks with bilateral data
         if (this.callbacks.onDataUpdate) {
+            const extensorActivation = {
+                left: Math.max(0.04, 0.85 - activations.left),
+                right: Math.max(0.04, 0.85 - activations.right)
+            };
+            const extensorSignals = {
+                left: extensorActivation.left * muscle.maxAmplitude * 0.82 * Math.sin(2 * Math.PI * muscle.baseFrequency * (this.time + this.timeDelay.left) + Math.PI) + this.generateNoise() * 0.8,
+                right: extensorActivation.right * muscle.maxAmplitude * 0.82 * Math.sin(2 * Math.PI * muscle.baseFrequency * 1.02 * (this.time + this.timeDelay.right) + Math.PI) + this.generateNoise() * 0.85
+            };
+            ['left', 'right'].forEach(side => {
+                this.extensorBuffer[side].push({ time: this.time, amplitude: extensorSignals[side], activation: extensorActivation[side] });
+                if (this.extensorBuffer[side].length > this.maxBufferSize) this.extensorBuffer[side].shift();
+            });
             this.callbacks.onDataUpdate({
                 time: this.time,
-                left: {
-                    amplitude: signals.left,
-                    activation: activations.left
+                channelSchema: 'flexor-extensor-4ch',
+                flexor: {
+                    left: { amplitude: signals.left, activation: activations.left, envelope: Math.abs(signals.left), flags: 0 },
+                    right: { amplitude: signals.right, activation: activations.right, envelope: Math.abs(signals.right), flags: 0 }
                 },
-                right: {
-                    amplitude: signals.right,
-                    activation: activations.right
+                extensor: {
+                    left: { amplitude: extensorSignals.left, activation: extensorActivation.left, envelope: Math.abs(extensorSignals.left), flags: 0 },
+                    right: { amplitude: extensorSignals.right, activation: extensorActivation.right, envelope: Math.abs(extensorSignals.right), flags: 0 }
                 }
             });
         }
         
         if (this.callbacks.onStatsUpdate) {
-            this.callbacks.onStatsUpdate(this.stats);
+            this.callbacks.onStatsUpdate(this.getFourChannelStats());
         }
         
             // Continue generation
@@ -969,7 +984,32 @@ class EMGSimulator {
     }
 
     getStats() {
-        return JSON.parse(JSON.stringify(this.stats)); // Deep copy
+        return JSON.parse(JSON.stringify(this.getFourChannelStats()));
+    }
+
+    getFourChannelStats() {
+        const summarize = side => {
+            const values = this.extensorBuffer[side].slice(-1000).map(sample => sample.amplitude);
+            if (!values.length) return { rms: 0, peakAmplitude: 0, frequency: this.muscleProfiles[this.currentMuscle].baseFrequency };
+            return {
+                rms: Math.sqrt(values.reduce((sum, value) => sum + value * value, 0) / values.length),
+                peakAmplitude: values.reduce((peak, value) => Math.max(peak, Math.abs(value)), 0),
+                frequency: this.muscleProfiles[this.currentMuscle].baseFrequency
+            };
+        };
+        const extensorLeft = summarize('left');
+        const extensorRight = summarize('right');
+        const maximum = Math.max(extensorLeft.rms, extensorRight.rms);
+        const extensorSymmetry = maximum ? Math.min(extensorLeft.rms, extensorRight.rms) / maximum * 100 : 100;
+        const extensorBilateral = {
+            symmetryIndex: extensorSymmetry,
+            difference: 100 - extensorSymmetry,
+            asymmetryLevel: extensorSymmetry >= 90 ? 'Normal' : extensorSymmetry >= 75 ? 'Leve' : extensorSymmetry >= 60 ? 'Moderada' : 'Severa',
+            snr: this.stats.bilateral.snr,
+            artifacts: this.stats.bilateral.artifacts
+        };
+        const flexor = { left: this.stats.left, right: this.stats.right, bilateral: this.stats.bilateral };
+        return { flexor, extensor: { left: extensorLeft, right: extensorRight, bilateral: extensorBilateral }, bilateral: this.stats.bilateral };
     }
 
     getSignalQuality() {

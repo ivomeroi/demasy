@@ -16,6 +16,9 @@
         <aside class="sidebar">
             <div class="logo">
                 <img src="DEMASY-LOGO.jpeg" alt="DEMASY — Dynamic Evaluation of Musculoskeletal Asymmetries">
+                <button class="sidebar-collapse-button" id="sidebar-collapse" type="button" aria-label="Contraer menú lateral" aria-expanded="true" title="Contraer menú lateral">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                </button>
             </div>
             
             <nav class="nav-menu">
@@ -109,19 +112,19 @@
                         <!-- Real-time EMG Chart -->
                         <div class="card chart-card">
                             <div class="card-header">
-                                <h3>Señales EMG Bilaterales en Tiempo Real</h3>
+                                <h3>Señales EMG de músculos complementarios en tiempo real</h3>
                                 <div class="chart-controls">
-                                    <select id="muscle-select">
-                                        <option value="quadriceps">Cuádriceps (Fuerza Principal)</option>
-                                        <option value="gastrocnemius">Gastrocnemio (Flexión Plantar)</option>
-                                        <option value="hamstring">Isquiotibiales (Fase de Recuperación)</option>
-                                        <option value="tibialis">Tibial Anterior (Dorsiflexión)</option>
-                                        <option value="gluteus">Glúteo (Extensión de Cadera)</option>
-                                        <option value="soleus">Sóleo (Estabilización)</option>
+                                    <select id="muscle-select" aria-label="Par muscular flexor y extensor">
+                                        <option value="quadriceps">Cuádriceps ↔ Isquiotibiales</option>
+                                        <option value="hamstring">Isquiotibiales ↔ Cuádriceps</option>
+                                        <option value="gastrocnemius">Gastrocnemio ↔ Tibial anterior</option>
+                                        <option value="tibialis">Tibial anterior ↔ Gastrocnemio</option>
+                                        <option value="gluteus">Glúteo ↔ Flexores de cadera</option>
+                                        <option value="soleus">Sóleo ↔ Tibial anterior</option>
                                     </select>
                                     <div class="cycling-controls">
                                         <div class="phase-control">
-                                            <label for="phase-shift-control">Retraso Temporal (Derecho): <span id="phase-display">0</span>°</label>
+                                            <label for="phase-shift-control">Retraso temporal derecho · ambos músculos: <span id="phase-display">0</span>°</label>
                                             <input type="range" id="phase-shift-control" min="-180" max="180" value="0" step="5" />
                                             <div class="phase-buttons">
                                                 <button class="btn-small" id="phase-auto-align" title="Superposición Automática">
@@ -135,7 +138,7 @@
                                                 </button>
                                             </div>
                                             <div class="phase-info">
-                                                <small><i class="fas fa-info-circle"></i> Ajusta el retraso para superponer visualmente las señales de ambas piernas</small>
+                                                <small><i class="fas fa-info-circle"></i> Se aplica al flexor y al extensor con la misma referencia temporal.</small>
                                             </div>
                                         </div>
                                     </div>
@@ -153,8 +156,9 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="chart-container">
-                                <canvas id="emg-chart"></canvas>
+                            <div class="four-channel-charts">
+                            <div class="chart-panel"><h4>Flexor · comparación bilateral</h4><div class="chart-container">
+                                <canvas id="emg-chart" aria-label="Señales del músculo flexor izquierdo y derecho"></canvas>
                                 <div class="calibration-overlay" id="calibration-overlay" hidden role="status" aria-live="polite">
                                     <div class="calibration-pulse"><i class="fas fa-wave-square"></i></div>
                                     <strong>Calibrando nivel de reposo</strong>
@@ -162,6 +166,8 @@
                                     <output id="calibration-countdown">5.0 s</output>
                                     <div class="calibration-progress"><div id="calibration-progress-fill"></div></div>
                                 </div>
+                            </div></div>
+                            <div class="chart-panel"><h4>Extensor · comparación bilateral</h4><div class="chart-container"><canvas id="extensor-chart" aria-label="Señales del músculo extensor izquierdo y derecho"></canvas></div></div>
                             </div>
                             <div class="chart-footer">
                                 <div class="time-scale">
@@ -192,8 +198,10 @@
                                         <span id="signal-min">Min: 0</span>
                                         <span id="signal-max">Max: 0</span>
                                         <span id="signal-peak-max">Pico max: 0</span>
-                                        <span class="activity-state" id="activity-state-left" data-status="uncalibrated">Sin calibrar</span>
-                                        <span class="activity-state" id="activity-state-right" data-status="uncalibrated">Sin calibrar</span>
+                                        <span class="activity-state" id="activity-state-flexor-left" data-status="uncalibrated">Flexor izq. sin calibrar</span>
+                                        <span class="activity-state" id="activity-state-flexor-right" data-status="uncalibrated">Flexor der. sin calibrar</span>
+                                        <span class="activity-state" id="activity-state-extensor-left" data-status="uncalibrated">Extensor izq. sin calibrar</span>
+                                        <span class="activity-state" id="activity-state-extensor-right" data-status="uncalibrated">Extensor der. sin calibrar</span>
                                     </div>
                                     <div class="pedal-position">
                                         <small>Posición del Pedal:</small>
@@ -206,50 +214,20 @@
 
                         <!-- Bilateral Statistics -->
                         <div class="card stats-card">
-                            <h3>Estadísticas Bilaterales</h3>
+                            <h3>Estadísticas por grupo muscular</h3>
                             <div class="bilateral-stats">
-                                <div class="side-stats">
-                                    <h4>Lado Izquierdo</h4>
-                                    <div class="stat-item">
-                                        <span class="stat-label">RMS:</span>
-                                        <span class="stat-value" id="rms-left">0.0 mV</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Pico:</span>
-                                        <span class="stat-value" id="peak-left">0.0 mV</span>
-                                    </div>
-                                </div>
-                                <div class="side-stats">
-                                    <h4>Lado Derecho</h4>
-                                    <div class="stat-item">
-                                        <span class="stat-label">RMS:</span>
-                                        <span class="stat-value" id="rms-right">0.0 mV</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Pico:</span>
-                                        <span class="stat-value" id="peak-right">0.0 mV</span>
-                                    </div>
-                                </div>
-                                <div class="comparison-stats">
-                                    <div class="stat-item">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-balance-scale"></i>
-                                        </div>
-                                        <div class="stat-content">
-                                            <span class="stat-label">Índice de Simetría</span>
-                                            <span class="stat-value" id="symmetry-index">100%</span>
-                                        </div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                        </div>
-                                        <div class="stat-content">
-                                            <span class="stat-label">Asimetría</span>
-                                            <span class="stat-value" id="asymmetry-level">Normal</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                <section class="muscle-stats-column" aria-labelledby="flexor-stats-title">
+                                    <h4 id="flexor-stats-title">Flexor</h4>
+                                    <div class="side-stats"><strong>Izquierdo</strong><div class="stat-item"><span>RMS</span><span id="rms-flexor-left">0.0 mV</span></div><div class="stat-item"><span>Pico</span><span id="peak-flexor-left">0.0 mV</span></div></div>
+                                    <div class="side-stats"><strong>Derecho</strong><div class="stat-item"><span>RMS</span><span id="rms-flexor-right">0.0 mV</span></div><div class="stat-item"><span>Pico</span><span id="peak-flexor-right">0.0 mV</span></div></div>
+                                    <div class="muscle-symmetry"><span>Simetría bilateral</span><strong id="symmetry-flexor">100%</strong></div>
+                                </section>
+                                <section class="muscle-stats-column" aria-labelledby="extensor-stats-title">
+                                    <h4 id="extensor-stats-title">Extensor</h4>
+                                    <div class="side-stats"><strong>Izquierdo</strong><div class="stat-item"><span>RMS</span><span id="rms-extensor-left">0.0 mV</span></div><div class="stat-item"><span>Pico</span><span id="peak-extensor-left">0.0 mV</span></div></div>
+                                    <div class="side-stats"><strong>Derecho</strong><div class="stat-item"><span>RMS</span><span id="rms-extensor-right">0.0 mV</span></div><div class="stat-item"><span>Pico</span><span id="peak-extensor-right">0.0 mV</span></div></div>
+                                    <div class="muscle-symmetry"><span>Simetría bilateral</span><strong id="symmetry-extensor">100%</strong></div>
+                                </section>
                             </div>
                         </div>
 
@@ -413,6 +391,7 @@
 
     <script src="/vendor/chart.min.js"></script>
     <script src="core/demasy-config.js"></script>
+    <script src="core/emg-channel-contract.js"></script>
     <script src="core/signal-source-contract.js"></script>
     <script src="core/recording-controller.js"></script>
     <script src="core/section-router.js"></script>

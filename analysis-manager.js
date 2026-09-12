@@ -60,16 +60,17 @@ class AnalysisManager {
         });
         const metrics = analysis.metrics;
         document.getElementById('analysis-results').innerHTML = `
-            <div class="analysis-notice">Interpretación descriptiva basada en umbrales demostrativos. Fórmula operacional: SI = min(RMS izq., RMS der.) / max(RMS izq., RMS der.) × 100.</div>
+            <div class="analysis-notice">Flexores y extensores se analizan de forma independiente. Fórmula: SI = min(RMS izq., RMS der.) / max(RMS izq., RMS der.) × 100.</div>
             <div class="analysis-metric-grid">
-                ${this.metric('RMS izquierdo', metrics.left.rms, 'mV')}${this.metric('RMS derecho', metrics.right.rms, 'mV')}
-                ${this.metric('MAV izquierdo', metrics.left.mav, 'mV')}${this.metric('MAV derecho', metrics.right.mav, 'mV')}
-                ${this.metric('Simetría', metrics.bilateral.symmetryIndex, '%')}${this.metric('Diferencia', metrics.bilateral.percentageDifference, '%')}
-                ${this.metric('Diferencia RMS', metrics.bilateral.absoluteRmsDifference, 'mV')}${this.metric('Duración efectiva', metrics.durationSeconds, 's')}
+                ${this.metric('RMS flexor izquierdo', metrics.flexor.left.rms, 'mV')}${this.metric('RMS flexor derecho', metrics.flexor.right.rms, 'mV')}
+                ${this.metric('RMS extensor izquierdo', metrics.extensor.left.rms, 'mV')}${this.metric('RMS extensor derecho', metrics.extensor.right.rms, 'mV')}
+                ${this.metric('Simetría flexor', metrics.flexor.bilateral.symmetryIndex, '%')}${this.metric('Simetría extensor', metrics.extensor.bilateral.symmetryIndex, '%')}
+                ${this.metric('Diferencia flexor', metrics.flexor.bilateral.percentageDifference, '%')}${this.metric('Diferencia extensor', metrics.extensor.bilateral.percentageDifference, '%')}
             </div>
-            <div class="card"><h3>Características por lado</h3>${this.sideTable(metrics)}</div>
+            <div class="card"><h3>Características del flexor</h3>${this.sideTable(metrics.flexor)}</div>
+            <div class="card"><h3>Características del extensor</h3>${this.sideTable(metrics.extensor)}</div>
             <div class="card"><h3>Evolución por ventanas de 1 segundo</h3><div class="analysis-chart-container"><canvas id="analysis-window-chart"></canvas></div></div>
-            <div class="analysis-notice">Lado dominante por RMS: <strong>${this.sideLabel(metrics.bilateral.dominantSide)}</strong>. ${this.escape(metrics.bilateral.asymmetryLevel)}. La fase mostrada es la configurada (${analysis.configuredPhaseDifferenceDegrees}°), no una estimación clínica.</div>`;
+            <div class="analysis-notice">Flexor dominante: <strong>${this.sideLabel(metrics.flexor.bilateral.dominantSide)}</strong>. Extensor dominante: <strong>${this.sideLabel(metrics.extensor.bilateral.dominantSide)}</strong>. Resultados descriptivos, no diagnósticos.</div>`;
         this.renderWindowChart(analysis.windows);
     }
 
@@ -108,9 +109,12 @@ class AnalysisManager {
         const canvas = document.getElementById('analysis-window-chart');
         if (!canvas || typeof Chart === 'undefined') return;
         this.windowChart = new Chart(canvas, { type: 'line', data: { labels: windows.map(item => item.startSeconds.toFixed(0)), datasets: [
-            { label: 'RMS izquierda (mV)', data: windows.map(item => item.left.rms), borderColor: '#3b82f6', pointRadius: 1 },
-            { label: 'RMS derecha (mV)', data: windows.map(item => item.right.rms), borderColor: '#ef4444', pointRadius: 1 },
-            { label: 'Simetría (%)', data: windows.map(item => item.bilateral.symmetryIndex), borderColor: '#10b981', pointRadius: 1, yAxisID: 'percentage' }
+            { label: 'RMS flexor izquierdo', data: windows.map(item => item.flexor.left.rms), borderColor: '#3b82f6', pointRadius: 1 },
+            { label: 'RMS flexor derecho', data: windows.map(item => item.flexor.right.rms), borderColor: '#ef4444', pointRadius: 1 },
+            { label: 'RMS extensor izquierdo', data: windows.map(item => item.extensor.left.rms), borderColor: '#06b6d4', pointRadius: 1 },
+            { label: 'RMS extensor derecho', data: windows.map(item => item.extensor.right.rms), borderColor: '#f59e0b', pointRadius: 1 },
+            { label: 'Simetría flexor (%)', data: windows.map(item => item.flexor.bilateral.symmetryIndex), borderColor: '#10b981', pointRadius: 1, yAxisID: 'percentage' },
+            { label: 'Simetría extensor (%)', data: windows.map(item => item.extensor.bilateral.symmetryIndex), borderColor: '#8b5cf6', pointRadius: 1, yAxisID: 'percentage' }
         ] }, options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { x: { title: { display: true, text: 'Tiempo (s)' } }, percentage: { position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false } } } } });
     }
 

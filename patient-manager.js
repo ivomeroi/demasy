@@ -487,12 +487,15 @@ class PatientManager {
     generateReplayPanel(session, samples) {
         if (!samples.length) return '<div class="empty-sessions">Esta sesión no contiene muestras reproducibles.</div>';
         return `<div class="replay-panel" data-session-id="${session.id}">
-            <div class="replay-values"><strong id="replay-status">Lista para reproducir</strong><span id="replay-time">0.00 s</span><span id="replay-left">Izq: —</span><span id="replay-right">Der: —</span></div>
-            <label class="replay-chart-label">Señal completa grabada</label>
-            <div class="replay-overview-container"><canvas id="replay-overview-chart" aria-label="Vista completa de la señal EMG bilateral"></canvas></div>
+            <div class="replay-values"><strong id="replay-status">Lista para reproducir</strong><span id="replay-time">0.00 s</span><span id="replay-left">Flexor: —</span><span id="replay-right">Extensor: —</span></div>
+            <label class="replay-chart-label">Flexor · señal completa</label>
+            <div class="replay-overview-container"><canvas id="replay-overview-chart" aria-label="Vista completa del flexor bilateral"></canvas></div>
+            <label class="replay-chart-label">Extensor · señal completa</label>
+            <div class="replay-overview-container"><canvas id="replay-extensor-overview-chart" aria-label="Vista completa del extensor bilateral"></canvas></div>
             <div class="replay-window-header"><label for="replay-window-slider">Ventana temporal ampliada</label><span id="replay-window-label">0.00–5.00 s</span></div>
             <input type="range" id="replay-window-slider" class="replay-window-slider" min="0" max="0" value="0" step="0.1" data-patient-input="replay-window">
-            <div class="replay-chart-container"><canvas id="replay-chart" aria-label="Ventana de la señal EMG bilateral grabada"></canvas></div>
+            <div class="replay-chart-container"><canvas id="replay-chart" aria-label="Ventana del flexor bilateral"></canvas></div>
+            <div class="replay-chart-container"><canvas id="replay-extensor-chart" aria-label="Ventana del extensor bilateral"></canvas></div>
             <div class="replay-track"><div id="replay-progress" class="replay-progress"></div></div>
             <div class="replay-controls">
                 <button class="btn-control primary" id="replay-toggle" data-patient-action="toggle-replay" data-session-id="${session.id}">Recorrer automáticamente</button>
@@ -520,8 +523,9 @@ class PatientManager {
         this.replaySource = new ReplaySignalSource(samples);
         this.replaySource.onDataUpdate(sample => {
             const time = Number(sample.time ?? sample.timestamp ?? 0);
-            const left = Number(sample.left?.amplitude ?? sample.left?.emg ?? sample.left ?? 0);
-            const right = Number(sample.right?.amplitude ?? sample.right?.emg ?? sample.right ?? 0);
+            const normalized = window.EMGChannelContract.normalizeSample(sample);
+            const left = normalized.flexor.left.amplitude;
+            const right = normalized.extensor.left.amplitude;
             if (document.getElementById('replay-time')) document.getElementById('replay-time').textContent = `${time.toFixed(2)} s`;
             if (document.getElementById('replay-left')) document.getElementById('replay-left').textContent = `Izq: ${left.toFixed(3)} mV`;
             if (document.getElementById('replay-right')) document.getElementById('replay-right').textContent = `Der: ${right.toFixed(3)} mV`;
@@ -534,41 +538,43 @@ class PatientManager {
     createReplayCharts(samples) {
         this.replayChart?.destroy();
         this.replayOverviewChart?.destroy();
+        this.replayExtensorChart?.destroy();
+        this.replayExtensorOverviewChart?.destroy();
         this.replayChart = null;
         this.replayOverviewChart = null;
         this.lastReplayChartRenderTime = Number.NEGATIVE_INFINITY;
         const canvas = document.getElementById('replay-chart');
         const overviewCanvas = document.getElementById('replay-overview-chart');
-        if (!canvas || !overviewCanvas || typeof Chart === 'undefined') {
+        const extensorCanvas = document.getElementById('replay-extensor-chart');
+        const extensorOverviewCanvas = document.getElementById('replay-extensor-overview-chart');
+        if (!canvas || !overviewCanvas || !extensorCanvas || !extensorOverviewCanvas || typeof Chart === 'undefined') {
             this.showNotification('No se pudo inicializar el gráfico de reproducción', 'warning');
             return;
         }
-        this.replayChartSamples = samples.map(sample => ({
-            time: Number(sample.time ?? sample.timestamp ?? 0),
-            left: Number(sample.left?.amplitude ?? sample.left?.emg ?? sample.left ?? 0),
-            right: Number(sample.right?.amplitude ?? sample.right?.emg ?? sample.right ?? 0)
-        })).filter(sample => Number.isFinite(sample.time) && Number.isFinite(sample.left) && Number.isFinite(sample.right));
+        this.replayChartSamples = samples.map(sample => window.EMGChannelContract.normalizeSample(sample));
         const duration = this.replayChartSamples.at(-1)?.time || 0;
         const slider = document.getElementById('replay-window-slider');
         if (slider) slider.max = String(Math.max(0, duration - 5));
         const overview = this.decimateReplaySamples(this.replayChartSamples, 2000);
         this.replayOverviewChart = new Chart(overviewCanvas.getContext('2d'), {
             type: 'line',
-            data: { datasets: this.buildReplayDatasets(overview) },
+            data: { datasets: this.buildReplayDatasets(overview, 'flexor') },
             options: this.buildReplayChartOptions(true)
         });
         this.replayChart = new Chart(canvas.getContext('2d'), {
             type: 'line',
-            data: { datasets: this.buildReplayDatasets([]) },
+            data: { datasets: this.buildReplayDatasets([], 'flexor') },
             options: this.buildReplayChartOptions(true)
         });
+        this.replayExtensorOverviewChart = new Chart(extensorOverviewCanvas.getContext('2d'), { type: 'line', data: { datasets: this.buildReplayDatasets(overview, 'extensor') }, options: this.buildReplayChartOptions(true) });
+        this.replayExtensorChart = new Chart(extensorCanvas.getContext('2d'), { type: 'line', data: { datasets: this.buildReplayDatasets([], 'extensor') }, options: this.buildReplayChartOptions(true) });
         this.renderReplayWindow(0);
     }
 
-    buildReplayDatasets(samples) {
+    buildReplayDatasets(samples, group = 'flexor') {
         return [
-            { label: 'Izquierda', data: samples.map(sample => ({ x: sample.time, y: sample.left })), borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0 },
-            { label: 'Derecha', data: samples.map(sample => ({ x: sample.time, y: sample.right })), borderColor: '#ef4444', backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0 }
+            { label: 'Izquierda', data: samples.map(sample => ({ x: sample.time, y: sample[group].left.amplitude })), borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0 },
+            { label: 'Derecha', data: samples.map(sample => ({ x: sample.time, y: sample[group].right.amplitude })), borderColor: '#ef4444', backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0 }
         ];
     }
 
@@ -597,9 +603,13 @@ class PatientManager {
         const end = start + 5;
         const visible = this.replayChartSamples.filter(sample => sample.time >= start && sample.time <= end);
         this.replayChart.data.datasets = this.buildReplayDatasets(visible);
+        this.replayExtensorChart.data.datasets = this.buildReplayDatasets(visible, 'extensor');
         this.replayChart.options.scales.x.min = start;
         this.replayChart.options.scales.x.max = end;
         this.replayChart.update('none');
+        this.replayExtensorChart.options.scales.x.min = start;
+        this.replayExtensorChart.options.scales.x.max = end;
+        this.replayExtensorChart.update('none');
         const slider = document.getElementById('replay-window-slider');
         if (slider) slider.value = String(start);
         const label = document.getElementById('replay-window-label');
@@ -649,6 +659,8 @@ class PatientManager {
         this.replaySource = null;
         this.replayChart?.destroy();
         this.replayOverviewChart?.destroy();
+        this.replayExtensorChart?.destroy();
+        this.replayExtensorOverviewChart?.destroy();
         this.replayChart = null;
         this.replayOverviewChart = null;
         this.replayChartSamples = null;
@@ -659,7 +671,7 @@ class PatientManager {
         try {
             const session = await this.database.getSession(sessionId);
             if (!session) throw new Error('Sesión no encontrada');
-            this.downloadJSON({ application: 'DEMASY', schemaVersion: 1, exportedAt: new Date().toISOString(), session }, `demasy-session-${session.id}.json`);
+            this.downloadJSON({ application: 'DEMASY', schemaVersion: 2, channelSchema: 'flexor-extensor-4ch', exportedAt: new Date().toISOString(), session }, `demasy-session-${session.id}.json`);
             this.showNotification('Sesión exportada correctamente', 'success');
         } catch (error) { this.showNotification(`No se pudo exportar: ${error.message}`, 'error'); }
     }
