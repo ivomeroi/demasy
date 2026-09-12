@@ -27,7 +27,7 @@ class EMGBluetoothManager extends EMGSerialManager {
 
         this.device = await navigator.bluetooth.requestDevice({
             filters: [
-                { namePrefix: 'KinesioEMG' },
+                { namePrefix: 'DEMASY' },
                 { services: [this.serviceUuid] }
             ],
             optionalServices: [this.serviceUuid]

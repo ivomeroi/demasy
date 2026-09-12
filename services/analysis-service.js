@@ -4,7 +4,8 @@
  */
 (function exposeAnalysisService(root, factory) {
     const AnalysisService = factory(
-        root?.DEMASY_CONFIG || (typeof require === 'function' ? require('../core/demasy-config.js') : null)
+        root?.DEMASY_CONFIG || (typeof require === 'function' ? require('../core/demasy-config.js') : null),
+        root?.EMGChannelContract || (typeof require === 'function' ? require('../core/emg-channel-contract.js') : null)
     );
 
     if (typeof module !== 'undefined' && module.exports) {
@@ -14,7 +15,7 @@
     if (root) {
         root.AnalysisService = AnalysisService;
     }
-})(typeof window !== 'undefined' ? window : null, function createAnalysisService(config) {
+})(typeof window !== 'undefined' ? window : null, function createAnalysisService(config, channelContract) {
     class AnalysisService {
         constructor(options = {}) {
             this.thresholds = options.thresholds || config?.symmetry || {
@@ -128,21 +129,42 @@
 
         analyzeSamples(samples) {
             const list = Array.isArray(samples) ? samples : [];
-            const leftValues = list.map(sample => this.extractAmplitude(sample, 'left'));
-            const rightValues = list.map(sample => this.extractAmplitude(sample, 'right'));
-            const left = this.calculateSide(leftValues);
-            const right = this.calculateSide(rightValues);
+            const analyzeGroup = group => {
+                const left = this.calculateSide(list.map(sample => this.extractAmplitude(sample, group, 'left')));
+                const right = this.calculateSide(list.map(sample => this.extractAmplitude(sample, group, 'right')));
+                return { left, right, bilateral: this.calculateBilateral(left.rms, right.rms) };
+            };
+            const flexor = analyzeGroup('flexor');
+            const extensor = analyzeGroup('extensor');
+            const hasFourChannels = list.some(sample => channelContract?.normalizeSample(sample)?.channelSchema === 'flexor-extensor-4ch');
+            const aggregateSymmetry = hasFourChannels
+                ? (flexor.bilateral.symmetryIndex + extensor.bilateral.symmetryIndex) / 2
+                : flexor.bilateral.symmetryIndex;
+            const aggregateDifference = hasFourChannels
+                ? (flexor.bilateral.difference + extensor.bilateral.difference) / 2
+                : flexor.bilateral.difference;
 
             return {
-                left,
-                right,
-                bilateral: this.calculateBilateral(left.rms, right.rms),
+                flexor,
+                extensor,
+                // Read-only aliases keep v1 consumers and two-channel exports usable.
+                left: flexor.left,
+                right: flexor.right,
+                bilateral: {
+                    symmetryIndex: aggregateSymmetry,
+                    difference: aggregateDifference,
+                    absoluteRmsDifference: hasFourChannels ? (flexor.bilateral.absoluteRmsDifference + extensor.bilateral.absoluteRmsDifference) / 2 : flexor.bilateral.absoluteRmsDifference,
+                    percentageDifference: aggregateDifference,
+                    dominantSide: flexor.bilateral.dominantSide,
+                    asymmetryLevel: this.classifySymmetry(aggregateSymmetry)
+                },
                 durationSeconds: this.calculateDuration(list)
             };
         }
 
-        extractAmplitude(sample, side) {
-            const value = sample?.[side];
+        extractAmplitude(sample, group, side) {
+            const normalized = channelContract?.normalizeSample ? channelContract.normalizeSample(sample) : sample;
+            const value = normalized?.[group]?.[side];
             return Number(value?.amplitude ?? value?.emg ?? value);
         }
 
@@ -188,6 +210,7 @@
             const reasons = [];
             if (Number(first?.patientId) !== Number(second?.patientId)) reasons.push('Deben pertenecer al mismo participante');
             if (first?.muscleType !== second?.muscleType) reasons.push('Deben medir el mismo músculo');
+            if ((first?.extensorMuscleType || first?.configuration?.extensorMuscleType) !== (second?.extensorMuscleType || second?.configuration?.extensorMuscleType)) reasons.push('Deben medir el mismo músculo extensor');
             if (first?.sessionType !== second?.sessionType) reasons.push('Deben usar el mismo tipo de prueba');
             const changedConditions = ['cadence', 'resistance'].filter(field => Number(first?.[field]) !== Number(second?.[field]));
             if ((first?.configuration?.scenario || first?.source?.scenario) !== (second?.configuration?.scenario || second?.source?.scenario)) changedConditions.push('scenario');
@@ -200,12 +223,18 @@
             const firstAnalysis = this.analyzeSession(first, options);
             const secondAnalysis = this.analyzeSession(second, options);
             const pairs = {
-                leftRms: [firstAnalysis.metrics.left.rms, secondAnalysis.metrics.left.rms],
-                rightRms: [firstAnalysis.metrics.right.rms, secondAnalysis.metrics.right.rms],
-                leftMav: [firstAnalysis.metrics.left.mav, secondAnalysis.metrics.left.mav],
-                rightMav: [firstAnalysis.metrics.right.mav, secondAnalysis.metrics.right.mav],
-                symmetryIndex: [firstAnalysis.metrics.bilateral.symmetryIndex, secondAnalysis.metrics.bilateral.symmetryIndex]
+                flexorLeftRms: [firstAnalysis.metrics.flexor.left.rms, secondAnalysis.metrics.flexor.left.rms],
+                flexorRightRms: [firstAnalysis.metrics.flexor.right.rms, secondAnalysis.metrics.flexor.right.rms],
+                extensorLeftRms: [firstAnalysis.metrics.extensor.left.rms, secondAnalysis.metrics.extensor.left.rms],
+                extensorRightRms: [firstAnalysis.metrics.extensor.right.rms, secondAnalysis.metrics.extensor.right.rms],
+                flexorSymmetryIndex: [firstAnalysis.metrics.flexor.bilateral.symmetryIndex, secondAnalysis.metrics.flexor.bilateral.symmetryIndex],
+                extensorSymmetryIndex: [firstAnalysis.metrics.extensor.bilateral.symmetryIndex, secondAnalysis.metrics.extensor.bilateral.symmetryIndex]
             };
+            pairs.leftRms = pairs.flexorLeftRms;
+            pairs.rightRms = pairs.flexorRightRms;
+            pairs.leftMav = [firstAnalysis.metrics.flexor.left.mav, secondAnalysis.metrics.flexor.left.mav];
+            pairs.rightMav = [firstAnalysis.metrics.flexor.right.mav, secondAnalysis.metrics.flexor.right.mav];
+            pairs.symmetryIndex = pairs.flexorSymmetryIndex;
             const differences = Object.fromEntries(Object.entries(pairs).map(([key, [before, after]]) => [key, {
                 absolute: after - before,
                 percentage: compatibility.equivalentConditions && before !== 0 ? (after - before) / Math.abs(before) * 100 : null
@@ -226,6 +255,8 @@
             return {
                 id: session?.id, patientId: session?.patientId, label: session?.label,
                 startedAt: session?.startedAt || session?.date, muscleType: session?.muscleType,
+                flexorMuscleType: session?.flexorMuscleType || session?.configuration?.flexorMuscleType || session?.muscleType,
+                extensorMuscleType: session?.extensorMuscleType || session?.configuration?.extensorMuscleType,
                 sessionType: session?.sessionType, cadence: session?.cadence, resistance: session?.resistance,
                 durationSeconds: session?.durationSeconds ?? session?.duration,
                 scenario: session?.configuration?.scenario || session?.source?.scenario || 'unknown',

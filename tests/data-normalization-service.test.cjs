@@ -33,7 +33,7 @@ test('adapta participantes históricos conservando id y estado', () => {
     assert.equal(participant.status, 'archived');
 });
 
-test('unifica sesiones históricas y nuevas en el esquema v1', () => {
+test('unifica sesiones históricas y nuevas en el esquema v2', () => {
     const service = new DataNormalizationService();
     const session = service.normalizeSession({
         id: 7,
@@ -45,7 +45,8 @@ test('unifica sesiones históricas y nuevas en el esquema v1', () => {
     });
 
     assert.equal(session.id, 7);
-    assert.equal(session.schemaVersion, 1);
+    assert.equal(session.schemaVersion, 2);
+    assert.equal(session.channelSchema, 'legacy-2ch');
     assert.equal(session.durationSeconds, 2);
     assert.equal(session.samples, session.emgData);
     assert.equal(session.source.type, 'simulation');

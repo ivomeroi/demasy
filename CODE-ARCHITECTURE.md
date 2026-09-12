@@ -34,6 +34,7 @@ Las rutas `/emg-en-vivo`, `/analisis`, `/pacientes`, `/asistente-ia` y `/configu
 - `core/recording-controller.js`: máquina de estados de grabación.
 - `services/session-configuration-service.js`: validación de configuración.
 - `services/analysis-service.js`: métricas temporales puras y comparación bilateral.
+- `core/emg-channel-contract.js`: contrato canónico y compatibilidad entre registros históricos de dos canales y muestras nuevas de cuatro canales.
 - `services/session-history-service.js`: filtros y compatibilidad histórica.
 - `services/data-normalization-service.js`: normalización de participantes y sesiones.
 - `services/backup-service.js`: validación y planificación de importaciones.

@@ -1,12 +1,12 @@
 # DEMASY v1
 
-DEMASY es un prototipo académico para registrar, visualizar y comparar señales electromiográficas bilaterales durante pruebas funcionales de ciclismo. Puede completar todo el recorrido principal con señales simuladas, sin hardware, internet ni servicios externos.
+DEMASY es un prototipo académico para registrar, visualizar y comparar cuatro señales electromiográficas durante pruebas funcionales de ciclismo: flexor izquierdo/derecho y extensor izquierdo/derecho. Puede completar todo el recorrido principal con señales simuladas, sin hardware, internet ni servicios externos.
 
 > DEMASY no es un producto sanitario, no realiza diagnósticos y no reemplaza la evaluación de un profesional. Evita almacenar información identificatoria o sensible y conserva respaldos periódicos.
 
 ## Funciones incluidas
 
-- simulación bilateral reproducible con distintos músculos y escenarios;
+- simulación reproducible de dos pares musculares bilaterales y complementarios;
 - adquisición opcional mediante Web Serial o Web Bluetooth desde ESP32;
 - calibración basal y visualización de actividad corregida en vivo;
 - configuración, pausa, recuperación y revisión de grabaciones;

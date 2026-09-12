@@ -89,3 +89,17 @@ test('aplica reglas de compatibilidad y omite progreso si cambian condiciones', 
     assert.equal(comparison.sessions.second.cadence, 80);
     assert.equal(service.checkCompatibility(first, { ...second, muscleType: 'hamstring' }).compatible, false);
 });
+
+test('analiza flexores y extensores bilateralmente de forma independiente', () => {
+    const service = new AnalysisService();
+    const samples = [-1, 1].map((value, index) => ({
+        time: index,
+        flexor: { left: { amplitude: value }, right: { amplitude: value * 2 } },
+        extensor: { left: { amplitude: value * 3 }, right: { amplitude: value * 3 } }
+    }));
+    const result = service.analyzeSamples(samples);
+    assert.equal(result.flexor.bilateral.symmetryIndex, 50);
+    assert.equal(result.extensor.bilateral.symmetryIndex, 100);
+    assert.equal(result.flexor.left.rms, 1);
+    assert.equal(result.extensor.left.rms, 3);
+});

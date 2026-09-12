@@ -21,7 +21,7 @@
             'activity', 'muscle', 'cadence', 'resistance', 'rms', 'mav', 'peakAmplitude',
             'peakToPeak', 'waveformLength', 'zeroCrossings', 'entropy', 'frequency', 'snr',
             'artifacts', 'symmetryIndex', 'difference', 'activationLevel', 'quality', 'left',
-            'right', 'bilateral', 'cycling', 'pedalingEfficiency', 'powerImbalance'
+            'right', 'flexor', 'extensor', 'musclePair', 'channelSchema', 'bilateral', 'cycling', 'pedalingEfficiency', 'powerImbalance'
         ]);
         const visit = value => {
             if (Array.isArray(value)) return value.slice(0, 50).map(visit);

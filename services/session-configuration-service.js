@@ -19,6 +19,10 @@
         'symmetric', 'left-weakness', 'right-weakness', 'left-fatigue',
         'right-fatigue', 'phase-delay', 'intervals', 'custom'
     ]);
+    const complementaryMuscle = Object.freeze({
+        quadriceps: 'hamstring', hamstring: 'quadriceps', gastrocnemius: 'tibialis',
+        tibialis: 'gastrocnemius', gluteus: 'hip-flexor', soleus: 'tibialis'
+    });
 
     class SessionConfigurationService {
         validate(input) {
@@ -64,6 +68,9 @@
                 patientId: Number(input.patientId),
                 label: String(input.label || '').trim() || 'Sesión simulada',
                 muscleType: input.muscleType,
+                flexorMuscleType: input.muscleType,
+                extensorMuscleType: input.extensorMuscleType || complementaryMuscle[input.muscleType] || 'complementary',
+                channelSchema: 'flexor-extensor-4ch',
                 testType: 'stationary-cycling',
                 plannedDurationSeconds: Number(input.plannedDurationSeconds),
                 cadenceRpm: Number(input.cadenceRpm),

@@ -63,6 +63,83 @@ body {
   position: fixed;
   height: 100vh;
   z-index: 1000;
+  transition: width 0.22s ease, transform 0.3s ease;
+}
+
+.sidebar-collapse-button {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 0.6rem;
+  color: white;
+  background: rgb(255 255 255 / 0.07);
+  cursor: pointer;
+}
+
+.sidebar-collapse-button:hover { background: rgb(255 255 255 / 0.14); }
+
+body.sidebar-collapsed { --sidebar-width: 76px; }
+.app-container.sidebar-collapsed { --sidebar-width: 76px; }
+body.sidebar-collapsed .sidebar .logo { padding: 0.55rem; }
+body.sidebar-collapsed .sidebar .logo img { max-height: 54px; }
+body.sidebar-collapsed .sidebar .logo img { max-width: 100%; }
+body.sidebar-collapsed .sidebar .nav-item span,
+body.sidebar-collapsed .sidebar .connection-status span,
+body.sidebar-collapsed .sidebar .device-info { display: none; }
+body.sidebar-collapsed .sidebar-collapse-button { position: absolute; right: -17px; top: 10px; background: #0d527d; }
+body.sidebar-collapsed .sidebar .nav-item { margin-inline: 0.55rem; text-align: center; }
+body.sidebar-collapsed .sidebar .nav-item i { margin: 0; }
+body.sidebar-collapsed .sidebar .connection-status { padding-inline: 0; display: flex; justify-content: center; }
+body.sidebar-collapsed .sidebar .status-indicator { margin: 0; }
+
+/* A collapsed sidebar temporarily opens over the page on pointer hover or
+   keyboard focus. The main content keeps its compact margin to avoid chart
+   reflows every time the pointer enters or leaves the navigation. */
+body.sidebar-collapsed .sidebar:hover,
+body.sidebar-collapsed .sidebar:focus-within {
+  width: 280px;
+}
+
+body.sidebar-collapsed .sidebar:hover .logo,
+body.sidebar-collapsed .sidebar:focus-within .logo {
+  padding: 0.8rem 1rem;
+}
+
+body.sidebar-collapsed .sidebar:hover .logo img,
+body.sidebar-collapsed .sidebar:focus-within .logo img {
+  max-width: calc(100% - 44px);
+  max-height: 126px;
+}
+
+body.sidebar-collapsed .sidebar:hover .nav-item span,
+body.sidebar-collapsed .sidebar:hover .connection-status span,
+body.sidebar-collapsed .sidebar:hover .device-info,
+body.sidebar-collapsed .sidebar:focus-within .nav-item span,
+body.sidebar-collapsed .sidebar:focus-within .connection-status span,
+body.sidebar-collapsed .sidebar:focus-within .device-info {
+  display: initial;
+}
+
+body.sidebar-collapsed .sidebar:hover .nav-item,
+body.sidebar-collapsed .sidebar:focus-within .nav-item {
+  margin-inline: 0.75rem;
+  text-align: left;
+}
+
+body.sidebar-collapsed .sidebar:hover .connection-status,
+body.sidebar-collapsed .sidebar:focus-within .connection-status {
+  padding: 1rem;
+  display: block;
+}
+
+body.sidebar-collapsed .sidebar:hover .status-indicator,
+body.sidebar-collapsed .sidebar:focus-within .status-indicator {
+  margin-bottom: 0.5rem;
 }
 
 .logo {
@@ -71,12 +148,13 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  position: relative;
 }
 
 .logo img {
   display: block;
   width: auto;
-  max-width: 100%;
+  max-width: calc(100% - 44px);
   max-height: 126px;
   object-fit: contain;
   border-radius: 0.4rem;
@@ -251,6 +329,7 @@ input[type="range"] { accent-color: var(--primary-color); }
   flex: 1;
   display: flex;
   flex-direction: column;
+  transition: margin-left 0.22s ease;
 }
 
 .header {
@@ -388,23 +467,23 @@ input[type="range"] { accent-color: var(--primary-color); }
 }
 
 .chart-card {
-  grid-column: 1;
-  grid-row: 1 / 3;
+  grid-column: 1 / -1;
+  grid-row: auto;
 }
 
 .stats-card {
-  grid-column: 2;
-  grid-row: 1;
+  grid-column: 1 / -1;
+  grid-row: auto;
 }
 
 .quality-card {
-  grid-column: 2;
-  grid-row: 2;
+  grid-column: 1;
+  grid-row: auto;
 }
 
 .analysis-card {
   grid-column: 2;
-  grid-row: 3;
+  grid-row: auto;
 }
 
 /* Cards */
@@ -504,7 +583,16 @@ input[type="range"] { accent-color: var(--primary-color); }
 /* Bilateral Statistics */
 .bilateral-stats {
   padding: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
+  gap: 1rem;
+  overflow-x: auto;
 }
+
+.muscle-stats-column { min-width: 0; padding: 0.85rem; border: 1px solid var(--border-color); border-radius: 0.8rem; }
+.muscle-stats-column > h4 { color: var(--primary-dark); margin-bottom: 0.75rem; }
+.muscle-stats-column .side-stats { padding: 0.7rem; }
+.muscle-symmetry { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.8rem; border-radius: 0.65rem; background: #e8f4fa; color: var(--primary-dark); }
 
 .side-stats {
   margin-bottom: 1rem;
@@ -900,6 +988,11 @@ input[type="range"] { accent-color: var(--primary-color); }
   cursor: wait;
   opacity: 0.65;
 }
+
+.four-channel-charts { display: grid; grid-template-columns: repeat(2, minmax(420px, 1fr)); gap: 1rem; padding: 0 1rem; overflow-x: auto; }
+.chart-panel { min-width: 0; }
+.chart-panel h4 { margin: .6rem 0; color: var(--primary-dark, #0b3159); }
+.four-channel-charts .chart-container { padding: 0; min-height: 280px; }
 
 .calibration-overlay {
   position: absolute;
@@ -1407,6 +1500,7 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
 }
 
 @media (max-width: 1024px) {
+  .four-channel-charts { grid-template-columns: repeat(2, minmax(420px, 1fr)); }
   .dashboard-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
@@ -1456,6 +1550,13 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
   .header-right .btn-control { font-size: 0; padding: 0.55rem; }
   .header-right .btn-control i { font-size: 0.9rem; }
   .sidebar { width: min(280px, 86vw); }
+  .sidebar-collapse-button { display: none; }
+  body.sidebar-collapsed { --sidebar-width: 0px; }
+  body.sidebar-collapsed .sidebar .logo { padding: 0.8rem 1rem; }
+  body.sidebar-collapsed .sidebar .logo img { max-height: 126px; }
+  body.sidebar-collapsed .sidebar .nav-item span,
+  body.sidebar-collapsed .sidebar .connection-status span,
+  body.sidebar-collapsed .sidebar .device-info { display: initial; }
   
   .header-right {
     flex-wrap: wrap;

@@ -25,7 +25,7 @@ class EMGSerialManager {
         };
         this.rawBaseline = null;
         this.rawBaselineAlpha = 0.002;
-        this.signalBuffer = { left: [], right: [] };
+        this.signalBuffer = this.createEmptyBuffer();
         this.maxBufferSize = 10000;
         this.callbacks = {
             onDataUpdate: null,
@@ -99,7 +99,7 @@ class EMGSerialManager {
 
     reset() {
         this.time = 0;
-        this.signalBuffer = { left: [], right: [] };
+        this.signalBuffer = this.createEmptyBuffer();
         this.rawBaseline = null;
         this.stats = this.createEmptyStats();
         this.callbacks.onStatsUpdate?.(this.stats);
@@ -179,18 +179,9 @@ class EMGSerialManager {
             time: sample.time ?? this.time,
             source: 'serial',
             raw: sample.raw,
-            envelope: sample.envelope,
-            envelopeLeft: sample.envelopeLeft ?? sample.envelope,
-            envelopeRight: sample.envelopeRight ?? sample.envelope,
-            flags: sample.flags || { left: 0, right: 0 },
-            left: {
-                amplitude: sample.left,
-                activation: Math.min(1, Math.abs(sample.left) / 2.5)
-            },
-            right: {
-                amplitude: sample.right,
-                activation: Number.isFinite(sample.right) ? Math.min(1, Math.abs(sample.right) / 2.5) : 0
-            }
+            channelSchema: 'flexor-extensor-4ch',
+            flexor: this.createMuscleSample(sample.flexor),
+            extensor: this.createMuscleSample(sample.extensor)
         };
 
         this.addToBuffer(data);
@@ -218,58 +209,55 @@ class EMGSerialManager {
             .map(value => Number(value))
             .filter(value => Number.isFinite(value));
 
+        if (values.length >= 12) {
+            return this.parseFourChannelValues(values, text);
+        }
+
         if (values.length >= 2) {
             if (values.length >= 6) {
                 const envelopeLeft = this.toFirmwareSignalValue(Math.abs(values[1]));
                 const envelopeRight = this.toFirmwareSignalValue(Math.abs(values[4]));
-                return {
-                    left: this.toFirmwareSignalValue(values[0]),
-                    right: this.toFirmwareSignalValue(values[3]),
-                    envelope: Math.max(envelopeLeft, envelopeRight),
-                    envelopeLeft,
-                    envelopeRight,
-                    flags: {
-                        left: values[2] || 0,
-                        right: values[5] || 0
-                    },
-                    raw: text
-                };
+                return this.legacyPair(values[0], values[3], envelopeLeft, envelopeRight, values[2], values[5], text);
             }
 
             if (values.length >= 4) {
                 const envelopeLeft = this.toFirmwareSignalValue(Math.abs(values[1]));
                 const envelopeRight = this.toFirmwareSignalValue(Math.abs(values[3]));
-                return {
-                    left: this.toFirmwareSignalValue(values[0]),
-                    right: this.toFirmwareSignalValue(values[2]),
-                    envelope: Math.max(envelopeLeft, envelopeRight),
-                    envelopeLeft,
-                    envelopeRight,
-                    flags: { left: 0, right: 0 },
-                    raw: text
-                };
+                return this.legacyPair(values[0], values[2], envelopeLeft, envelopeRight, 0, 0, text);
             }
 
-            return {
-                left: this.toFirmwareSignalValue(values[0]),
-                right: null,
-                envelope: this.toFirmwareSignalValue(Math.abs(values[1])),
-                flags: { left: 0, right: 0 },
-                raw: text
-            };
+            return this.legacyPair(values[0], 0, values[1], 0, 0, 0, text);
         }
 
         if (values.length === 1) {
-            return {
-                left: this.toFirmwareSignalValue(values[0]),
-                right: null,
-                envelope: null,
-                flags: { left: 0, right: 0 },
-                raw: text
-            };
+            return this.legacyPair(values[0], 0, 0, 0, 0, 0, text);
         }
 
         return null;
+    }
+
+    parseFourChannelValues(values, raw) {
+        const channel = offset => ({
+            amplitude: this.toFirmwareSignalValue(values[offset]),
+            envelope: this.toFirmwareSignalValue(Math.abs(values[offset + 1])),
+            flags: values[offset + 2] || 0
+        });
+        return { flexor: { left: channel(0), right: channel(3) }, extensor: { left: channel(6), right: channel(9) }, raw };
+    }
+
+    legacyPair(left, right, envelopeLeft, envelopeRight, flagsLeft, flagsRight, raw) {
+        const channel = (amplitude, envelope, flags) => ({ amplitude: this.toFirmwareSignalValue(amplitude), envelope: Number(envelope) || 0, flags: Number(flags) || 0 });
+        return { flexor: { left: channel(left, envelopeLeft, flagsLeft), right: channel(right, envelopeRight, flagsRight) }, extensor: { left: channel(0, 0, 0), right: channel(0, 0, 0) }, raw, legacy: true };
+    }
+
+    createMuscleSample(group = {}) {
+        const make = value => ({
+            amplitude: Number(value?.amplitude || 0),
+            envelope: Number(value?.envelope || 0),
+            flags: Number(value?.flags || 0),
+            activation: Math.min(1, Math.abs(Number(value?.amplitude || 0)) / 2.5)
+        });
+        return { left: make(group.left), right: make(group.right) };
     }
 
     parseJsonSample(text) {
@@ -286,19 +274,14 @@ class EMGSerialManager {
 
             if (!Number.isFinite(Number(left))) return null;
 
-            return {
-                left: this.toFirmwareSignalValue(Number(left)),
-                right: Number.isFinite(Number(right)) ? this.toFirmwareSignalValue(Number(right)) : null,
-                envelope: Number.isFinite(Number(envelope)) ? this.toFirmwareSignalValue(Math.abs(Number(envelope))) : null,
-                envelopeLeft: Number.isFinite(Number(envelope)) ? this.toFirmwareSignalValue(Math.abs(Number(envelope))) : null,
-                envelopeRight: Number.isFinite(Number(envelopeRight)) ? this.toFirmwareSignalValue(Math.abs(Number(envelopeRight))) : null,
-                flags: {
-                    left: Number.isFinite(Number(flagsLeft)) ? Number(flagsLeft) : 0,
-                    right: Number.isFinite(Number(flagsRight)) ? Number(flagsRight) : 0
-                },
-                time: Number.isFinite(Number(data.time)) ? Number(data.time) : undefined,
-                raw: text
-            };
+            const parsed = this.legacyPair(
+                Number(left), Number.isFinite(Number(right)) ? Number(right) : 0,
+                Number.isFinite(Number(envelope)) ? this.toFirmwareSignalValue(Math.abs(Number(envelope))) : 0,
+                Number.isFinite(Number(envelopeRight)) ? this.toFirmwareSignalValue(Math.abs(Number(envelopeRight))) : 0,
+                Number(flagsLeft) || 0, Number(flagsRight) || 0, text
+            );
+            parsed.time = Number.isFinite(Number(data.time)) ? Number(data.time) : undefined;
+            return parsed;
         } catch {
             return null;
         }
@@ -314,18 +297,12 @@ class EMGSerialManager {
 
         if (!leftMatch && !rightMatch) return null;
 
-        return {
-            left: this.toFirmwareSignalValue(Number(leftMatch?.[1] ?? 0)),
-            right: rightMatch ? this.toFirmwareSignalValue(Number(rightMatch[1])) : null,
-            envelope: envelopeMatch ? this.toFirmwareSignalValue(Math.abs(Number(envelopeMatch[1]))) : null,
-            envelopeLeft: envelopeMatch ? this.toFirmwareSignalValue(Math.abs(Number(envelopeMatch[1]))) : null,
-            envelopeRight: envelopeRightMatch ? this.toFirmwareSignalValue(Math.abs(Number(envelopeRightMatch[1]))) : null,
-            flags: {
-                left: flagsLeftMatch ? Number(flagsLeftMatch[1]) : 0,
-                right: flagsRightMatch ? Number(flagsRightMatch[1]) : 0
-            },
-            raw: text
-        };
+        return this.legacyPair(
+            Number(leftMatch?.[1] ?? 0), Number(rightMatch?.[1] ?? 0),
+            envelopeMatch ? this.toFirmwareSignalValue(Math.abs(Number(envelopeMatch[1]))) : 0,
+            envelopeRightMatch ? this.toFirmwareSignalValue(Math.abs(Number(envelopeRightMatch[1]))) : 0,
+            Number(flagsLeftMatch?.[1] || 0), Number(flagsRightMatch?.[1] || 0), text
+        );
     }
 
     toFirmwareSignalValue(value) {
@@ -333,56 +310,44 @@ class EMGSerialManager {
     }
 
     addToBuffer(data) {
-        this.signalBuffer.left.push({
-            time: data.time,
-            amplitude: data.left.amplitude,
-            activation: data.left.activation,
-            flags: data.flags?.left || 0
-        });
-
-        this.signalBuffer.right.push({
-            time: data.time,
-            amplitude: data.right.amplitude,
-            activation: data.right.activation,
-            flags: data.flags?.right || 0
-        });
-
-        ['left', 'right'].forEach(side => {
-            if (this.signalBuffer[side].length > this.maxBufferSize) {
-                this.signalBuffer[side].shift();
-            }
-        });
+        ['flexor', 'extensor'].forEach(group => ['left', 'right'].forEach(side => {
+            const value = data[group][side];
+            const buffer = this.signalBuffer[group][side];
+            buffer.push({ time: data.time, ...value });
+            if (buffer.length > this.maxBufferSize) buffer.shift();
+        }));
     }
 
     updateStats() {
-        const left = this.signalBuffer.left.slice(-1000).map(sample => sample.amplitude);
-        const right = this.signalBuffer.right.slice(-1000).map(sample => sample.amplitude);
-        const recentFlags = [
-            ...this.signalBuffer.left.slice(-1000).map(sample => sample.flags || 0),
-            ...this.signalBuffer.right.slice(-1000).map(sample => sample.flags || 0)
-        ];
-
-        const leftStats = this.calculateSideStats(left);
-        const rightStats = this.calculateSideStats(right);
-        const averageRms = (leftStats.rms + rightStats.rms) / 2;
-        const difference = averageRms > 0
-            ? Math.abs(leftStats.rms - rightStats.rms) / averageRms * 100
-            : 0;
-        const symmetryIndex = Math.max(0, 100 - difference);
+        const groupStats = group => {
+            const leftValues = this.signalBuffer[group].left.slice(-1000).map(sample => sample.amplitude);
+            const rightValues = this.signalBuffer[group].right.slice(-1000).map(sample => sample.amplitude);
+            const left = this.calculateSideStats(leftValues);
+            const right = this.calculateSideStats(rightValues);
+            const averageRms = (left.rms + right.rms) / 2;
+            const difference = averageRms > 0 ? Math.abs(left.rms - right.rms) / averageRms * 100 : 0;
+            return { left, right, bilateral: { symmetryIndex: Math.max(0, 100 - difference), asymmetryLevel: this.classifyAsymmetry(difference), difference } };
+        };
+        const flexor = groupStats('flexor');
+        const extensor = groupStats('extensor');
+        const all = ['flexor', 'extensor'].flatMap(group => ['left', 'right'].flatMap(side => this.signalBuffer[group][side].slice(-1000)));
+        const recentFlags = all.map(sample => sample.flags || 0);
+        const allValues = all.map(sample => sample.amplitude);
+        const averageRms = (flexor.left.rms + flexor.right.rms + extensor.left.rms + extensor.right.rms) / 4;
         const artifactCount = recentFlags.filter(flags => flags !== 0).length;
         const artifactLabel = this.describeArtifacts(recentFlags);
-        const noiseFloor = this.estimateNoise([...left, ...right]);
+        const noiseFloor = this.estimateNoise(allValues);
         const snr = noiseFloor > 0
             ? 20 * Math.log10(Math.max(averageRms, 0.001) / noiseFloor)
             : 45;
 
         this.stats = {
-            left: leftStats,
-            right: rightStats,
+            flexor,
+            extensor,
             bilateral: {
-                symmetryIndex,
-                asymmetryLevel: this.classifyAsymmetry(difference),
-                difference,
+                symmetryIndex: (flexor.bilateral.symmetryIndex + extensor.bilateral.symmetryIndex) / 2,
+                asymmetryLevel: this.classifyAsymmetry((flexor.bilateral.difference + extensor.bilateral.difference) / 2),
+                difference: (flexor.bilateral.difference + extensor.bilateral.difference) / 2,
                 snr: Math.max(0, Math.min(60, snr)),
                 artifacts: artifactCount > 5 ? artifactLabel : 'Ninguno'
             }
@@ -443,9 +408,9 @@ class EMGSerialManager {
     }
 
     createEmptyStats() {
+        const group = () => ({ left: { rms: 0, peakAmplitude: 0, frequency: 0 }, right: { rms: 0, peakAmplitude: 0, frequency: 0 }, bilateral: { symmetryIndex: 100, asymmetryLevel: 'Normal', difference: 0 } });
         return {
-            left: { rms: 0, peakAmplitude: 0, frequency: 0 },
-            right: { rms: 0, peakAmplitude: 0, frequency: 0 },
+            flexor: group(), extensor: group(),
             bilateral: {
                 symmetryIndex: 100,
                 asymmetryLevel: 'Normal',
@@ -454,6 +419,10 @@ class EMGSerialManager {
                 artifacts: 'Ninguno'
             }
         };
+    }
+
+    createEmptyBuffer() {
+        return { flexor: { left: [], right: [] }, extensor: { left: [], right: [] } };
     }
 
     notifyConnection(status) {
