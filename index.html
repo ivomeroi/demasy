@@ -151,23 +151,44 @@
                                     <button class="btn-small" id="clear-chart" title="Limpiar Gráfico">
                                         <i class="fas fa-eraser"></i>
                                     </button>
-                                    <button class="btn-small calibration-button" id="calibrate-signal" title="Calibrar el nivel de reposo">
-                                        <i class="fas fa-crosshairs"></i> Calibrar
-                                    </button>
+                                    <div class="calibration-controls">
+                                        <label for="calibration-target">Calibrar:</label>
+                                        <select id="calibration-target" aria-label="Sensores que se calibrarán">
+                                            <option value="all">Los 4 sensores</option>
+                                            <option value="flexor">Ambos flexores (S1 y S2)</option>
+                                            <option value="extensor">Ambos extensores (S3 y S4)</option>
+                                            <option value="flexor-left">S1 · Flexor izquierdo</option>
+                                            <option value="flexor-right">S2 · Flexor derecho</option>
+                                            <option value="extensor-left">S3 · Extensor izquierdo</option>
+                                            <option value="extensor-right">S4 · Extensor derecho</option>
+                                        </select>
+                                        <button class="btn-small calibration-button" id="calibrate-signal" title="Calibrar el nivel de reposo">
+                                            <i class="fas fa-crosshairs"></i> Calibrar
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="four-channel-charts">
                             <div class="chart-panel"><h4>Flexor · comparación bilateral</h4><div class="chart-container">
                                 <canvas id="emg-chart" aria-label="Señales del músculo flexor izquierdo y derecho"></canvas>
-                                <div class="calibration-overlay" id="calibration-overlay" hidden role="status" aria-live="polite">
+                                <div class="calibration-overlay" data-calibration-group="flexor" hidden role="status" aria-live="polite">
                                     <div class="calibration-pulse"><i class="fas fa-wave-square"></i></div>
                                     <strong>Calibrando nivel de reposo</strong>
                                     <span>Mantén los músculos relajados y evita movimientos.</span>
-                                    <output id="calibration-countdown">5.0 s</output>
-                                    <div class="calibration-progress"><div id="calibration-progress-fill"></div></div>
+                                    <output class="calibration-countdown">5.0 s</output>
+                                    <div class="calibration-progress"><div class="calibration-progress-fill"></div></div>
                                 </div>
                             </div></div>
-                            <div class="chart-panel"><h4>Extensor · comparación bilateral</h4><div class="chart-container"><canvas id="extensor-chart" aria-label="Señales del músculo extensor izquierdo y derecho"></canvas></div></div>
+                            <div class="chart-panel"><h4>Extensor · comparación bilateral</h4><div class="chart-container">
+                                <canvas id="extensor-chart" aria-label="Señales del músculo extensor izquierdo y derecho"></canvas>
+                                <div class="calibration-overlay" data-calibration-group="extensor" hidden role="status" aria-live="polite">
+                                    <div class="calibration-pulse"><i class="fas fa-wave-square"></i></div>
+                                    <strong>Calibrando nivel de reposo</strong>
+                                    <span>Mantén los músculos relajados y evita movimientos.</span>
+                                    <output class="calibration-countdown">5.0 s</output>
+                                    <div class="calibration-progress"><div class="calibration-progress-fill"></div></div>
+                                </div>
+                            </div></div>
                             </div>
                             <div class="chart-footer">
                                 <div class="time-scale">
