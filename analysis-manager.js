@@ -5,6 +5,7 @@ class AnalysisManager {
         this.service = new AnalysisService();
         this.sessions = [];
         this.windowChart = null;
+        this.progressCharts = [];
     }
 
     async render() {
@@ -15,63 +16,102 @@ class AnalysisManager {
             <div class="analysis-header"><div><h2>Análisis descriptivo de sesiones</h2><p>Resultados computacionales de apoyo; no constituyen diagnóstico clínico.</p></div></div>
             <div class="card analysis-selector">
                 <label>Participante<select id="analysis-patient"><option value="">Seleccionar…</option>${participants.map(item => `<option value="${item.id}">${this.escape(item.participantCode)}${item.name ? ` · ${this.escape(item.name)}` : ''}</option>`).join('')}</select></label>
-                <label>Sesión A<select id="analysis-session-a" disabled><option value="">Seleccionar…</option></select></label>
-                <label>Sesión B para comparar<select id="analysis-session-b" disabled><option value="">Opcional…</option></select></label>
-                <button class="btn-control primary" id="analyze-session" disabled>Analizar sesión A</button>
-                <button class="btn-outline" id="compare-sessions" disabled>Comparar A y B</button>
+                <div class="analysis-session-field">
+                    <span>Sesiones</span>
+                    <details id="analysis-session-picker" class="analysis-multiselect">
+                        <summary id="analysis-session-summary">Selecciona un participante</summary>
+                        <div class="analysis-multiselect-panel">
+                            <div class="analysis-multiselect-actions"><button type="button" id="analysis-select-all">Seleccionar todas</button><button type="button" id="analysis-clear-all">Limpiar</button></div>
+                            <div id="analysis-session-options" class="analysis-session-options"><p>No hay sesiones disponibles.</p></div>
+                        </div>
+                    </details>
+                </div>
+                <button class="btn-control primary" id="analyze-session" disabled>Analizar selección</button>
             </div>
-            <div id="analysis-results" class="analysis-results"><div class="empty-state"><h3>Selecciona una sesión guardada</h3><p>Se calcularán métricas sobre la sesión completa y ventanas de un segundo.</p></div></div>`;
+            <div id="analysis-results" class="analysis-results"><div class="empty-state"><h3>Selecciona una o más sesiones guardadas</h3><p>Se calcularán las métricas de cada sesión y su evolución cronológica.</p></div></div>`;
         document.getElementById('analysis-patient').addEventListener('change', event => this.loadParticipantSessions(event.target.value));
-        document.getElementById('analysis-session-a').addEventListener('change', () => this.updateControls());
-        document.getElementById('analysis-session-b').addEventListener('change', () => this.updateControls());
+        document.getElementById('analysis-select-all').addEventListener('click', () => this.setAllSessions(true));
+        document.getElementById('analysis-clear-all').addEventListener('click', () => this.setAllSessions(false));
         document.getElementById('analyze-session').addEventListener('click', () => this.analyzeSelected().catch(error => {
             window.app?.showNotification(`No se pudo guardar el análisis: ${error.message}`, 'error');
         }));
-        document.getElementById('compare-sessions').addEventListener('click', () => this.compareSelected());
     }
 
     async loadParticipantSessions(patientId) {
         this.sessions = patientId ? await this.database.getPatientSessions(Number(patientId)) : [];
-        const options = this.sessions.map(session => `<option value="${session.id}">${this.escape(session.label || `Sesión ${session.id}`)} · ${this.formatDate(session.startedAt || session.date)} · ${this.escape(session.muscleType)}</option>`).join('');
-        const first = document.getElementById('analysis-session-a');
-        const second = document.getElementById('analysis-session-b');
-        first.innerHTML = `<option value="">Seleccionar…</option>${options}`;
-        second.innerHTML = `<option value="">Opcional…</option>${options}`;
-        first.disabled = !this.sessions.length;
-        second.disabled = !this.sessions.length;
+        this.sessions.sort((first, second) => this.sessionTime(second) - this.sessionTime(first));
+        const options = this.sessions.map(session => `<label class="analysis-session-option"><input type="checkbox" value="${session.id}"><span><strong>${this.escape(session.label || `Sesión ${session.id}`)}</strong><small>${this.formatDate(session.startedAt || session.date)} · ${this.escape(session.muscleType || 'Músculo no registrado')}</small></span></label>`).join('');
+        const picker = document.getElementById('analysis-session-picker');
+        picker.classList.toggle('disabled', !this.sessions.length);
+        picker.open = false;
+        document.getElementById('analysis-session-options').innerHTML = options || '<p>No hay sesiones guardadas para este participante.</p>';
+        document.querySelectorAll('#analysis-session-options input').forEach(input => input.addEventListener('change', () => this.updateControls()));
         this.updateControls();
     }
 
     updateControls() {
-        const first = document.getElementById('analysis-session-a')?.value;
-        const second = document.getElementById('analysis-session-b')?.value;
-        document.getElementById('analyze-session').disabled = !first;
-        document.getElementById('compare-sessions').disabled = !first || !second || first === second;
+        const count = this.selectedSessions().length;
+        document.getElementById('analyze-session').disabled = count === 0;
+        document.getElementById('analysis-session-summary').textContent = count ? `${count} ${count === 1 ? 'sesión seleccionada' : 'sesiones seleccionadas'}` : (this.sessions.length ? 'Seleccionar sesiones…' : 'Sin sesiones disponibles');
     }
 
-    getSelected(id) { return this.sessions.find(session => session.id === Number(document.getElementById(id)?.value)); }
+    selectedSessions() {
+        const ids = new Set([...document.querySelectorAll('#analysis-session-options input:checked')].map(input => String(input.value)));
+        return this.sessions.filter(session => ids.has(String(session.id)));
+    }
+
+    setAllSessions(selected) {
+        document.querySelectorAll('#analysis-session-options input').forEach(input => { input.checked = selected; });
+        this.updateControls();
+    }
 
     async analyzeSelected() {
-        const session = this.getSelected('analysis-session-a');
-        if (!session) return;
-        const analysis = this.service.analyzeSession(session, { windowSeconds: 1 });
-        await this.database.updateSession(session.id, {
-            analysis: { type: 'descriptive-v1', calculatedAt: new Date().toISOString(), ...analysis }
-        });
-        const metrics = analysis.metrics;
+        const sessions = this.selectedSessions();
+        if (!sessions.length) return;
+        const longitudinal = this.service.analyzeSessions(sessions, { windowSeconds: 1 });
+        const calculatedAt = new Date().toISOString();
+        await Promise.all(sessions.map(session => {
+            const entry = longitudinal.newestFirst.find(item => String(item.session.id) === String(session.id));
+            return this.database.updateSession(session.id, { analysis: { type: 'descriptive-v1', calculatedAt, ...entry.analysis } });
+        }));
         document.getElementById('analysis-results').innerHTML = `
-            <div class="analysis-notice">Flexores y extensores se analizan de forma independiente. Fórmula: SI = min(RMS izq., RMS der.) / max(RMS izq., RMS der.) × 100.</div>
-            <div class="analysis-metric-grid">
-                ${this.metric('RMS flexor izquierdo', metrics.flexor.left.rms, 'mV')}${this.metric('RMS flexor derecho', metrics.flexor.right.rms, 'mV')}
-                ${this.metric('RMS extensor izquierdo', metrics.extensor.left.rms, 'mV')}${this.metric('RMS extensor derecho', metrics.extensor.right.rms, 'mV')}
-                ${this.metric('Simetría flexor', metrics.flexor.bilateral.symmetryIndex, '%')}${this.metric('Simetría extensor', metrics.extensor.bilateral.symmetryIndex, '%')}
-                ${this.metric('Diferencia flexor', metrics.flexor.bilateral.percentageDifference, '%')}${this.metric('Diferencia extensor', metrics.extensor.bilateral.percentageDifference, '%')}
+            <div class="analysis-notice">Se analizaron <strong>${sessions.length}</strong> ${sessions.length === 1 ? 'sesión' : 'sesiones'}. La tabla muestra primero la más reciente; los gráficos avanzan cronológicamente de izquierda a derecha.</div>
+            <div class="analysis-progress-grid">
+                <div class="card"><h3>Evolución de RMS</h3><div class="analysis-chart-container"><canvas id="analysis-rms-progress"></canvas></div></div>
+                <div class="card"><h3>Evolución de simetría bilateral</h3><div class="analysis-chart-container"><canvas id="analysis-symmetry-progress"></canvas></div></div>
             </div>
-            <div class="card"><h3>Características del flexor</h3>${this.sideTable(metrics.flexor)}</div>
-            <div class="card"><h3>Características del extensor</h3>${this.sideTable(metrics.extensor)}</div>
-            <div class="card"><h3>Evolución por ventanas de 1 segundo</h3><div class="analysis-chart-container"><canvas id="analysis-window-chart"></canvas></div></div>
-            <div class="analysis-notice">Flexor dominante: <strong>${this.sideLabel(metrics.flexor.bilateral.dominantSide)}</strong>. Extensor dominante: <strong>${this.sideLabel(metrics.extensor.bilateral.dominantSide)}</strong>. Resultados descriptivos, no diagnósticos.</div>`;
-        this.renderWindowChart(analysis.windows);
+            <div class="card"><h3>Métricas por sesión</h3><div class="analysis-table-scroll">${this.longitudinalTable(longitudinal.newestFirst)}</div></div>
+            <div class="analysis-notice">Fórmula de simetría: min(RMS izq., RMS der.) / max(RMS izq., RMS der.) × 100. Los resultados son descriptivos y no constituyen diagnóstico.</div>`;
+        this.renderProgressCharts(longitudinal.chronological);
+    }
+
+    longitudinalTable(entries) {
+        return `<table><thead><tr><th>Fecha</th><th>Sesión</th><th>Par muscular</th><th>Flexor izq. RMS</th><th>Flexor der. RMS</th><th>Simetría flexor</th><th>Extensor izq. RMS</th><th>Extensor der. RMS</th><th>Simetría extensor</th></tr></thead><tbody>${entries.map(({ session, analysis }) => {
+            const metrics = analysis.metrics;
+            const musclePair = [session.flexorMuscleType || session.muscleType, session.extensorMuscleType].filter(Boolean).join(' / ') || 'No registrado';
+            return `<tr><td>${this.formatDateTime(session.startedAt)}</td><td>${this.escape(session.label || `Sesión ${session.id}`)}</td><td>${this.escape(musclePair)}</td><td>${this.number(metrics.flexor.left.rms)} mV</td><td>${this.number(metrics.flexor.right.rms)} mV</td><td>${this.number(metrics.flexor.bilateral.symmetryIndex)}%</td><td>${this.number(metrics.extensor.left.rms)} mV</td><td>${this.number(metrics.extensor.right.rms)} mV</td><td>${this.number(metrics.extensor.bilateral.symmetryIndex)}%</td></tr>`;
+        }).join('')}</tbody></table>`;
+    }
+
+    renderProgressCharts(entries) {
+        this.progressCharts.forEach(chart => chart.destroy());
+        this.progressCharts = [];
+        if (typeof Chart === 'undefined') return;
+        const labels = entries.map(({ session }) => this.formatDate(session.startedAt));
+        const line = (label, selector, color) => ({ label, data: entries.map(({ analysis }) => selector(analysis.metrics)), borderColor: color, backgroundColor: color, tension: 0.2, pointRadius: 4 });
+        const rmsCanvas = document.getElementById('analysis-rms-progress');
+        const symmetryCanvas = document.getElementById('analysis-symmetry-progress');
+        if (rmsCanvas) this.progressCharts.push(new Chart(rmsCanvas, { type: 'line', data: { labels, datasets: [
+            line('Flexor izquierdo', metrics => metrics.flexor.left.rms, '#2563eb'), line('Flexor derecho', metrics => metrics.flexor.right.rms, '#dc2626'),
+            line('Extensor izquierdo', metrics => metrics.extensor.left.rms, '#0891b2'), line('Extensor derecho', metrics => metrics.extensor.right.rms, '#d97706')
+        ] }, options: this.progressChartOptions('RMS (mV)') }));
+        if (symmetryCanvas) this.progressCharts.push(new Chart(symmetryCanvas, { type: 'line', data: { labels, datasets: [
+            line('Simetría flexor', metrics => metrics.flexor.bilateral.symmetryIndex, '#059669'), line('Simetría extensor', metrics => metrics.extensor.bilateral.symmetryIndex, '#7c3aed')
+        ] }, options: this.progressChartOptions('Simetría (%)', 0, 100) }));
+    }
+
+    progressChartOptions(title, min, max) {
+        return { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false }, scales: { x: { title: { display: true, text: 'Fecha de sesión' } }, y: { title: { display: true, text: title }, ...(min !== undefined ? { min, max } : {}) } } };
     }
 
     compareSelected() {
@@ -139,6 +179,8 @@ class AnalysisManager {
     }
     download(content, filename, type) { const url = URL.createObjectURL(new Blob([content], { type })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); URL.revokeObjectURL(url); }
     formatDate(value) { return new Date(value).toLocaleDateString('es-AR'); }
+    formatDateTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Fecha no registrada' : date.toLocaleString('es-AR'); }
+    sessionTime(session) { const value = new Date(session?.startedAt || session?.date || 0).getTime(); return Number.isFinite(value) ? value : 0; }
     escape(value) { return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]); }
 }
 

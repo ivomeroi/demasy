@@ -103,3 +103,17 @@ test('analiza flexores y extensores bilateralmente de forma independiente', () =
     assert.equal(result.flexor.left.rms, 1);
     assert.equal(result.extensor.left.rms, 3);
 });
+
+test('ordena múltiples sesiones para análisis longitudinal', () => {
+    const service = new AnalysisService();
+    const samples = [{ time: 0, left: -1, right: -2 }, { time: 1, left: 1, right: 2 }];
+    const sessions = [
+        { id: 2, patientId: 1, startedAt: '2026-02-02T10:00:00Z', samples },
+        { id: 1, patientId: 1, startedAt: '2026-01-01T10:00:00Z', samples },
+        { id: 3, patientId: 1, startedAt: '2026-03-03T10:00:00Z', samples }
+    ];
+    const result = service.analyzeSessions(sessions);
+    assert.deepEqual(result.chronological.map(item => item.session.id), [1, 2, 3]);
+    assert.deepEqual(result.newestFirst.map(item => item.session.id), [3, 2, 1]);
+    assert.equal(result.newestFirst[0].analysis.metrics.flexor.bilateral.symmetryIndex, 50);
+});

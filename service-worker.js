@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demasy-v1-four-channel-calibration-6';
+const CACHE_NAME = 'demasy-v1-longitudinal-analysis-7';
 const APP_SHELL = [
     '/', '/index.html', '/styles.css', '/DEMASY-LOGO.jpeg',
     '/vendor/chart.min.js', '/vendor/fontawesome/css/all.min.css',

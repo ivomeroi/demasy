@@ -206,6 +206,24 @@
             };
         }
 
+        analyzeSessions(sessions, options = {}) {
+            const entries = (Array.isArray(sessions) ? sessions : []).map(session => ({
+                session: this.configurationSnapshot(session),
+                analysis: this.analyzeSession(session, options),
+                timestamp: this.sessionTimestamp(session)
+            }));
+            const chronological = [...entries].sort((first, second) => first.timestamp - second.timestamp);
+            return {
+                chronological,
+                newestFirst: [...chronological].reverse()
+            };
+        }
+
+        sessionTimestamp(session) {
+            const timestamp = new Date(session?.startedAt || session?.date || 0).getTime();
+            return Number.isFinite(timestamp) ? timestamp : 0;
+        }
+
         checkCompatibility(first, second) {
             const reasons = [];
             if (Number(first?.patientId) !== Number(second?.patientId)) reasons.push('Deben pertenecer al mismo participante');
