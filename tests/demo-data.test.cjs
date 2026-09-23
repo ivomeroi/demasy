@@ -18,14 +18,15 @@ test('genera una señal demo determinista, bipolar y con frecuencia coherente', 
     assert(first.some(sample => sample.extensor.left.amplitude !== 0));
 });
 
-test('cada participante demo posee dos sesiones sintéticas coherentes y etiquetadas', () => {
-    assert.equal(DEMO_PROFILES.length, 3);
+test('los diez participantes demo poseen dos sesiones sintéticas coherentes y etiquetadas', () => {
+    assert.equal(DEMO_PROFILES.length, 10);
+    assert.equal(new Set(DEMO_PROFILES.map(profile => profile.participant.participantCode)).size, 10);
     for (const profile of DEMO_PROFILES) {
         assert.equal(profile.sessions.length, 2);
         const session = buildDemoSession(1, profile.sessions[0], profile.participant.participantCode);
         assert.equal(session.samples.length, 3000);
         assert.equal(session.source.type, 'simulation');
-        assert.equal(session.source.provider, 'demasy-demo-v3');
+        assert.equal(session.source.provider, 'demasy-demo-v4');
         assert.equal(session.configuration.scenario, profile.sessions[0].scenario);
         assert.equal(session.statistics.bilateral.symmetryIndex, profile.sessions[0].symmetry);
     }

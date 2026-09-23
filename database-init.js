@@ -3,7 +3,7 @@
  * Sets up sample data and ensures proper database initialization
  */
 
-const DEMO_DATASET_VERSION = 3;
+const DEMO_DATASET_VERSION = 4;
 const DEMO_DATASET_KEY = `demoDataset.v${DEMO_DATASET_VERSION}`;
 const DEMO_PROFILES = [
     {
@@ -39,6 +39,83 @@ const DEMO_PROFILES = [
         sessions: [
             { date: '2026-08-05T12:00:00.000Z', label: 'Evaluación preventiva', muscleType: 'gastrocnemius', scenario: 'symmetric', cadence: 80, resistance: 30, leftScale: 0.97, rightScale: 1, symmetry: 96, notes: 'Caso simulado: patrón bilateral dentro del rango esperado.' },
             { date: '2026-08-20T12:00:00.000Z', label: 'Control preventivo', muscleType: 'gastrocnemius', scenario: 'phase-delay', cadence: 85, resistance: 35, leftScale: 0.98, rightScale: 1, phaseDelayDegrees: 12, symmetry: 95, notes: 'Caso simulado: amplitud simétrica con pequeño retraso temporal derecho.' }
+        ]
+    },
+    {
+        participant: {
+            participantCode: 'DEMO-004', name: 'Lucía Fernández', email: 'lucia.fernandez@example.com',
+            dateOfBirth: '1990-02-18', gender: 'female', height: 168, weight: 63,
+            medicalHistory: ['Esguince de tobillo derecho 2024'], notes: 'Caso sintético: recuperación funcional del miembro inferior derecho.'
+        },
+        sessions: [
+            { date: '2026-07-10T13:00:00.000Z', label: 'Evaluación inicial de gemelos', muscleType: 'gastrocnemius', scenario: 'right-weakness', cadence: 62, resistance: 30, leftScale: 1, rightScale: 0.66, symmetry: 70, notes: 'Caso simulado: menor activación derecha posterior al esguince.' },
+            { date: '2026-08-10T13:00:00.000Z', label: 'Control de gemelos', muscleType: 'gastrocnemius', scenario: 'right-weakness', cadence: 68, resistance: 35, leftScale: 1, rightScale: 0.82, symmetry: 86, notes: 'Caso simulado: recuperación parcial de la activación derecha.' }
+        ]
+    },
+    {
+        participant: {
+            participantCode: 'DEMO-005', name: 'Diego Martínez', email: 'diego.martinez@example.com',
+            dateOfBirth: '1983-09-04', gender: 'male', height: 175, weight: 78,
+            medicalHistory: ['Reconstrucción de ligamento cruzado anterior izquierdo 2021'], notes: 'Caso sintético: seguimiento tardío de fuerza del cuádriceps.'
+        },
+        sessions: [
+            { date: '2026-07-12T16:00:00.000Z', label: 'Control funcional de cuádriceps', muscleType: 'quadriceps', scenario: 'left-weakness', cadence: 68, resistance: 42, leftScale: 0.73, rightScale: 1, symmetry: 78, notes: 'Caso simulado: asimetría izquierda residual.' },
+            { date: '2026-08-12T16:00:00.000Z', label: 'Reevaluación de cuádriceps', muscleType: 'quadriceps', scenario: 'left-weakness', cadence: 72, resistance: 45, leftScale: 0.8, rightScale: 1, symmetry: 84, notes: 'Caso simulado: mejora moderada manteniendo asimetría.' }
+        ]
+    },
+    {
+        participant: {
+            participantCode: 'DEMO-006', name: 'Sofía Pérez', email: 'sofia.perez@example.com',
+            dateOfBirth: '1995-12-11', gender: 'female', height: 162, weight: 56,
+            medicalHistory: [], notes: 'Caso sintético: deportista sin lesión y patrón bilateral estable.'
+        },
+        sessions: [
+            { date: '2026-07-14T11:00:00.000Z', label: 'Línea de base bilateral', muscleType: 'quadriceps', scenario: 'symmetric', cadence: 82, resistance: 38, leftScale: 0.96, rightScale: 1, symmetry: 95, notes: 'Caso simulado: activación bilateral estable.' },
+            { date: '2026-08-14T11:00:00.000Z', label: 'Control bilateral', muscleType: 'quadriceps', scenario: 'symmetric', cadence: 82, resistance: 38, leftScale: 0.98, rightScale: 1, symmetry: 97, notes: 'Caso simulado: condiciones equivalentes y simetría conservada.' }
+        ]
+    },
+    {
+        participant: {
+            participantCode: 'DEMO-007', name: 'Martín Sánchez', email: 'martin.sanchez@example.com',
+            dateOfBirth: '1975-05-27', gender: 'male', height: 182, weight: 88,
+            medicalHistory: ['Distensión de isquiotibial izquierdo 2025'], notes: 'Caso sintético: retorno gradual a la actividad luego de lesión muscular.'
+        },
+        sessions: [
+            { date: '2026-07-16T14:30:00.000Z', label: 'Retorno inicial de isquiotibiales', muscleType: 'hamstring', scenario: 'left-weakness', cadence: 60, resistance: 32, leftScale: 0.58, rightScale: 1, symmetry: 65, notes: 'Caso simulado: diferencia marcada del lado izquierdo.' },
+            { date: '2026-08-16T14:30:00.000Z', label: 'Control de retorno', muscleType: 'hamstring', scenario: 'left-weakness', cadence: 66, resistance: 37, leftScale: 0.75, rightScale: 1, symmetry: 80, notes: 'Caso simulado: evolución favorable con déficit persistente.' }
+        ]
+    },
+    {
+        participant: {
+            participantCode: 'DEMO-008', name: 'Valentina Romero', email: 'valentina.romero@example.com',
+            dateOfBirth: '1988-06-30', gender: 'female', height: 170, weight: 65,
+            medicalHistory: ['Tendinopatía aquílea bilateral'], notes: 'Caso sintético: comparación bilateral con retraso temporal.'
+        },
+        sessions: [
+            { date: '2026-07-18T10:30:00.000Z', label: 'Evaluación aquílea funcional', muscleType: 'gastrocnemius', scenario: 'phase-delay', cadence: 64, resistance: 34, leftScale: 0.91, rightScale: 1, phaseDelayDegrees: 24, symmetry: 90, notes: 'Caso simulado: amplitud próxima a simétrica con retraso temporal.' },
+            { date: '2026-08-18T10:30:00.000Z', label: 'Control aquíleo funcional', muscleType: 'gastrocnemius', scenario: 'phase-delay', cadence: 68, resistance: 36, leftScale: 0.95, rightScale: 1, phaseDelayDegrees: 10, symmetry: 94, notes: 'Caso simulado: reducción del retraso temporal.' }
+        ]
+    },
+    {
+        participant: {
+            participantCode: 'DEMO-009', name: 'Javier Torres', email: 'javier.torres@example.com',
+            dateOfBirth: '1969-01-19', gender: 'male', height: 173, weight: 81,
+            medicalHistory: ['Artrosis leve de rodilla derecha'], notes: 'Caso sintético: diferencia funcional derecha sostenida.'
+        },
+        sessions: [
+            { date: '2026-07-20T15:00:00.000Z', label: 'Evaluación de rodilla derecha', muscleType: 'quadriceps', scenario: 'right-weakness', cadence: 58, resistance: 28, leftScale: 1, rightScale: 0.7, symmetry: 75, notes: 'Caso simulado: menor activación derecha.' },
+            { date: '2026-08-20T15:00:00.000Z', label: 'Control de rodilla derecha', muscleType: 'quadriceps', scenario: 'right-weakness', cadence: 62, resistance: 30, leftScale: 1, rightScale: 0.76, symmetry: 81, notes: 'Caso simulado: mejora leve del lado derecho.' }
+        ]
+    },
+    {
+        participant: {
+            participantCode: 'DEMO-010', name: 'Camila Díaz', email: 'camila.diaz@example.com',
+            dateOfBirth: '1998-10-06', gender: 'female', height: 160, weight: 54,
+            medicalHistory: [], notes: 'Caso sintético: evaluación preventiva con evolución estable.'
+        },
+        sessions: [
+            { date: '2026-07-22T09:00:00.000Z', label: 'Evaluación preventiva bilateral', muscleType: 'hamstring', scenario: 'symmetric', cadence: 76, resistance: 33, leftScale: 0.94, rightScale: 1, symmetry: 93, notes: 'Caso simulado: leve diferencia sin antecedente de lesión.' },
+            { date: '2026-08-22T09:00:00.000Z', label: 'Seguimiento preventivo bilateral', muscleType: 'hamstring', scenario: 'symmetric', cadence: 76, resistance: 33, leftScale: 0.97, rightScale: 1, symmetry: 96, notes: 'Caso simulado: patrón bilateral estable en condiciones equivalentes.' }
         ]
     }
 ];
@@ -114,7 +191,7 @@ function buildDemoSession(patientId, definition, seedText) {
         date: definition.date, startedAt: definition.date, duration: durationSeconds, durationSeconds,
         cadence: definition.cadence, resistance: definition.resistance, samples,
         channelSchema: 'flexor-extensor-4ch',
-        source: { type: 'simulation', provider: 'demasy-demo-v3', scenario: definition.scenario, version: DEMO_DATASET_VERSION },
+        source: { type: 'simulation', provider: `demasy-demo-v${DEMO_DATASET_VERSION}`, scenario: definition.scenario, version: DEMO_DATASET_VERSION },
         configuration: {
             label: definition.label, muscleType: definition.muscleType, testType: 'cycling',
             plannedDurationSeconds: durationSeconds, cadenceRpm: definition.cadence,
