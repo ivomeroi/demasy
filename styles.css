@@ -1848,7 +1848,7 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
   border: 0;
 }
 
-.analysis-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; align-items: end; margin: 1rem 0; }
+.analysis-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; align-items: end; margin: 1rem 0; overflow: visible; position: relative; z-index: 5; }
 .analysis-selector label { display: grid; gap: 0.4rem; color: var(--text-secondary); }
 .analysis-selector select { width: 100%; }
 .analysis-session-field { display: grid; gap: 0.4rem; color: var(--text-secondary); min-width: 240px; }
