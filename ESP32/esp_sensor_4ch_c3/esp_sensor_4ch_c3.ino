@@ -1,264 +1,245 @@
-#include <WiFi.h>
-#include <esp_now.h>
-#include <esp_wifi.h>
-#include <esp_idf_version.h>
+#include <NimBLEDevice.h>
 #include <math.h>
 
-#define SAMPLE_RATE 500
-#define BAUD_RATE 115200
-#define INPUT_PIN 0
+// Cambiar a 1, 2, 3 o 4 antes de cargar cada sensor.
+#define SENSOR_NODE_ID 1
+#if SENSOR_NODE_ID < 1 || SENSOR_NODE_ID > 4
+#error "SENSOR_NODE_ID debe estar entre 1 y 4"
+#endif
+
+#define EMG_PIN 0
+#define BATTERY_PIN 1
+#define BATTERY_LED_PIN 3
+#define SAMPLE_RATE_HZ 500
+#define BLE_RATE_HZ 100
 #define BUFFER_SIZE 128
-#ifndef SENSOR_NODE_ID\n#define SENSOR_NODE_ID 1 // 1 flexor izq., 2 flexor der., 3 extensor izq., 4 extensor der.\n#endif\n#if SENSOR_NODE_ID < 1 || SENSOR_NODE_ID > 4\n#error "SENSOR_NODE_ID debe estar entre 1 y 4"\n#endif\n#define SLAVE_ID SENSOR_NODE_ID
-#define WIFI_CHANNEL 1
-#define DEBUG_EVERY_MS 1000
+#define BATTERY_LOW_MV 3400
+#define BATTERY_DIVIDER 2.0f       // Divisor resistivo 47k/47k.
+#define BATTERY_CALIBRATION 1.00f  // Ajustar comparando con un multimetro.
 #define RAW_SHIFT_ARTIFACT_THRESHOLD 500
 #define ENVELOPE_ARTIFACT_THRESHOLD 100
 #define FLAG_ADC_CLIPPED 0x01
 #define FLAG_PRESSURE_ARTIFACT 0x02
 
-int circular_buffer[BUFFER_SIZE] = {0};
-int data_index = 0;
-long sum = 0;
+#define SENSOR_SERVICE_UUID "7d100001-7e2a-4f21-8b77-2c7a5db10000"
+#define SENSOR_DATA_UUID    "7d100002-7e2a-4f21-8b77-2c7a5db10000"
 
-float dcOffset = 0;
-uint32_t sentOk = 0;
-uint32_t sentFail = 0;
-uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
+// 16 bytes: funciona incluso con el ATT payload minimo de 20 bytes.
 typedef struct __attribute__((packed)) {
   uint8_t nodeId;
   uint32_t seq;
   float signal;
   uint16_t envelope;
-  uint32_t tMicros;
   uint16_t raw;
   uint8_t flags;
-} EMGPacket;
+  uint16_t batteryMv;
+} SensorPacket;
 
-EMGPacket txPacket = {0};
+static_assert(sizeof(SensorPacket) == 16, "SensorPacket debe ocupar 16 bytes");
 
-#if ESP_IDF_VERSION_MAJOR >= 5
-void onEspNowSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
-  (void)tx_info;
-  if (status == ESP_NOW_SEND_SUCCESS) sentOk++;
-  else sentFail++;
-}
-#else
-void onEspNowSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  (void)mac_addr;
-  if (status == ESP_NOW_SEND_SUCCESS) sentOk++;
-  else sentFail++;
-}
-#endif
+NimBLECharacteristic *dataCharacteristic = nullptr;
+bool masterConnected = false;
+SensorPacket packet = {};
+int envelopeBuffer[BUFFER_SIZE] = {};
+int envelopeIndex = 0;
+long envelopeSum = 0;
+float dcOffset = 0.0f;
+float latestSignal = 0.0f;
+uint16_t latestEnvelope = 0;
+uint16_t latestRaw = 0;
+uint8_t latestFlags = 0;
+uint16_t batteryMv = 0;
+bool batteryLow = false;
 
-void setupEspNow();
-void sendPacket(float signal, int envelope, int raw, uint8_t flags);
-uint8_t classifySignal(int raw, float signal, int envelope);
-
-
-int readADC()
-{
-  long adc = 0;
-
-  for(int i = 0; i < 8; i++)
-  {
-    adc += analogRead(INPUT_PIN);
+class SensorServerCallbacks : public NimBLEServerCallbacks {
+  void onConnect(NimBLEServer *, NimBLEConnInfo &) override {
+    masterConnected = true;
   }
 
-  return adc / 8;
+  void onDisconnect(NimBLEServer *, NimBLEConnInfo &, int) override {
+    masterConnected = false;
+    NimBLEDevice::startAdvertising();
+  }
+};
+
+int readEmgADC() {
+  long total = 0;
+  for (int i = 0; i < 8; i++) total += analogRead(EMG_PIN);
+  return total / 8;
 }
 
-void setup()
-{
-  Serial.begin(BAUD_RATE);
-  delay(1000);
-  Serial.println("SENSOR BOOT");
-
-  setupEspNow();
-
-  analogReadResolution(12);
-  analogSetPinAttenuation(INPUT_PIN, ADC_11db);
-
-  long offsetSum = 0;
-
-  for(int i=0;i<1000;i++)
-  {
-    offsetSum += readADC();
-    delay(1);
+uint16_t readBatteryMv() {
+  uint32_t total = 0;
+  for (int i = 0; i < 20; i++) {
+    total += analogReadMilliVolts(BATTERY_PIN);
+    delayMicroseconds(150);
   }
-
-  dcOffset = offsetSum / 1000.0;
-  Serial.print("EMG READY node=");
-  Serial.print(SLAVE_ID);
-  Serial.print(",pin=");
-  Serial.print(INPUT_PIN);
-  Serial.print(",offset=");
-  Serial.println(dcOffset, 2);
+  const float value = (total / 20.0f) * BATTERY_DIVIDER * BATTERY_CALIBRATION;
+  return (uint16_t)constrain((int)value, 0, 5000);
 }
 
-void loop()
-{
-  static unsigned long lastMicros = 0;
-  if(micros() - lastMicros >= (1000000 / SAMPLE_RATE))
-  {
-    lastMicros += (1000000 / SAMPLE_RATE);
-    int raw = readADC();
-    float centered = raw - dcOffset;
-    float signal = EMGFilter(centered);
-
-    if(fabsf(signal) < 10)
-    {
-      signal = 0;
-    }
-    int envelope = getEnvelope((int)fabsf(signal));
-    uint8_t flags = classifySignal(raw, signal, envelope);
-
-    sendPacket(signal, envelope, raw, flags);
-
-    static unsigned long lastDebugMs = 0;
-    const unsigned long nowMs = millis();
-    if (nowMs - lastDebugMs >= DEBUG_EVERY_MS)
-    {
-      lastDebugMs = nowMs;
-      Serial.print("node=");
-      Serial.print(SLAVE_ID);
-      Serial.print(",raw=");
-      Serial.print(raw);
-      Serial.print(",signal=");
-      Serial.print(signal, 2);
-      Serial.print(",envelope=");
-      Serial.print(envelope);
-      Serial.print(",flags=");
-      Serial.print(flags);
-      Serial.print(",sentOk=");
-      Serial.print(sentOk);
-      Serial.print(",sentFail=");
-      Serial.println(sentFail);
-    }
-  }
+int getEnvelope(int absoluteEmg) {
+  envelopeSum -= envelopeBuffer[envelopeIndex];
+  envelopeBuffer[envelopeIndex] = absoluteEmg;
+  envelopeSum += absoluteEmg;
+  envelopeIndex = (envelopeIndex + 1) % BUFFER_SIZE;
+  return envelopeSum / BUFFER_SIZE;
 }
 
-void setupEspNow()
-{
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-  esp_wifi_set_channel(WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
-
-  if (esp_now_init() != ESP_OK)
+float EMGFilter(float input) {
+  float output = input;
   {
-    Serial.println("ERROR: ESP-NOW init");
-    return;
+    static float z1 = 0, z2 = 0;
+    const float x = output - 0.05159732f * z1 - 0.36347401f * z2;
+    output = 0.01856301f * x + 0.03712602f * z1 + 0.01856301f * z2;
+    z2 = z1;
+    z1 = x;
   }
-
-  esp_now_register_send_cb(onEspNowSent);
-
-  esp_now_peer_info_t peerInfo = {};
-  for (int i = 0; i < 6; i++)
   {
-    peerInfo.peer_addr[i] = broadcastAddress[i];
+    static float z1 = 0, z2 = 0;
+    const float x = output + 0.53945795f * z1 - 0.39764934f * z2;
+    output = x - 2.0f * z1 + z2;
+    z2 = z1;
+    z1 = x;
   }
-  peerInfo.channel = WIFI_CHANNEL;
-  peerInfo.encrypt = false;
-  peerInfo.ifidx = WIFI_IF_STA;
-
-  if (!esp_now_is_peer_exist(peerInfo.peer_addr))
   {
-    if (esp_now_add_peer(&peerInfo) != ESP_OK)
-    {
-      Serial.println("ERROR: ESP-NOW peer");
-      return;
-    }
+    static float z1 = 0, z2 = 0;
+    const float x = output - 0.47319594f * z1 - 0.70744137f * z2;
+    output = x + 2.0f * z1 + z2;
+    z2 = z1;
+    z1 = x;
   }
-
-  Serial.print("ESP-NOW READY channel=");
-  Serial.println(WIFI_CHANNEL);
+  {
+    static float z1 = 0, z2 = 0;
+    const float x = output + 1.00211112f * z1 - 0.74520226f * z2;
+    output = x - 2.0f * z1 + z2;
+    z2 = z1;
+    z1 = x;
+  }
+  return output;
 }
 
-void sendPacket(float signal, int envelope, int raw, uint8_t flags)
-{
-  txPacket.nodeId = SLAVE_ID;
-  txPacket.seq++;
-  txPacket.signal = signal;
-  txPacket.envelope = (uint16_t)max(0, min(4095, envelope));
-  txPacket.tMicros = micros();
-  txPacket.raw = (uint16_t)max(0, min(4095, raw));
-  txPacket.flags = flags;
-
-  esp_now_send(broadcastAddress, (uint8_t *)&txPacket, sizeof(txPacket));
-}
-
-uint8_t classifySignal(int raw, float signal, int envelope)
-{
-  (void)signal;
+uint8_t classifySignal(int raw, int envelope) {
   uint8_t flags = 0;
-
-  if (raw <= 50 || raw >= 4000)
-  {
-    flags |= FLAG_ADC_CLIPPED;
-  }
-
-  const float rawShift = fabsf(raw - dcOffset);
-  if (rawShift >= RAW_SHIFT_ARTIFACT_THRESHOLD && envelope >= ENVELOPE_ARTIFACT_THRESHOLD)
-  {
+  if (raw <= 50 || raw >= 4000) flags |= FLAG_ADC_CLIPPED;
+  if (fabsf(raw - dcOffset) >= RAW_SHIFT_ARTIFACT_THRESHOLD &&
+      envelope >= ENVELOPE_ARTIFACT_THRESHOLD) {
     flags |= FLAG_PRESSURE_ARTIFACT;
   }
-
   return flags;
 }
 
-int getEnvelope(int abs_emg)
-{
-  sum -= circular_buffer[data_index];
+void setupBle() {
+  char deviceName[18];
+  snprintf(deviceName, sizeof(deviceName), "DEMASY-S%u", SENSOR_NODE_ID);
+  NimBLEDevice::init(deviceName);
+  NimBLEDevice::setPower(3);
 
-  sum += abs_emg;
+  NimBLEServer *server = NimBLEDevice::createServer();
+  server->setCallbacks(new SensorServerCallbacks());
+  NimBLEService *service = server->createService(SENSOR_SERVICE_UUID);
+  dataCharacteristic = service->createCharacteristic(
+    SENSOR_DATA_UUID,
+    NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY,
+    sizeof(SensorPacket)
+  );
+  server->start();
 
-  circular_buffer[data_index] = abs_emg;
-
-  data_index++;
-
-  if(data_index >= BUFFER_SIZE)
-  {
-    data_index = 0;
-  }
-
-  return sum / BUFFER_SIZE;
+  NimBLEAdvertising *advertising = NimBLEDevice::getAdvertising();
+  advertising->setName(deviceName);
+  advertising->addServiceUUID(SENSOR_SERVICE_UUID);
+  advertising->enableScanResponse(true);
+  advertising->start();
 }
 
-float EMGFilter(float input)
-{
-  float output = input;
+void updateBatteryAndLed() {
+  static uint32_t lastRead = 0;
+  static uint32_t lastBlink = 0;
+  static bool led = false;
+  const uint32_t now = millis();
 
-  {
-    static float z1, z2;
-    float x = output - 0.05159732*z1 - 0.36347401*z2;
-    output = 0.01856301*x + 0.03712602*z1 + 0.01856301*z2;
-    z2 = z1;
-    z1 = x;
+  if (now - lastRead >= 1000) {
+    lastRead = now;
+    batteryMv = readBatteryMv();
+    batteryLow = batteryMv < BATTERY_LOW_MV;
   }
 
-  {
-    static float z1, z2;
-    float x = output + 0.53945795*z1 - 0.39764934*z2;
-    output = x - 2.0*z1 + z2;
-    z2 = z1;
-    z1 = x;
+  if (!batteryLow) {
+    digitalWrite(BATTERY_LED_PIN, HIGH);
+  } else if (now - lastBlink >= 500) {
+    lastBlink = now;
+    led = !led;
+    digitalWrite(BATTERY_LED_PIN, led);
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(BATTERY_LED_PIN, OUTPUT);
+  analogReadResolution(12);
+  analogSetPinAttenuation(EMG_PIN, ADC_11db);
+  analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
+
+  batteryMv = readBatteryMv();
+  long total = 0;
+  Serial.println("Mantener el musculo relajado: calibrando...");
+  for (int i = 0; i < 1000; i++) {
+    total += readEmgADC();
+    delay(1);
+  }
+  dcOffset = total / 1000.0f;
+
+  setupBle();
+  Serial.printf(
+    "DEMASY-S%u listo, offset=%.2f, bateria=%.2f V\n",
+    SENSOR_NODE_ID,
+    dcOffset,
+    batteryMv / 1000.0f
+  );
+}
+
+void loop() {
+  static uint32_t lastSampleUs = 0;
+  static uint32_t lastNotifyUs = 0;
+  static uint32_t lastDebugMs = 0;
+  const uint32_t nowUs = micros();
+
+  if ((uint32_t)(nowUs - lastSampleUs) >= 1000000UL / SAMPLE_RATE_HZ) {
+    lastSampleUs += 1000000UL / SAMPLE_RATE_HZ;
+    const int raw = readEmgADC();
+    float signal = EMGFilter(raw - dcOffset);
+    if (fabsf(signal) < 10.0f) signal = 0.0f;
+    const int envelope = getEnvelope((int)fabsf(signal));
+    latestRaw = constrain(raw, 0, 4095);
+    latestSignal = signal;
+    latestEnvelope = constrain(envelope, 0, 4095);
+    latestFlags = classifySignal(raw, envelope);
   }
 
-  {
-    static float z1, z2;
-    float x = output - 0.47319594*z1 - 0.70744137*z2;
-    output = x + 2.0*z1 + z2;
-    z2 = z1;
-    z1 = x;
+  if (masterConnected && (uint32_t)(nowUs - lastNotifyUs) >= 1000000UL / BLE_RATE_HZ) {
+    lastNotifyUs += 1000000UL / BLE_RATE_HZ;
+    packet.nodeId = SENSOR_NODE_ID;
+    packet.seq++;
+    packet.signal = latestSignal;
+    packet.envelope = latestEnvelope;
+    packet.raw = latestRaw;
+    packet.flags = latestFlags;
+    packet.batteryMv = batteryMv;
+    dataCharacteristic->notify((uint8_t *)&packet, sizeof(packet));
   }
 
-  {
-    static float z1, z2;
-    float x = output + 1.00211112*z1 - 0.74520226*z2;
-    output = x - 2.0*z1 + z2;
-    z2 = z1;
-    z1 = x;
-  }
+  updateBatteryAndLed();
 
-  return output;
+  if (millis() - lastDebugMs >= 1000) {
+    lastDebugMs = millis();
+    Serial.printf(
+      "node=%u, conectado=%u, raw=%u, signal=%.2f, env=%u, bat=%.2fV\n",
+      SENSOR_NODE_ID,
+      masterConnected,
+      latestRaw,
+      latestSignal,
+      latestEnvelope,
+      batteryMv / 1000.0f
+    );
+  }
 }
