@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demasy-v1-demo-dataset-10';
+const CACHE_NAME = 'demasy-v1-asymmetry-metrics-11';
 const APP_SHELL = [
     '/', '/index.html', '/styles.css', '/DEMASY-LOGO.jpeg',
     '/vendor/chart.min.js', '/vendor/fontawesome/css/all.min.css',

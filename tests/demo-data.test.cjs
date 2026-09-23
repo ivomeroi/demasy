@@ -27,8 +27,10 @@ test('los cinco participantes demo poseen diez sesiones longitudinales coherente
         const session = buildDemoSession(1, profile.sessions[0], profile.participant.participantCode);
         assert.equal(session.samples.length, 3000);
         assert.equal(session.source.type, 'simulation');
-        assert.equal(session.source.provider, 'demasy-demo-v5');
+        assert.equal(session.source.provider, 'demasy-demo-v6');
         assert.equal(session.configuration.scenario, profile.sessions[0].scenario);
-        assert.equal(session.statistics.bilateral.symmetryIndex, profile.sessions[0].symmetry);
+        assert(Number.isFinite(session.statistics.flexor.bilateral.relativeAsymmetry));
+        assert(Number.isFinite(session.statistics.flexor.bilateral.robinsonAsymmetry));
+        assert(Number.isFinite(session.statistics.flexor.bilateral.weightedUniversalAsymmetry));
     }
 });

@@ -3,7 +3,7 @@
  * Sets up sample data and ensures proper database initialization
  */
 
-const DEMO_DATASET_VERSION = 5;
+const DEMO_DATASET_VERSION = 6;
 const DEMO_DATASET_KEY = `demoDataset.v${DEMO_DATASET_VERSION}`;
 const RETIRED_DEMO_CODES = ['DEMO-006', 'DEMO-007', 'DEMO-008', 'DEMO-009', 'DEMO-010'];
 
@@ -155,7 +155,9 @@ async function createSampleSessions(db, patient, definitions) {
 function buildDemoSession(patientId, definition, seedText) {
     const durationSeconds = 30;
     const samples = generateCoherentEMGData({ ...definition, durationSeconds, sampleRate: 100, seed: hashSeed(seedText) });
-    const difference = 100 - definition.symmetry;
+    const flexorBilateral = calculateDemoBilateral(samples, 'flexor');
+    const extensorBilateral = calculateDemoBilateral(samples, 'extensor');
+    const aggregateDifference = (flexorBilateral.difference + extensorBilateral.difference) / 2;
     return {
         patientId, label: definition.label, muscleType: definition.muscleType, flexorMuscleType: definition.muscleType,
         extensorMuscleType: ({ quadriceps: 'hamstring', hamstring: 'quadriceps', gastrocnemius: 'tibialis' })[definition.muscleType] || 'complementary', sessionType: 'cycling',
@@ -170,12 +172,44 @@ function buildDemoSession(patientId, definition, seedText) {
             phaseDelayDegrees: definition.phaseDelayDegrees || 0, source: { type: 'simulation' }
         },
         statistics: {
-            flexor: { bilateral: { symmetryIndex: definition.symmetry, asymmetryLevel: difference, difference } },
-            extensor: { bilateral: { symmetryIndex: Math.min(100, definition.symmetry + 3), asymmetryLevel: Math.max(0, difference - 3), difference: Math.max(0, difference - 3) } },
-            bilateral: { symmetryIndex: definition.symmetry, asymmetryLevel: difference, difference },
+            flexor: { bilateral: flexorBilateral },
+            extensor: { bilateral: extensorBilateral },
+            bilateral: {
+                symmetryIndex: (flexorBilateral.symmetryIndex + extensorBilateral.symmetryIndex) / 2,
+                asymmetryLevel: aggregateDifference,
+                difference: aggregateDifference,
+                relativeAsymmetry: aggregateDifference,
+                robinsonAsymmetry: (flexorBilateral.robinsonAsymmetry + extensorBilateral.robinsonAsymmetry) / 2,
+                weightedUniversalAsymmetry: (flexorBilateral.weightedUniversalAsymmetry + extensorBilateral.weightedUniversalAsymmetry) / 2
+            },
             pedalingEfficiency: Math.round(70 + definition.symmetry * 0.18)
         },
         notes: definition.notes
+    };
+}
+
+function calculateDemoBilateral(samples, group) {
+    const rms = side => Math.sqrt(samples.reduce((sum, sample) => sum + sample[group][side].amplitude ** 2, 0) / Math.max(1, samples.length));
+    const left = rms('left');
+    const right = rms('right');
+    const maximum = Math.max(left, right);
+    const mean = (left + right) / 2;
+    const symmetryIndex = maximum ? Math.min(left, right) / maximum * 100 : 100;
+    const relativeAsymmetry = 100 - symmetryIndex;
+    const denominator = Math.sqrt(2 * (left * left + right * right));
+    const universal = denominator ? (left - right) / denominator * 100 : 0;
+    const sigma = Math.min(left, right) * 0.08;
+    const weightDenominator = Math.sqrt(2 * sigma * sigma + left * left + right * right);
+    const noiseWeight = weightDenominator ? Math.max(0, 1 - Math.sqrt(2) * sigma / weightDenominator) : 0;
+    return {
+        symmetryIndex,
+        difference: relativeAsymmetry,
+        relativeAsymmetry,
+        robinsonAsymmetry: mean ? (left - right) / mean * 100 : 0,
+        universalAsymmetry: universal,
+        weightedUniversalAsymmetry: universal * noiseWeight,
+        noiseWeight,
+        dominantSide: left === right ? 'balanced' : left > right ? 'left' : 'right'
     };
 }
 

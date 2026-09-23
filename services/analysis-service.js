@@ -43,7 +43,7 @@
                 return {
                     count: 0, mean: 0, dcOffset: 0, rms: 0, mav: 0, peakAmplitude: 0,
                     min: 0, max: 0, peakToPeak: 0, waveformLength: 0, zeroCrossings: 0,
-                    shannonEntropy: 0, meanNormalizedActivation: 0
+                    shannonEntropy: 0, meanNormalizedActivation: 0, noiseSigma: 0
                 };
             }
 
@@ -72,8 +72,17 @@
                 waveformLength: centered.slice(1).reduce((total, value, index) => total + Math.abs(value - centered[index]), 0),
                 zeroCrossings: centered.slice(1).reduce((total, value, index) => total + (value * centered[index] < 0 ? 1 : 0), 0),
                 shannonEntropy: this.calculateShannonEntropy(centered),
-                meanNormalizedActivation: peakAmplitude === 0 ? 0 : absoluteTotal / finite.length / peakAmplitude * 100
+                meanNormalizedActivation: peakAmplitude === 0 ? 0 : absoluteTotal / finite.length / peakAmplitude * 100,
+                noiseSigma: this.estimateNoiseSigma(centered)
             };
+        }
+
+        estimateNoiseSigma(values) {
+            const absolute = this.finiteValues(values).map(Math.abs).sort((a, b) => a - b);
+            if (!absolute.length) return 0;
+            const quietCount = Math.max(1, Math.floor(absolute.length * 0.2));
+            const quiet = absolute.slice(0, quietCount);
+            return Math.sqrt(quiet.reduce((sum, value) => sum + value * value, 0) / quiet.length);
         }
 
         calculateShannonEntropy(values, binCount = 16) {
@@ -99,17 +108,29 @@
             return entropy / Math.log2(binCount);
         }
 
-        calculateBilateral(leftRms, rightRms) {
+        calculateBilateral(leftRms, rightRms, noiseSigma = 0) {
             const left = Number.isFinite(Number(leftRms)) ? Math.max(0, Number(leftRms)) : 0;
             const right = Number.isFinite(Number(rightRms)) ? Math.max(0, Number(rightRms)) : 0;
+            const sigma = Number.isFinite(Number(noiseSigma)) ? Math.max(0, Number(noiseSigma)) : 0;
             const maximum = Math.max(left, right);
             const minimum = Math.min(left, right);
             const symmetryIndex = maximum === 0 ? 100 : minimum / maximum * 100;
             const difference = 100 - symmetryIndex;
+            const mean = (left + right) / 2;
+            const energyDenominator = Math.sqrt(2 * (left * left + right * right));
+            const universalAsymmetry = energyDenominator === 0 ? 0 : (left - right) / energyDenominator * 100;
+            const weightDenominator = Math.sqrt(2 * sigma * sigma + left * left + right * right);
+            const noiseWeight = weightDenominator === 0 ? 0 : Math.max(0, 1 - Math.sqrt(2) * sigma / weightDenominator);
 
             return {
                 symmetryIndex,
                 difference,
+                relativeAsymmetry: difference,
+                robinsonAsymmetry: mean === 0 ? 0 : (left - right) / mean * 100,
+                universalAsymmetry,
+                weightedUniversalAsymmetry: universalAsymmetry * noiseWeight,
+                noiseWeight,
+                noiseSigma: sigma,
                 absoluteRmsDifference: Math.abs(left - right),
                 percentageDifference: difference,
                 dominantSide: left === right ? 'balanced' : left > right ? 'left' : 'right',
@@ -132,7 +153,7 @@
             const analyzeGroup = group => {
                 const left = this.calculateSide(list.map(sample => this.extractAmplitude(sample, group, 'left')));
                 const right = this.calculateSide(list.map(sample => this.extractAmplitude(sample, group, 'right')));
-                return { left, right, bilateral: this.calculateBilateral(left.rms, right.rms) };
+                return { left, right, bilateral: this.calculateBilateral(left.rms, right.rms, Math.min(left.noiseSigma, right.noiseSigma)) };
             };
             const flexor = analyzeGroup('flexor');
             const extensor = analyzeGroup('extensor');
@@ -153,6 +174,10 @@
                 bilateral: {
                     symmetryIndex: aggregateSymmetry,
                     difference: aggregateDifference,
+                    relativeAsymmetry: aggregateDifference,
+                    robinsonAsymmetry: hasFourChannels ? (flexor.bilateral.robinsonAsymmetry + extensor.bilateral.robinsonAsymmetry) / 2 : flexor.bilateral.robinsonAsymmetry,
+                    universalAsymmetry: hasFourChannels ? (flexor.bilateral.universalAsymmetry + extensor.bilateral.universalAsymmetry) / 2 : flexor.bilateral.universalAsymmetry,
+                    weightedUniversalAsymmetry: hasFourChannels ? (flexor.bilateral.weightedUniversalAsymmetry + extensor.bilateral.weightedUniversalAsymmetry) / 2 : flexor.bilateral.weightedUniversalAsymmetry,
                     absoluteRmsDifference: hasFourChannels ? (flexor.bilateral.absoluteRmsDifference + extensor.bilateral.absoluteRmsDifference) / 2 : flexor.bilateral.absoluteRmsDifference,
                     percentageDifference: aggregateDifference,
                     dominantSide: flexor.bilateral.dominantSide,

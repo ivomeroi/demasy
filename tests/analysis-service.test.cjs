@@ -51,6 +51,18 @@ test('uses the approved bounded symmetry formula', () => {
     assert.equal(bilateral.asymmetryLevel, 'Diferencia marcada');
 });
 
+test('calcula múltiples índices de asimetría y conserva su dirección', () => {
+    const service = new AnalysisService();
+    const leftDominant = service.calculateBilateral(2, 1, 0.1);
+    const rightDominant = service.calculateBilateral(1, 2, 0.1);
+    assert.equal(leftDominant.relativeAsymmetry, 50);
+    assert(Math.abs(leftDominant.robinsonAsymmetry - 100 / 1.5) < 1e-10);
+    assert(leftDominant.weightedUniversalAsymmetry > 0);
+    assert(rightDominant.robinsonAsymmetry < 0);
+    assert(rightDominant.weightedUniversalAsymmetry < 0);
+    assert(Math.abs(leftDominant.weightedUniversalAsymmetry) < Math.abs(leftDominant.universalAsymmetry));
+});
+
 test('treats two empty sides as balanced', () => {
     const service = new AnalysisService();
     const result = service.analyzeSamples([]);

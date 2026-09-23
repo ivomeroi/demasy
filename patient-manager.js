@@ -456,6 +456,8 @@ class PatientManager {
             if (!session) throw new Error('Sesión no encontrada');
             const samples = this.historyService.getSamples(session);
             const symmetry = session.statistics?.bilateral?.symmetryIndex;
+            const flexorAsymmetry = session.statistics?.flexor?.bilateral;
+            const extensorAsymmetry = session.statistics?.extensor?.bilateral;
             document.getElementById('session-detail-modal')?.remove();
             document.body.insertAdjacentHTML('beforeend', `
                 <div class="modal-overlay" id="session-detail-modal">
@@ -471,6 +473,9 @@ class PatientManager {
                             <div><label>Cadencia</label><strong>${Number(session.cadence || 0)} rpm</strong></div>
                             <div><label>Resistencia</label><strong>${this.formatResistance(session.resistance)}</strong></div>
                             <div><label>Simetría</label><strong>${Number.isFinite(symmetry) ? `${symmetry.toFixed(1)}%` : 'N/A'}</strong></div>
+                            <div><label>Asimetría relativa flexor/extensor</label><strong>${this.metricPair(flexorAsymmetry?.relativeAsymmetry, extensorAsymmetry?.relativeAsymmetry)}</strong></div>
+                            <div><label>Robinson flexor/extensor</label><strong>${this.metricPair(flexorAsymmetry?.robinsonAsymmetry, extensorAsymmetry?.robinsonAsymmetry, true)}</strong></div>
+                            <div><label>wUSI flexor/extensor</label><strong>${this.metricPair(flexorAsymmetry?.weightedUniversalAsymmetry, extensorAsymmetry?.weightedUniversalAsymmetry, true)}</strong></div>
                             <div><label>Estado</label><strong>${session.status === 'archived' ? 'Archivada' : 'Guardada'}</strong></div>
                         </div>
                         <div class="session-notes"><label>Notas</label><p>${this.escapeHTML(session.notes || 'Sin notas')}</p></div>
@@ -730,6 +735,11 @@ class PatientManager {
                 symmetryIndex: stats.bilateral.symmetryIndex,
                 asymmetryLevel: stats.bilateral.asymmetryLevel,
                 difference: stats.bilateral.difference,
+                relativeAsymmetry: stats.bilateral.relativeAsymmetry ?? stats.bilateral.difference,
+                robinsonAsymmetry: stats.bilateral.robinsonAsymmetry,
+                weightedUniversalAsymmetry: stats.bilateral.weightedUniversalAsymmetry,
+                flexor: stats.flexor?.bilateral,
+                extensor: stats.extensor?.bilateral,
                 interpretation: this.interpretSymmetry(stats.bilateral.symmetryIndex)
             },
             recommendations: this.generateSymmetryRecommendations(stats.bilateral)
@@ -982,6 +992,12 @@ class PatientManager {
         return String(value ?? '').replace(/[&<>'"]/g, character => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
         })[character]);
+    }
+
+    metricPair(first, second, signed = false) {
+        const format = value => Number.isFinite(Number(value))
+            ? `${signed && Number(value) >= 0 ? '+' : ''}${Number(value).toFixed(1)}%` : 'N/A';
+        return `${format(first)} / ${format(second)}`;
     }
 
     bindDelegatedActions() {

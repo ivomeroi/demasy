@@ -6,6 +6,8 @@ class AnalysisManager {
         this.sessions = [];
         this.windowChart = null;
         this.progressCharts = [];
+        this.currentLongitudinalEntries = [];
+        this.asymmetryMetricSelection = new Set(['relativeAsymmetry', 'weightedUniversalAsymmetry']);
     }
 
     async render() {
@@ -78,19 +80,49 @@ class AnalysisManager {
             <div class="analysis-notice">Se analizaron <strong>${sessions.length}</strong> ${sessions.length === 1 ? 'sesión' : 'sesiones'}. La tabla muestra primero la más reciente; los gráficos avanzan cronológicamente de izquierda a derecha.</div>
             <div class="analysis-progress-grid">
                 <div class="card"><h3>Evolución de RMS</h3><div class="analysis-chart-container"><canvas id="analysis-rms-progress"></canvas></div></div>
-                <div class="card"><h3>Evolución de simetría bilateral</h3><div class="analysis-chart-container"><canvas id="analysis-symmetry-progress"></canvas></div></div>
+                <div class="card"><h3>Evolución de asimetrías</h3>${this.asymmetryMetricControls()}<div class="analysis-chart-container"><canvas id="analysis-symmetry-progress"></canvas></div></div>
             </div>
             <div class="card"><h3>Métricas por sesión</h3><div class="analysis-table-scroll">${this.longitudinalTable(longitudinal.newestFirst)}</div></div>
-            <div class="analysis-notice">Fórmula de simetría: min(RMS izq., RMS der.) / max(RMS izq., RMS der.) × 100. Los resultados son descriptivos y no constituyen diagnóstico.</div>`;
+            ${this.metricGlossary()}
+            <div class="analysis-notice">Los resultados son descriptivos y no constituyen diagnóstico. El wUSI es una adaptación experimental a amplitudes RMS de EMG.</div>`;
+        this.currentLongitudinalEntries = longitudinal.chronological;
+        document.querySelectorAll('[data-asymmetry-metric]').forEach(input => input.addEventListener('change', event => this.toggleAsymmetryMetric(event.target)));
         this.renderProgressCharts(longitudinal.chronological);
     }
 
     longitudinalTable(entries) {
-        return `<table><thead><tr><th>Fecha</th><th>Sesión</th><th>Par muscular</th><th>Flexor izq. RMS</th><th>Flexor der. RMS</th><th>Simetría flexor</th><th>Extensor izq. RMS</th><th>Extensor der. RMS</th><th>Simetría extensor</th></tr></thead><tbody>${entries.map(({ session, analysis }) => {
+        return `<table><thead><tr><th>Fecha</th><th>Sesión</th><th>Par muscular</th><th>Flexor izq./der. RMS</th><th>Asimetría relativa flexor</th><th>Robinson flexor</th><th>wUSI flexor</th><th>Extensor izq./der. RMS</th><th>Asimetría relativa extensor</th><th>Robinson extensor</th><th>wUSI extensor</th></tr></thead><tbody>${entries.map(({ session, analysis }) => {
             const metrics = analysis.metrics;
             const musclePair = [session.flexorMuscleType || session.muscleType, session.extensorMuscleType].filter(Boolean).join(' / ') || 'No registrado';
-            return `<tr><td>${this.formatDateTime(session.startedAt)}</td><td>${this.escape(session.label || `Sesión ${session.id}`)}</td><td>${this.escape(musclePair)}</td><td>${this.number(metrics.flexor.left.rms)} mV</td><td>${this.number(metrics.flexor.right.rms)} mV</td><td>${this.number(metrics.flexor.bilateral.symmetryIndex)}%</td><td>${this.number(metrics.extensor.left.rms)} mV</td><td>${this.number(metrics.extensor.right.rms)} mV</td><td>${this.number(metrics.extensor.bilateral.symmetryIndex)}%</td></tr>`;
+            return `<tr><td>${this.formatDateTime(session.startedAt)}</td><td>${this.escape(session.label || `Sesión ${session.id}`)}</td><td>${this.escape(musclePair)}</td><td>${this.number(metrics.flexor.left.rms)} / ${this.number(metrics.flexor.right.rms)} mV</td>${this.asymmetryCells(metrics.flexor.bilateral)}<td>${this.number(metrics.extensor.left.rms)} / ${this.number(metrics.extensor.right.rms)} mV</td>${this.asymmetryCells(metrics.extensor.bilateral)}</tr>`;
         }).join('')}</tbody></table>`;
+    }
+
+    asymmetryCells(bilateral) {
+        return `<td>${this.number(bilateral.relativeAsymmetry)}%</td><td>${this.signed(bilateral.robinsonAsymmetry)}%</td><td>${this.signed(bilateral.weightedUniversalAsymmetry)}%</td>`;
+    }
+
+    asymmetryMetricControls() {
+        return `<fieldset class="analysis-metric-controls"><legend>Medidas visibles</legend>${this.asymmetryMetricCatalog().map(metric => `<label><input type="checkbox" data-asymmetry-metric value="${metric.key}" ${this.asymmetryMetricSelection.has(metric.key) ? 'checked' : ''}>${metric.shortLabel}</label>`).join('')}</fieldset>`;
+    }
+
+    asymmetryMetricCatalog() {
+        return [
+            { key: 'relativeAsymmetry', shortLabel: 'Relativa', label: 'Asimetría relativa', flexorColor: '#059669', extensorColor: '#0f766e' },
+            { key: 'robinsonAsymmetry', shortLabel: 'Robinson', label: 'Índice de Robinson', flexorColor: '#2563eb', extensorColor: '#1e40af' },
+            { key: 'weightedUniversalAsymmetry', shortLabel: 'wUSI', label: 'wUSI adaptado', flexorColor: '#d97706', extensorColor: '#b45309' }
+        ];
+    }
+
+    toggleAsymmetryMetric(input) {
+        if (input.checked) this.asymmetryMetricSelection.add(input.value);
+        else if (this.asymmetryMetricSelection.size > 1) this.asymmetryMetricSelection.delete(input.value);
+        else input.checked = true;
+        this.renderProgressCharts(this.currentLongitudinalEntries);
+    }
+
+    metricGlossary() {
+        return `<details class="metric-glossary card"><summary>Glosario de métricas de asimetría</summary><div class="metric-glossary-content"><dl><dt>Simetría bilateral</dt><dd>RMS menor dividido por RMS mayor. 100% representa amplitudes iguales.</dd><dt>Asimetría relativa</dt><dd>|L−R| / max(L,R) × 100. Va de 0% a 100% y no conserva dirección.</dd><dt>Índice de Robinson</dt><dd>(L−R) / promedio(L,R) × 100. Positivo: mayor RMS izquierdo; negativo: mayor RMS derecho.</dd><dt>wUSI adaptado</dt><dd>Índice universal ponderado por el piso de ruido estimado. El signo conserva la dirección y la ponderación reduce resultados inflados cuando las amplitudes son pequeñas.</dd></dl></div></details>`;
     }
 
     renderProgressCharts(entries) {
@@ -105,9 +137,11 @@ class AnalysisManager {
             line('Flexor izquierdo', metrics => metrics.flexor.left.rms, '#2563eb'), line('Flexor derecho', metrics => metrics.flexor.right.rms, '#dc2626'),
             line('Extensor izquierdo', metrics => metrics.extensor.left.rms, '#0891b2'), line('Extensor derecho', metrics => metrics.extensor.right.rms, '#d97706')
         ] }, options: this.progressChartOptions('RMS (mV)') }));
-        if (symmetryCanvas) this.progressCharts.push(new Chart(symmetryCanvas, { type: 'line', data: { labels, datasets: [
-            line('Simetría flexor', metrics => metrics.flexor.bilateral.symmetryIndex, '#059669'), line('Simetría extensor', metrics => metrics.extensor.bilateral.symmetryIndex, '#7c3aed')
-        ] }, options: this.progressChartOptions('Simetría (%)', 0, 100) }));
+        const asymmetryDatasets = this.asymmetryMetricCatalog().filter(metric => this.asymmetryMetricSelection.has(metric.key)).flatMap(metric => [
+            line(`${metric.label} · flexor`, metrics => metrics.flexor.bilateral[metric.key], metric.flexorColor),
+            line(`${metric.label} · extensor`, metrics => metrics.extensor.bilateral[metric.key], metric.extensorColor)
+        ]);
+        if (symmetryCanvas) this.progressCharts.push(new Chart(symmetryCanvas, { type: 'line', data: { labels, datasets: asymmetryDatasets }, options: this.progressChartOptions('Asimetría (%)') }));
     }
 
     progressChartOptions(title, min, max) {
@@ -134,6 +168,7 @@ class AnalysisManager {
 
     metric(label, value, unit) { return `<div class="analysis-metric"><span>${label}</span><strong>${this.number(value)} ${unit}</strong></div>`; }
     number(value) { return Number.isFinite(Number(value)) ? Number(value).toFixed(3) : 'N/A'; }
+    signed(value) { return Number.isFinite(Number(value)) ? `${Number(value) >= 0 ? '+' : ''}${Number(value).toFixed(3)}` : 'N/A'; }
     sideLabel(value) { return ({ left: 'izquierdo', right: 'derecho', balanced: 'equilibrado' })[value] || value; }
     sideTable(metrics) {
         const rows = [

@@ -34,6 +34,7 @@ class KinesioEMGApp {
             this.displayPreferences = null;
             this.recordingController = new RecordingController();
             this.sessionConfigurationService = new SessionConfigurationService();
+            this.analysisService = new AnalysisService();
             this.sectionRouter = new SectionRouter();
             this.onboardingTour = new OnboardingTour({
                 onNavigate: section => this.navigateToSection(section, { replaceHistory: true })
@@ -1397,6 +1398,8 @@ class KinesioEMGApp {
                     <div class="session-review-metric"><span>Muestras guardables</span><strong>${review.sampleCount}</strong></div>
                     <div class="session-review-metric"><span>Simetría flexor</span><strong>${review.statistics.flexor.bilateral.symmetryIndex.toFixed(1)}%</strong></div>
                     <div class="session-review-metric"><span>Simetría extensor</span><strong>${review.statistics.extensor.bilateral.symmetryIndex.toFixed(1)}%</strong></div>
+                    <div class="session-review-metric"><span>Asimetría relativa flexor/extensor</span><strong>${review.statistics.flexor.bilateral.relativeAsymmetry.toFixed(1)}% / ${review.statistics.extensor.bilateral.relativeAsymmetry.toFixed(1)}%</strong></div>
+                    <div class="session-review-metric"><span>wUSI flexor/extensor</span><strong>${this.formatSignedPercent(review.statistics.flexor.bilateral.weightedUniversalAsymmetry)} / ${this.formatSignedPercent(review.statistics.extensor.bilateral.weightedUniversalAsymmetry)}</strong></div>
                     <div class="session-review-metric"><span>RMS flexor izq./der.</span><strong>${review.statistics.flexor.left.rms.toFixed(2)} / ${review.statistics.flexor.right.rms.toFixed(2)} mV</strong></div>
                     <div class="session-review-metric"><span>RMS extensor izq./der.</span><strong>${review.statistics.extensor.left.rms.toFixed(2)} / ${review.statistics.extensor.right.rms.toFixed(2)} mV</strong></div>
                 </div>
@@ -1488,7 +1491,7 @@ class KinesioEMGApp {
                 cadence: provider.cyclingParams?.cadence || 80,
                 resistance: provider.cyclingParams?.resistance || 0.5,
                 emgData: this.sessionData,
-                statistics: provider.getStats(),
+                statistics: this.sessionReview?.statistics || this.analysisService.analyzeSamples(this.sessionData),
                 notes: configuration.notes,
                 configuration,
                 source: configuration.source,
@@ -2191,6 +2194,8 @@ class KinesioEMGApp {
     updateStatistics(stats) {
         const flexor = stats.flexor || { left: stats.left, right: stats.right, bilateral: stats.bilateral };
         const extensor = stats.extensor || flexor;
+        this.enrichAsymmetryMetrics(flexor, stats.bilateral);
+        this.enrichAsymmetryMetrics(extensor, stats.bilateral);
         ['flexor', 'extensor'].forEach(group => ['left', 'right'].forEach(side => {
             const value = group === 'flexor' ? flexor[side] : extensor[side];
             this.updateElement(`rms-${group}-${side}`, this.formatVoltageStat(value?.rms || 0));
@@ -2200,6 +2205,8 @@ class KinesioEMGApp {
         // Update comparison statistics
         this.updateElement('symmetry-flexor', `${flexor.bilateral.symmetryIndex.toFixed(0)}%`);
         this.updateElement('symmetry-extensor', `${extensor.bilateral.symmetryIndex.toFixed(0)}%`);
+        this.updateAsymmetryReadout('flexor', flexor.bilateral);
+        this.updateAsymmetryReadout('extensor', extensor.bilateral);
         this.updateElement('bilateral-difference', `${stats.bilateral.difference.toFixed(1)}%`);
         
         // Update activation levels for both sides
@@ -2228,6 +2235,26 @@ class KinesioEMGApp {
         
         // Update pedal positions
         this.updatePedalPositions();
+    }
+
+    enrichAsymmetryMetrics(group, aggregate = {}) {
+        if (!group?.left || !group?.right) return;
+        if (['relativeAsymmetry', 'robinsonAsymmetry', 'weightedUniversalAsymmetry'].every(key => Number.isFinite(Number(group.bilateral?.[key])))) return;
+        const averageRms = (Number(group.left.rms || 0) + Number(group.right.rms || 0)) / 2;
+        const snr = Number(group.bilateral?.snr ?? aggregate?.snr);
+        const sigma = Number.isFinite(snr) && averageRms > 0 ? averageRms / Math.pow(10, snr / 20) : 0;
+        group.bilateral = { ...group.bilateral, ...this.analysisService.calculateBilateral(group.left.rms, group.right.rms, sigma) };
+    }
+
+    updateAsymmetryReadout(group, bilateral) {
+        this.updateElement(`relative-asymmetry-${group}`, `${Number(bilateral.relativeAsymmetry || 0).toFixed(1)}%`);
+        this.updateElement(`robinson-asymmetry-${group}`, this.formatSignedPercent(bilateral.robinsonAsymmetry));
+        this.updateElement(`wusi-asymmetry-${group}`, this.formatSignedPercent(bilateral.weightedUniversalAsymmetry));
+    }
+
+    formatSignedPercent(value) {
+        const numeric = Number(value || 0);
+        return `${numeric >= 0 ? '+' : ''}${numeric.toFixed(1)}%`;
     }
 
     formatVoltageStat(value) {
