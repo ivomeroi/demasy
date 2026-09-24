@@ -757,8 +757,9 @@ class KinesioEMGApp {
 
     async connectBluetoothESP32() {
         try {
-            if (!this.bluetoothManager.isSupported()) {
-                this.showNotification('Web Bluetooth requiere Chrome o Edge en localhost/HTTPS', 'error');
+            const supportError = this.bluetoothManager.getSupportError();
+            if (supportError) {
+                this.showNotification(supportError, 'error');
                 return;
             }
 

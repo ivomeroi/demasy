@@ -17,13 +17,28 @@ class EMGBluetoothManager extends EMGSerialManager {
     }
 
     isSupported() {
-        return 'bluetooth' in navigator;
+        return window.isSecureContext && 'bluetooth' in navigator;
+    }
+
+    getSupportError() {
+        if (!window.isSecureContext) {
+            return 'Web Bluetooth requiere un origen seguro. Abre DEMASY mediante HTTPS, http://localhost o http://127.0.0.1; no abras index.html directamente ni uses una IP HTTP de la red local.';
+        }
+
+        if (!('bluetooth' in navigator)) {
+            const platform = navigator.userAgentData?.platform || navigator.platform || '';
+            if (/linux/i.test(platform)) {
+                return 'Chrome en Linux no habilita Web Bluetooth de forma predeterminada. Activa una vez “Experimental Web Platform features” en chrome://flags/#enable-experimental-web-platform-features, reinicia Chrome y vuelve a intentarlo.';
+            }
+            return 'Este navegador no expone Web Bluetooth. Usa una versión compatible de Chrome o Edge y comprueba que Bluetooth no esté bloqueado por una política del navegador o de la organización.';
+        }
+
+        return null;
     }
 
     async connect() {
-        if (!this.isSupported()) {
-            throw new Error('Web Bluetooth no está disponible. Usa Chrome o Edge desde localhost/HTTPS.');
-        }
+        const supportError = this.getSupportError();
+        if (supportError) throw new Error(supportError);
 
         this.device = await navigator.bluetooth.requestDevice({
             filters: [

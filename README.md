@@ -65,6 +65,8 @@ El firmware está en `ESP32/`:
 
 Para Bluetooth, carga ambos firmwares, abre DEMASY en Chrome/Edge sobre `localhost` o HTTPS y selecciona **Bluetooth**. Antes de medir, pulsa **Calibrar** y mantén los músculos relajados durante cinco segundos. La transformación visual no modifica las muestras persistidas.
 
+En Chrome para Linux, Web Bluetooth continúa siendo una función experimental del navegador. Activa una sola vez `Experimental Web Platform features` en `chrome://flags/#enable-experimental-web-platform-features`, reinicia Chrome y luego podrás abrir DEMASY normalmente en `http://localhost:8000/emg-en-vivo`. Esta limitación pertenece a Chrome/Linux y no puede ser habilitada por una página web.
+
 Web Serial acepta líneas delimitadas por salto de línea. Bluetooth usa el servicio y característica declarados en `esp_base.ino`. Consulta [la guía USB](docs/esp32-usb-serial.md) para los formatos admitidos.
 
 ## Asistente Gemini opcional
