@@ -3,7 +3,7 @@
  * Sets up sample data and ensures proper database initialization
  */
 
-const DEMO_DATASET_VERSION = 6;
+const DEMO_DATASET_VERSION = 7;
 const DEMO_DATASET_KEY = `demoDataset.v${DEMO_DATASET_VERSION}`;
 const RETIRED_DEMO_CODES = ['DEMO-006', 'DEMO-007', 'DEMO-008', 'DEMO-009', 'DEMO-010'];
 
@@ -180,7 +180,7 @@ function buildDemoSession(patientId, definition, seedText) {
                 difference: aggregateDifference,
                 relativeAsymmetry: aggregateDifference,
                 robinsonAsymmetry: (flexorBilateral.robinsonAsymmetry + extensorBilateral.robinsonAsymmetry) / 2,
-                weightedUniversalAsymmetry: (flexorBilateral.weightedUniversalAsymmetry + extensorBilateral.weightedUniversalAsymmetry) / 2
+                normalizedSymmetryIndex: (flexorBilateral.normalizedSymmetryIndex + extensorBilateral.normalizedSymmetryIndex) / 2
             },
             pedalingEfficiency: Math.round(70 + definition.symmetry * 0.18)
         },
@@ -189,26 +189,30 @@ function buildDemoSession(patientId, definition, seedText) {
 }
 
 function calculateDemoBilateral(samples, group) {
-    const rms = side => Math.sqrt(samples.reduce((sum, sample) => sum + sample[group][side].amplitude ** 2, 0) / Math.max(1, samples.length));
+    const values = side => samples.map(sample => sample[group][side].amplitude);
+    const rmsValues = input => Math.sqrt(input.reduce((sum, value) => sum + value ** 2, 0) / Math.max(1, input.length));
+    const rms = side => rmsValues(values(side));
+    const normalize = input => {
+        const minimum = input.reduce((result, value) => Math.min(result, value), Infinity);
+        const maximum = input.reduce((result, value) => Math.max(result, value), -Infinity);
+        const range = maximum - minimum;
+        return range ? input.map(value => (value - minimum) / range) : input.map(() => 0);
+    };
     const left = rms('left');
     const right = rms('right');
     const maximum = Math.max(left, right);
     const mean = (left + right) / 2;
     const symmetryIndex = maximum ? Math.min(left, right) / maximum * 100 : 100;
     const relativeAsymmetry = 100 - symmetryIndex;
-    const denominator = Math.sqrt(2 * (left * left + right * right));
-    const universal = denominator ? (left - right) / denominator * 100 : 0;
-    const sigma = Math.min(left, right) * 0.08;
-    const weightDenominator = Math.sqrt(2 * sigma * sigma + left * left + right * right);
-    const noiseWeight = weightDenominator ? Math.max(0, 1 - Math.sqrt(2) * sigma / weightDenominator) : 0;
+    const normalizedLeft = rmsValues(normalize(values('left')));
+    const normalizedRight = rmsValues(normalize(values('right')));
+    const normalizedMean = (normalizedLeft + normalizedRight) / 2;
     return {
         symmetryIndex,
         difference: relativeAsymmetry,
         relativeAsymmetry,
-        robinsonAsymmetry: mean ? (left - right) / mean * 100 : 0,
-        universalAsymmetry: universal,
-        weightedUniversalAsymmetry: universal * noiseWeight,
-        noiseWeight,
+        robinsonAsymmetry: mean ? Math.abs(left - right) / mean * 100 : 0,
+        normalizedSymmetryIndex: normalizedMean ? Math.abs(normalizedLeft - normalizedRight) / normalizedMean * 100 : 0,
         dominantSide: left === right ? 'balanced' : left > right ? 'left' : 'right'
     };
 }

@@ -474,8 +474,8 @@ class PatientManager {
                             <div><label>Resistencia</label><strong>${this.formatResistance(session.resistance)}</strong></div>
                             <div><label>Simetría</label><strong>${Number.isFinite(symmetry) ? `${symmetry.toFixed(1)}%` : 'N/A'}</strong></div>
                             <div><label>Asimetría relativa flexor/extensor</label><strong>${this.metricPair(flexorAsymmetry?.relativeAsymmetry, extensorAsymmetry?.relativeAsymmetry)}</strong></div>
-                            <div><label>Robinson flexor/extensor</label><strong>${this.metricPair(flexorAsymmetry?.robinsonAsymmetry, extensorAsymmetry?.robinsonAsymmetry, true)}</strong></div>
-                            <div><label>wUSI flexor/extensor</label><strong>${this.metricPair(flexorAsymmetry?.weightedUniversalAsymmetry, extensorAsymmetry?.weightedUniversalAsymmetry, true)}</strong></div>
+                            <div><label>Robinson flexor/extensor</label><strong>${this.metricPair(flexorAsymmetry?.robinsonAsymmetry, extensorAsymmetry?.robinsonAsymmetry)}</strong></div>
+                            <div><label>NSI flexor/extensor</label><strong>${this.metricPair(flexorAsymmetry?.normalizedSymmetryIndex, extensorAsymmetry?.normalizedSymmetryIndex)}</strong></div>
                             <div><label>Estado</label><strong>${session.status === 'archived' ? 'Archivada' : 'Guardada'}</strong></div>
                         </div>
                         <div class="session-notes"><label>Notas</label><p>${this.escapeHTML(session.notes || 'Sin notas')}</p></div>
@@ -737,7 +737,7 @@ class PatientManager {
                 difference: stats.bilateral.difference,
                 relativeAsymmetry: stats.bilateral.relativeAsymmetry ?? stats.bilateral.difference,
                 robinsonAsymmetry: stats.bilateral.robinsonAsymmetry,
-                weightedUniversalAsymmetry: stats.bilateral.weightedUniversalAsymmetry,
+                normalizedSymmetryIndex: stats.bilateral.normalizedSymmetryIndex,
                 flexor: stats.flexor?.bilateral,
                 extensor: stats.extensor?.bilateral,
                 interpretation: this.interpretSymmetry(stats.bilateral.symmetryIndex)
@@ -995,7 +995,7 @@ class PatientManager {
     }
 
     metricPair(first, second, signed = false) {
-        const format = value => Number.isFinite(Number(value))
+        const format = value => value !== null && value !== undefined && Number.isFinite(Number(value))
             ? `${signed && Number(value) >= 0 ? '+' : ''}${Number(value).toFixed(1)}%` : 'N/A';
         return `${format(first)} / ${format(second)}`;
     }

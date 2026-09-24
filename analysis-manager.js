@@ -7,7 +7,7 @@ class AnalysisManager {
         this.windowChart = null;
         this.progressCharts = [];
         this.currentLongitudinalEntries = [];
-        this.asymmetryMetricSelection = new Set(['relativeAsymmetry', 'weightedUniversalAsymmetry']);
+        this.asymmetryMetricSelection = new Set(['relativeAsymmetry', 'normalizedSymmetryIndex']);
     }
 
     async render() {
@@ -84,14 +84,14 @@ class AnalysisManager {
             </div>
             <div class="card"><h3>Métricas por sesión</h3><div class="analysis-table-scroll">${this.longitudinalTable(longitudinal.newestFirst)}</div></div>
             ${this.metricGlossary()}
-            <div class="analysis-notice">Los resultados son descriptivos y no constituyen diagnóstico. El wUSI es una adaptación experimental a amplitudes RMS de EMG.</div>`;
+            <div class="analysis-notice">Los resultados son descriptivos y no constituyen diagnóstico. Compara únicamente sesiones realizadas con el mismo protocolo, tarea y colocación de electrodos.</div>`;
         this.currentLongitudinalEntries = longitudinal.chronological;
         document.querySelectorAll('[data-asymmetry-metric]').forEach(input => input.addEventListener('change', event => this.toggleAsymmetryMetric(event.target)));
         this.renderProgressCharts(longitudinal.chronological);
     }
 
     longitudinalTable(entries) {
-        return `<table><thead><tr><th>Fecha</th><th>Sesión</th><th>Par muscular</th><th>Flexor izq./der. RMS</th><th>Asimetría relativa flexor</th><th>Robinson flexor</th><th>wUSI flexor</th><th>Extensor izq./der. RMS</th><th>Asimetría relativa extensor</th><th>Robinson extensor</th><th>wUSI extensor</th></tr></thead><tbody>${entries.map(({ session, analysis }) => {
+        return `<table><thead><tr><th>Fecha</th><th>Sesión</th><th>Par muscular</th><th>Flexor izq./der. RMS</th><th>Asimetría relativa flexor</th><th>Robinson flexor</th><th>NSI flexor</th><th>Extensor izq./der. RMS</th><th>Asimetría relativa extensor</th><th>Robinson extensor</th><th>NSI extensor</th></tr></thead><tbody>${entries.map(({ session, analysis }) => {
             const metrics = analysis.metrics;
             const musclePair = [session.flexorMuscleType || session.muscleType, session.extensorMuscleType].filter(Boolean).join(' / ') || 'No registrado';
             return `<tr><td>${this.formatDateTime(session.startedAt)}</td><td>${this.escape(session.label || `Sesión ${session.id}`)}</td><td>${this.escape(musclePair)}</td><td>${this.number(metrics.flexor.left.rms)} / ${this.number(metrics.flexor.right.rms)} mV</td>${this.asymmetryCells(metrics.flexor.bilateral)}<td>${this.number(metrics.extensor.left.rms)} / ${this.number(metrics.extensor.right.rms)} mV</td>${this.asymmetryCells(metrics.extensor.bilateral)}</tr>`;
@@ -99,7 +99,7 @@ class AnalysisManager {
     }
 
     asymmetryCells(bilateral) {
-        return `<td>${this.number(bilateral.relativeAsymmetry)}%</td><td>${this.signed(bilateral.robinsonAsymmetry)}%</td><td>${this.signed(bilateral.weightedUniversalAsymmetry)}%</td>`;
+        return `<td>${this.number(bilateral.relativeAsymmetry)}%</td><td>${this.number(bilateral.robinsonAsymmetry)}%</td><td>${this.number(bilateral.normalizedSymmetryIndex)}%</td>`;
     }
 
     asymmetryMetricControls() {
@@ -110,7 +110,7 @@ class AnalysisManager {
         return [
             { key: 'relativeAsymmetry', shortLabel: 'Relativa', label: 'Asimetría relativa', flexorColor: '#059669', extensorColor: '#0f766e' },
             { key: 'robinsonAsymmetry', shortLabel: 'Robinson', label: 'Índice de Robinson', flexorColor: '#2563eb', extensorColor: '#1e40af' },
-            { key: 'weightedUniversalAsymmetry', shortLabel: 'wUSI', label: 'wUSI adaptado', flexorColor: '#d97706', extensorColor: '#b45309' }
+            { key: 'normalizedSymmetryIndex', shortLabel: 'NSI', label: 'NSI normalizado', flexorColor: '#d97706', extensorColor: '#b45309' }
         ];
     }
 
@@ -122,7 +122,7 @@ class AnalysisManager {
     }
 
     metricGlossary() {
-        return `<details class="metric-glossary card"><summary>Glosario de métricas de asimetría</summary><div class="metric-glossary-content"><dl><dt>Simetría bilateral</dt><dd>RMS menor dividido por RMS mayor. 100% representa amplitudes iguales.</dd><dt>Asimetría relativa</dt><dd>|L−R| / max(L,R) × 100. Va de 0% a 100% y no conserva dirección.</dd><dt>Índice de Robinson</dt><dd>(L−R) / promedio(L,R) × 100. Positivo: mayor RMS izquierdo; negativo: mayor RMS derecho.</dd><dt>wUSI adaptado</dt><dd>Índice universal ponderado por el piso de ruido estimado. El signo conserva la dirección y la ponderación reduce resultados inflados cuando las amplitudes son pequeñas.</dd></dl></div></details>`;
+        return `<details class="metric-glossary card"><summary>Glosario de métricas de asimetría</summary><div class="metric-glossary-content"><dl><dt>Simetría bilateral (LSI)</dt><dd>RMS menor / RMS mayor × 100. 100% representa amplitudes iguales.</dd><dt>Asimetría relativa</dt><dd>|L−R| / max(L,R) × 100. Va de 0% a 100% y no conserva dirección.</dd><dt>Índice de Robinson</dt><dd>|L−R| / promedio(L,R) × 100. 0% representa igualdad; el lado de mayor RMS se registra aparte.</dd><dt>NSI normalizado</dt><dd>Compara las magnitudes después de normalizar cada señal al rango observado. 0% representa igualdad y valores mayores indican mayor diferencia de los perfiles normalizados.</dd></dl><p><a href="docs/asymmetry-metrics.md" target="_blank" rel="noopener">Fórmulas, bibliografía y limitaciones metodológicas</a>.</p></div></details>`;
     }
 
     renderProgressCharts(entries) {
@@ -167,7 +167,7 @@ class AnalysisManager {
     }
 
     metric(label, value, unit) { return `<div class="analysis-metric"><span>${label}</span><strong>${this.number(value)} ${unit}</strong></div>`; }
-    number(value) { return Number.isFinite(Number(value)) ? Number(value).toFixed(3) : 'N/A'; }
+    number(value) { return value !== null && value !== undefined && Number.isFinite(Number(value)) ? Number(value).toFixed(3) : 'N/A'; }
     signed(value) { return Number.isFinite(Number(value)) ? `${Number(value) >= 0 ? '+' : ''}${Number(value).toFixed(3)}` : 'N/A'; }
     sideLabel(value) { return ({ left: 'izquierdo', right: 'derecho', balanced: 'equilibrado' })[value] || value; }
     sideTable(metrics) {

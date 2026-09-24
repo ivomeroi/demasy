@@ -20,7 +20,7 @@
         const allowedKeys = new Set([
             'activity', 'muscle', 'cadence', 'resistance', 'rms', 'mav', 'peakAmplitude',
             'peakToPeak', 'waveformLength', 'zeroCrossings', 'entropy', 'frequency', 'snr',
-            'artifacts', 'symmetryIndex', 'difference', 'relativeAsymmetry', 'robinsonAsymmetry', 'weightedUniversalAsymmetry', 'activationLevel', 'quality', 'left',
+            'artifacts', 'symmetryIndex', 'difference', 'relativeAsymmetry', 'robinsonAsymmetry', 'normalizedSymmetryIndex', 'activationLevel', 'quality', 'left',
             'right', 'flexor', 'extensor', 'musclePair', 'channelSchema', 'bilateral', 'cycling', 'pedalingEfficiency', 'powerImbalance'
         ]);
         const visit = value => {

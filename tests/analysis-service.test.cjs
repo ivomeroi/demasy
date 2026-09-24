@@ -53,14 +53,21 @@ test('uses the approved bounded symmetry formula', () => {
 
 test('calcula múltiples índices de asimetría y conserva su dirección', () => {
     const service = new AnalysisService();
-    const leftDominant = service.calculateBilateral(2, 1, 0.1);
-    const rightDominant = service.calculateBilateral(1, 2, 0.1);
+    const leftDominant = service.calculateBilateral(2, 1, 12);
+    const rightDominant = service.calculateBilateral(1, 2, 12);
     assert.equal(leftDominant.relativeAsymmetry, 50);
     assert(Math.abs(leftDominant.robinsonAsymmetry - 100 / 1.5) < 1e-10);
-    assert(leftDominant.weightedUniversalAsymmetry > 0);
-    assert(rightDominant.robinsonAsymmetry < 0);
-    assert(rightDominant.weightedUniversalAsymmetry < 0);
-    assert(Math.abs(leftDominant.weightedUniversalAsymmetry) < Math.abs(leftDominant.universalAsymmetry));
+    assert.equal(leftDominant.normalizedSymmetryIndex, 12);
+    assert.equal(rightDominant.robinsonAsymmetry, leftDominant.robinsonAsymmetry);
+    assert.equal(leftDominant.dominantSide, 'left');
+    assert.equal(rightDominant.dominantSide, 'right');
+});
+
+test('calcula NSI sobre perfiles EMG normalizados por su rango', () => {
+    const service = new AnalysisService();
+    assert.equal(service.calculateNormalizedSymmetryIndex([0, 1, 0], [0, 1, 0]), 0);
+    const differentProfiles = service.calculateNormalizedSymmetryIndex([0, 1, 0, 1], [0, 0.25, 0.5, 1]);
+    assert(differentProfiles > 0);
 });
 
 test('treats two empty sides as balanced', () => {

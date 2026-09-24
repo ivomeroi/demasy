@@ -20,6 +20,8 @@ for (const file of runtimeFiles) {
 
 await cp(join(root, 'core'), join(output, 'core'), { recursive: true });
 await cp(join(root, 'services'), join(output, 'services'), { recursive: true });
+await mkdir(join(output, 'docs'), { recursive: true });
+await cp(join(root, 'docs', 'asymmetry-metrics.md'), join(output, 'docs', 'asymmetry-metrics.md'));
 await mkdir(join(output, 'vendor', 'fontawesome'), { recursive: true });
 await cp(
     join(root, 'node_modules', 'chart.js', 'dist', 'chart.min.js'),

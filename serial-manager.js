@@ -326,7 +326,14 @@ class EMGSerialManager {
             const right = this.calculateSideStats(rightValues);
             const averageRms = (left.rms + right.rms) / 2;
             const difference = averageRms > 0 ? Math.abs(left.rms - right.rms) / averageRms * 100 : 0;
-            return { left, right, bilateral: { symmetryIndex: Math.max(0, 100 - difference), asymmetryLevel: this.classifyAsymmetry(difference), difference } };
+            const maximum = Math.max(left.rms, right.rms);
+            const relativeDifference = maximum > 0 ? Math.abs(left.rms - right.rms) / maximum * 100 : 0;
+            return { left, right, bilateral: {
+                symmetryIndex: maximum > 0 ? Math.min(left.rms, right.rms) / maximum * 100 : 100,
+                asymmetryLevel: this.classifyAsymmetry(difference),
+                difference: relativeDifference,
+                normalizedSymmetryIndex: this.calculateNormalizedSymmetryIndex(leftValues, rightValues)
+            } };
         };
         const flexor = groupStats('flexor');
         const extensor = groupStats('extensor');
@@ -348,6 +355,7 @@ class EMGSerialManager {
                 symmetryIndex: (flexor.bilateral.symmetryIndex + extensor.bilateral.symmetryIndex) / 2,
                 asymmetryLevel: this.classifyAsymmetry((flexor.bilateral.difference + extensor.bilateral.difference) / 2),
                 difference: (flexor.bilateral.difference + extensor.bilateral.difference) / 2,
+                normalizedSymmetryIndex: (flexor.bilateral.normalizedSymmetryIndex + extensor.bilateral.normalizedSymmetryIndex) / 2,
                 snr: Math.max(0, Math.min(60, snr)),
                 artifacts: artifactCount > 5 ? artifactLabel : 'Ninguno'
             }
@@ -407,8 +415,23 @@ class EMGSerialManager {
         return 'Severa';
     }
 
+    calculateNormalizedSymmetryIndex(leftValues, rightValues) {
+        const normalize = values => {
+            if (!values.length) return [];
+            const minimum = values.reduce((result, value) => Math.min(result, value), Infinity);
+            const maximum = values.reduce((result, value) => Math.max(result, value), -Infinity);
+            const range = maximum - minimum;
+            return range ? values.map(value => (value - minimum) / range) : values.map(() => 0);
+        };
+        const rms = values => values.length ? Math.sqrt(values.reduce((sum, value) => sum + value * value, 0) / values.length) : 0;
+        const left = rms(normalize(leftValues));
+        const right = rms(normalize(rightValues));
+        const mean = (left + right) / 2;
+        return mean ? Math.abs(left - right) / mean * 100 : 0;
+    }
+
     createEmptyStats() {
-        const group = () => ({ left: { rms: 0, peakAmplitude: 0, frequency: 0 }, right: { rms: 0, peakAmplitude: 0, frequency: 0 }, bilateral: { symmetryIndex: 100, asymmetryLevel: 'Normal', difference: 0 } });
+        const group = () => ({ left: { rms: 0, peakAmplitude: 0, frequency: 0 }, right: { rms: 0, peakAmplitude: 0, frequency: 0 }, bilateral: { symmetryIndex: 100, asymmetryLevel: 'Normal', difference: 0, normalizedSymmetryIndex: 0 } });
         return {
             flexor: group(), extensor: group(),
             bilateral: {

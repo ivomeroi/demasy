@@ -156,6 +156,7 @@ class EMGSimulator {
                 symmetryIndex: 100, // percentage
                 asymmetryLevel: 'Normal',
                 difference: 0, // percentage difference
+                normalizedSymmetryIndex: 0,
                 snr: 45.2,
                 artifacts: 'Ninguno'
             }
@@ -724,6 +725,10 @@ class EMGSimulator {
         } else {
             this.stats.bilateral.symmetryIndex = 100;
         }
+        this.stats.bilateral.normalizedSymmetryIndex = this.calculateNormalizedSymmetryIndex(
+            this.signalBuffer.left.slice(-1000).map(sample => sample.amplitude),
+            this.signalBuffer.right.slice(-1000).map(sample => sample.amplitude)
+        );
         
         // Bilateral difference percentage
         if (leftRMS > 0 || rightRMS > 0) {
@@ -1004,12 +1009,31 @@ class EMGSimulator {
         const extensorBilateral = {
             symmetryIndex: extensorSymmetry,
             difference: 100 - extensorSymmetry,
+            normalizedSymmetryIndex: this.calculateNormalizedSymmetryIndex(
+                this.extensorBuffer.left.slice(-1000).map(sample => sample.amplitude),
+                this.extensorBuffer.right.slice(-1000).map(sample => sample.amplitude)
+            ),
             asymmetryLevel: extensorSymmetry >= 90 ? 'Normal' : extensorSymmetry >= 75 ? 'Leve' : extensorSymmetry >= 60 ? 'Moderada' : 'Severa',
             snr: this.stats.bilateral.snr,
             artifacts: this.stats.bilateral.artifacts
         };
         const flexor = { left: this.stats.left, right: this.stats.right, bilateral: this.stats.bilateral };
         return { flexor, extensor: { left: extensorLeft, right: extensorRight, bilateral: extensorBilateral }, bilateral: this.stats.bilateral };
+    }
+
+    calculateNormalizedSymmetryIndex(leftValues, rightValues) {
+        const normalize = values => {
+            if (!values.length) return [];
+            const minimum = values.reduce((result, value) => Math.min(result, value), Infinity);
+            const maximum = values.reduce((result, value) => Math.max(result, value), -Infinity);
+            const range = maximum - minimum;
+            return range ? values.map(value => (value - minimum) / range) : values.map(() => 0);
+        };
+        const rms = values => values.length ? Math.sqrt(values.reduce((sum, value) => sum + value * value, 0) / values.length) : 0;
+        const left = rms(normalize(leftValues));
+        const right = rms(normalize(rightValues));
+        const mean = (left + right) / 2;
+        return mean ? Math.abs(left - right) / mean * 100 : 0;
     }
 
     getSignalQuality() {

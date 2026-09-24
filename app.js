@@ -1400,7 +1400,7 @@ class KinesioEMGApp {
                     <div class="session-review-metric"><span>Simetría flexor</span><strong>${review.statistics.flexor.bilateral.symmetryIndex.toFixed(1)}%</strong></div>
                     <div class="session-review-metric"><span>Simetría extensor</span><strong>${review.statistics.extensor.bilateral.symmetryIndex.toFixed(1)}%</strong></div>
                     <div class="session-review-metric"><span>Asimetría relativa flexor/extensor</span><strong>${review.statistics.flexor.bilateral.relativeAsymmetry.toFixed(1)}% / ${review.statistics.extensor.bilateral.relativeAsymmetry.toFixed(1)}%</strong></div>
-                    <div class="session-review-metric"><span>wUSI flexor/extensor</span><strong>${this.formatSignedPercent(review.statistics.flexor.bilateral.weightedUniversalAsymmetry)} / ${this.formatSignedPercent(review.statistics.extensor.bilateral.weightedUniversalAsymmetry)}</strong></div>
+                    <div class="session-review-metric"><span>NSI flexor/extensor</span><strong>${this.formatPercent(review.statistics.flexor.bilateral.normalizedSymmetryIndex)} / ${this.formatPercent(review.statistics.extensor.bilateral.normalizedSymmetryIndex)}</strong></div>
                     <div class="session-review-metric"><span>RMS flexor izq./der.</span><strong>${review.statistics.flexor.left.rms.toFixed(2)} / ${review.statistics.flexor.right.rms.toFixed(2)} mV</strong></div>
                     <div class="session-review-metric"><span>RMS extensor izq./der.</span><strong>${review.statistics.extensor.left.rms.toFixed(2)} / ${review.statistics.extensor.right.rms.toFixed(2)} mV</strong></div>
                 </div>
@@ -2240,22 +2240,18 @@ class KinesioEMGApp {
 
     enrichAsymmetryMetrics(group, aggregate = {}) {
         if (!group?.left || !group?.right) return;
-        if (['relativeAsymmetry', 'robinsonAsymmetry', 'weightedUniversalAsymmetry'].every(key => Number.isFinite(Number(group.bilateral?.[key])))) return;
-        const averageRms = (Number(group.left.rms || 0) + Number(group.right.rms || 0)) / 2;
-        const snr = Number(group.bilateral?.snr ?? aggregate?.snr);
-        const sigma = Number.isFinite(snr) && averageRms > 0 ? averageRms / Math.pow(10, snr / 20) : 0;
-        group.bilateral = { ...group.bilateral, ...this.analysisService.calculateBilateral(group.left.rms, group.right.rms, sigma) };
+        if (['relativeAsymmetry', 'robinsonAsymmetry'].every(key => Number.isFinite(Number(group.bilateral?.[key])))) return;
+        group.bilateral = { ...group.bilateral, ...this.analysisService.calculateBilateral(group.left.rms, group.right.rms, group.bilateral?.normalizedSymmetryIndex) };
     }
 
     updateAsymmetryReadout(group, bilateral) {
         this.updateElement(`relative-asymmetry-${group}`, `${Number(bilateral.relativeAsymmetry || 0).toFixed(1)}%`);
-        this.updateElement(`robinson-asymmetry-${group}`, this.formatSignedPercent(bilateral.robinsonAsymmetry));
-        this.updateElement(`wusi-asymmetry-${group}`, this.formatSignedPercent(bilateral.weightedUniversalAsymmetry));
+        this.updateElement(`robinson-asymmetry-${group}`, this.formatPercent(bilateral.robinsonAsymmetry));
+        this.updateElement(`nsi-asymmetry-${group}`, this.formatPercent(bilateral.normalizedSymmetryIndex));
     }
 
-    formatSignedPercent(value) {
-        const numeric = Number(value || 0);
-        return `${numeric >= 0 ? '+' : ''}${numeric.toFixed(1)}%`;
+    formatPercent(value) {
+        return value !== null && value !== undefined && Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)}%` : 'N/D';
     }
 
     formatVoltageStat(value) {

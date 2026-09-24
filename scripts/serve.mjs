@@ -114,7 +114,7 @@ function redactAssistantText(value) {
 }
 
 function sanitizeAssistantContext(context) {
-    const allowed = new Set(['activity', 'muscle', 'musclePair', 'cadence', 'resistance', 'rms', 'mav', 'peakAmplitude', 'peakToPeak', 'waveformLength', 'zeroCrossings', 'entropy', 'frequency', 'snr', 'artifacts', 'symmetryIndex', 'difference', 'activationLevel', 'quality', 'left', 'right', 'flexor', 'extensor', 'channelSchema', 'bilateral', 'cycling', 'pedalingEfficiency', 'powerImbalance']);
+    const allowed = new Set(['activity', 'muscle', 'musclePair', 'cadence', 'resistance', 'rms', 'mav', 'peakAmplitude', 'peakToPeak', 'waveformLength', 'zeroCrossings', 'entropy', 'frequency', 'snr', 'artifacts', 'symmetryIndex', 'difference', 'relativeAsymmetry', 'robinsonAsymmetry', 'normalizedSymmetryIndex', 'activationLevel', 'quality', 'left', 'right', 'flexor', 'extensor', 'channelSchema', 'bilateral', 'cycling', 'pedalingEfficiency', 'powerImbalance']);
     const visit = value => {
         if (Array.isArray(value)) return value.slice(0, 50).map(visit);
         if (!value || typeof value !== 'object') return typeof value === 'string' ? redactAssistantText(value).slice(0, 120) : value;
