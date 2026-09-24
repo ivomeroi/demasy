@@ -63,7 +63,7 @@ El firmware está en `ESP32/`:
 - `esp_sensor.ino`: nodo sensor izquierdo o derecho mediante `SLAVE_ID`;
 - `esp_base.ino`: agregador ESP-NOW y periférico BLE `DEMASY-Master`.
 
-Para Bluetooth, carga ambos firmwares, abre DEMASY en Chrome/Edge sobre `localhost` o HTTPS y selecciona **Bluetooth**. Antes de medir, pulsa **Calibrar** y mantén los músculos relajados durante cinco segundos. La transformación visual no modifica las muestras persistidas.
+Para Bluetooth, carga ambos firmwares, abre DEMASY en Chrome/Edge sobre `localhost` o HTTPS y selecciona **Bluetooth**. Antes de medir, pulsa **Calibrar**: mantén los músculos relajados durante los primeros cinco segundos y realiza contracciones representativas durante los cinco segundos siguientes. DEMASY utiliza el reposo para corregir la actividad visual y el movimiento para ajustar el eje Y con margen. La transformación visual no modifica las muestras persistidas.
 
 En Chrome para Linux, Web Bluetooth continúa siendo una función experimental del navegador. Activa una sola vez `Experimental Web Platform features` en `chrome://flags/#enable-experimental-web-platform-features`, reinicia Chrome y luego podrás abrir DEMASY normalmente en `http://localhost:8000/emg-en-vivo`. Esta limitación pertenece a Chrome/Linux y no puede ser habilitada por una página web.
 

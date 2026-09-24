@@ -48,7 +48,7 @@ Preparar una entrega repetible, resistente a errores y segura para datos locales
 - El eje temporal del simulador utiliza el mismo reloj monotónico real que el cronómetro; ya no supone que `setTimeout(1)` se ejecuta exactamente mil veces por segundo.
 - La escala fija se adapta a la fuente: ±3 mV en simulación y ±50 mV para USB/Bluetooth.
 - La visualización ESP32 destaca una envolvente corregida respecto del basal, con ganancia visual, histéresis e indicador de reposo/contracción. Los datos persistidos mantienen los valores originales.
-- La calibración del nivel de reposo puede ejecutarse a demanda mediante un control de cinco segundos con cuenta regresiva y aviso animado.
+- La calibración puede ejecutarse a demanda mediante dos etapas guiadas de cinco segundos: reposo para estimar la línea basal y movimiento para ajustar automáticamente el rango del eje Y.
 
 ## Validación manual completada
 

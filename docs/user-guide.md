@@ -24,7 +24,7 @@ Si la página se recarga durante una grabación, DEMASY ofrece recuperar el borr
 
 ## Usar un ESP32
 
-Conecta por USB o Bluetooth desde los botones de **EMG en vivo**. Para Bluetooth selecciona `DEMASY-Master`. Ejecuta **Calibrar**, permanece relajado durante la cuenta regresiva de cinco segundos y luego comienza las contracciones. Recalibra si cambian los electrodos, el músculo o las condiciones de señal.
+Conecta por USB o Bluetooth desde los botones de **EMG en vivo**. Para Bluetooth selecciona `DEMASY-Master`. Ejecuta **Calibrar** y sigue las dos etapas indicadas: permanece relajado durante cinco segundos y luego realiza contracciones o movimientos representativos durante otros cinco segundos. La segunda etapa ajusta automáticamente el eje Y para mostrar la curva completa con margen. Recalibra si cambian los electrodos, el músculo o las condiciones de señal.
 
 La curva de actividad corregida facilita la lectura visual, pero no reemplaza la señal original almacenada.
 

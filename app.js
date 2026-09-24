@@ -64,6 +64,8 @@ class KinesioEMGApp {
             this.calibrationInProgress = false;
             this.calibrationTimer = null;
             this.calibrationDurationMs = 5000;
+            this.calibrationPhase = null;
+            this.calibrationPhaseStartedAt = null;
             this.activeCalibrationChannels = [];
             this.envelopeDisplaySource = null;
             
@@ -91,6 +93,7 @@ class KinesioEMGApp {
             activityVisualGain: 2.5,
             fixedYMin: -3,
             fixedYMax: 3,
+            calibratedYRanges: { flexor: null, extensor: null },
             signalUnit: 'mV'
         };
         
@@ -364,8 +367,9 @@ class KinesioEMGApp {
         if (!this.emgChart) return;
         const fixed = this.displayPreferences.chartScaleMode !== 'auto';
         this.getLiveCharts().forEach(chart => {
-            chart.options.scales.y.min = fixed ? this.chartConfig.fixedYMin : undefined;
-            chart.options.scales.y.max = fixed ? this.chartConfig.fixedYMax : undefined;
+            const range = this.getChartYRange(chart);
+            chart.options.scales.y.min = fixed ? -range : undefined;
+            chart.options.scales.y.max = fixed ? range : undefined;
             chart.data.datasets[0].hidden = this.displayPreferences.showLeftSignal === false;
             chart.data.datasets[1].hidden = this.displayPreferences.showRightSignal === false;
             chart.data.datasets[2].hidden = this.displayPreferences.showRms === false || this.displayPreferences.showLeftSignal === false;
@@ -384,6 +388,7 @@ class KinesioEMGApp {
         const yRange = isExternal ? this.chartConfig.externalYRange : this.chartConfig.simulatorYRange;
         this.chartConfig.fixedYMin = -yRange;
         this.chartConfig.fixedYMax = yRange;
+        this.chartConfig.calibratedYRanges = { flexor: null, extensor: null };
         this.getLiveCharts().forEach(chart => {
             chart.data.datasets[0].borderColor = isExternal ? 'rgba(37, 99, 235, 0.32)' : '#2563eb';
             chart.data.datasets[0].borderWidth = isExternal ? 1 : 2;
@@ -1821,6 +1826,8 @@ class KinesioEMGApp {
                     ? this.smoothEnvelope(`${group}-left`, data[group].left.envelope, data.time) : this.calculateRMSFromDataset(leftSignal);
                 const rightEnvelope = Number.isFinite(data[group].right.envelope)
                     ? this.smoothEnvelope(`${group}-right`, data[group].right.envelope, data.time) : this.calculateRMSFromDataset(rightSignal);
+                this.captureCalibrationMovement(`${group}-left`, data[group].left.amplitude, leftEnvelope);
+                this.captureCalibrationMovement(`${group}-right`, data[group].right.amplitude, rightEnvelope);
                 leftEnvelopeData.data.push({ x: data.time, y: leftEnvelope });
                 rightEnvelopeData.data.push({ x: data.time, y: rightEnvelope });
             });
@@ -1844,10 +1851,16 @@ class KinesioEMGApp {
         return [this.emgChart, this.extensorChart].filter(Boolean);
     }
 
+    getChartYRange(chart) {
+        const group = chart === this.extensorChart ? 'extensor' : 'flexor';
+        return this.chartConfig.calibratedYRanges[group] || Math.abs(this.chartConfig.fixedYMax);
+    }
+
     createEnvelopeDisplayState() {
         return {
             smoothed: null,
             baselineSamples: [],
+            movementSamples: [],
             baseline: null,
             calibrated: false,
             active: false,
@@ -1895,16 +1908,18 @@ class KinesioEMGApp {
             this.envelopeDisplay[channel] = this.createEnvelopeDisplayState();
         });
         this.calibrationInProgress = true;
-        const startedAt = performance.now();
+        this.calibrationPhase = 'rest';
+        this.calibrationPhaseStartedAt = performance.now();
         const button = document.getElementById('calibrate-signal');
         const selector = document.getElementById('calibration-target');
         this.setCalibrationOverlayVisibility(this.activeCalibrationChannels, true);
+        this.updateCalibrationOverlay('rest');
         if (button) button.disabled = true;
         if (selector) selector.disabled = true;
         this.activeCalibrationChannels.forEach(key => this.updateActivityBadge(key, 'calibrating'));
 
         const updateCountdown = () => {
-            const elapsed = performance.now() - startedAt;
+            const elapsed = performance.now() - this.calibrationPhaseStartedAt;
             const remaining = Math.max(0, this.calibrationDurationMs - elapsed);
             document.querySelectorAll('.calibration-countdown').forEach(countdown => {
                 countdown.textContent = `${(remaining / 1000).toFixed(1)} s`;
@@ -1912,11 +1927,51 @@ class KinesioEMGApp {
             document.querySelectorAll('.calibration-progress-fill').forEach(progress => {
                 progress.style.width = `${Math.min(100, elapsed / this.calibrationDurationMs * 100)}%`;
             });
-            if (remaining <= 0) this.finishSignalCalibration();
+            if (remaining <= 0) {
+                if (this.calibrationPhase === 'rest') this.startMovementCalibrationPhase();
+                else this.finishSignalCalibration();
+            }
         };
 
         updateCountdown();
         this.calibrationTimer = window.setInterval(updateCountdown, 100);
+    }
+
+    startMovementCalibrationPhase() {
+        let channelsWithBaseline = 0;
+        this.activeCalibrationChannels.forEach(channel => {
+            const state = this.envelopeDisplay[channel];
+            if (state.baselineSamples.length) {
+                const ordered = [...state.baselineSamples].sort((a, b) => a - b);
+                state.baseline = ordered[Math.floor(ordered.length / 2)];
+                state.calibrated = true;
+                channelsWithBaseline++;
+            }
+            state.baselineSamples = [];
+            state.movementSamples = [];
+        });
+        if (!channelsWithBaseline) {
+            this.finishSignalCalibration();
+            return;
+        }
+        this.calibrationPhase = 'movement';
+        this.calibrationPhaseStartedAt = performance.now();
+        this.updateCalibrationOverlay('movement');
+    }
+
+    updateCalibrationOverlay(phase) {
+        const movement = phase === 'movement';
+        document.querySelectorAll('[data-calibration-group]').forEach(overlay => {
+            overlay.dataset.phase = phase;
+            const title = overlay.querySelector('.calibration-title');
+            const instruction = overlay.querySelector('.calibration-instruction');
+            if (title) title.textContent = movement ? 'Calibrando rango de movimiento' : 'Calibrando nivel de reposo';
+            if (instruction) instruction.textContent = movement
+                ? 'Realiza contracciones y movimientos normales durante cinco segundos.'
+                : 'Mantén los músculos relajados y evita movimientos.';
+        });
+        document.querySelectorAll('.calibration-progress-fill').forEach(progress => { progress.style.width = '0%'; });
+        document.querySelectorAll('.calibration-countdown').forEach(countdown => { countdown.textContent = '5.0 s'; });
     }
 
     finishSignalCalibration() {
@@ -1926,35 +1981,64 @@ class KinesioEMGApp {
         this.calibrationTimer = null;
 
         let calibratedChannels = 0;
+        let channelsWithMovement = 0;
         this.activeCalibrationChannels.forEach(channel => {
             const state = this.envelopeDisplay[channel];
-            if (state.baselineSamples.length > 0) {
+            if (!state.calibrated && state.baselineSamples.length > 0) {
                 const ordered = [...state.baselineSamples].sort((a, b) => a - b);
                 state.baseline = ordered[Math.floor(ordered.length / 2)];
                 state.calibrated = true;
-                calibratedChannels++;
-                this.updateActivityBadge(channel, 'rest');
-            } else {
-                this.updateActivityBadge(channel, 'uncalibrated');
             }
+            if (state.calibrated) calibratedChannels++;
+            if (state.movementSamples.length) channelsWithMovement++;
+            this.updateActivityBadge(channel, state.calibrated ? 'rest' : 'uncalibrated');
             state.baselineSamples = [];
         });
+
+        const calibratedRanges = this.applyCalibrationChartRanges(this.activeCalibrationChannels);
 
         const button = document.getElementById('calibrate-signal');
         const selector = document.getElementById('calibration-target');
         this.setCalibrationOverlayVisibility([], false);
+        this.calibrationPhase = null;
+        this.calibrationPhaseStartedAt = null;
         if (button) button.disabled = false;
         if (selector) selector.disabled = false;
         const expectedChannels = this.activeCalibrationChannels.length;
         this.activeCalibrationChannels = [];
         this.showNotification(
-            calibratedChannels === expectedChannels
-                ? `Calibración completada en ${calibratedChannels} sensor${calibratedChannels === 1 ? '' : 'es'}.`
+            calibratedChannels === expectedChannels && channelsWithMovement === expectedChannels
+                ? `Calibración completada en ${calibratedChannels} sensor${calibratedChannels === 1 ? '' : 'es'}. Escala ajustada a ${calibratedRanges.join(' / ')} mV.`
                 : calibratedChannels > 0
-                    ? `Calibración parcial: ${calibratedChannels} de ${expectedChannels} sensores recibieron datos.`
+                    ? `Calibración parcial: reposo ${calibratedChannels}/${expectedChannels}, movimiento ${channelsWithMovement}/${expectedChannels}.`
                     : 'No se recibieron datos para calibrar.',
-            calibratedChannels === expectedChannels ? 'success' : 'warning'
+            calibratedChannels === expectedChannels && channelsWithMovement === expectedChannels ? 'success' : 'warning'
         );
+    }
+
+    captureCalibrationMovement(channel, rawAmplitude, displayedEnvelope) {
+        if (!this.calibrationInProgress || this.calibrationPhase !== 'movement' || !this.activeCalibrationChannels.includes(channel)) return;
+        const state = this.envelopeDisplay[channel];
+        [rawAmplitude, displayedEnvelope].map(value => Math.abs(Number(value))).filter(Number.isFinite).forEach(value => state.movementSamples.push(value));
+    }
+
+    applyCalibrationChartRanges(channels) {
+        const groups = [...new Set(channels.map(channel => channel.split('-')[0]))];
+        const labels = [];
+        groups.forEach(group => {
+            const values = channels
+                .filter(channel => channel.startsWith(`${group}-`))
+                .flatMap(channel => this.envelopeDisplay[channel].movementSamples)
+                .filter(value => Number.isFinite(value) && value >= 0)
+                .sort((a, b) => a - b);
+            if (!values.length) return;
+            const robustPeak = values[Math.min(values.length - 1, Math.floor(values.length * 0.99))];
+            const range = Math.max(3, Math.ceil(robustPeak * 1.2 / 5) * 5);
+            this.chartConfig.calibratedYRanges[group] = range;
+            labels.push(`${group === 'flexor' ? 'flexor' : 'extensor'} ±${range}`);
+        });
+        this.applyDisplayPreferences(this.displayPreferences);
+        return labels.length ? labels : ['sin ajuste'];
     }
 
     smoothEnvelope(channel, value, time) {
@@ -1964,13 +2048,13 @@ class KinesioEMGApp {
             ? Math.max(0, value)
             : state.smoothed + alpha * (Math.max(0, value) - state.smoothed);
 
-        if (this.calibrationInProgress && this.activeCalibrationChannels.includes(channel)) {
+        if (this.calibrationInProgress && this.calibrationPhase === 'rest' && this.activeCalibrationChannels.includes(channel)) {
             state.baselineSamples.push(state.smoothed);
             this.updateActivityBadge(channel, 'calibrating');
             return 0;
         }
 
-        if (state.calibrated && !state.active) {
+        if (state.calibrated && !state.active && this.calibrationPhase !== 'movement') {
             state.baseline += 0.002 * (state.smoothed - state.baseline);
         }
 
@@ -1999,7 +2083,9 @@ class KinesioEMGApp {
             state.candidateSince = null;
         }
 
-        this.updateActivityBadge(channel, state.active ? 'active' : 'rest');
+        if (!(this.calibrationInProgress && this.calibrationPhase === 'movement' && this.activeCalibrationChannels.includes(channel))) {
+            this.updateActivityBadge(channel, state.active ? 'active' : 'rest');
+        }
         if (!this.isExternalSignalSource()) return state.smoothed;
 
         // Display-only transformation. The original sample and envelope remain

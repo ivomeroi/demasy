@@ -1056,6 +1056,21 @@ input[type="range"] { accent-color: var(--primary-color); }
   font-weight: 800;
 }
 
+.calibration-overlay[data-phase="movement"] {
+  border-color: rgba(5, 150, 105, 0.42);
+  background: rgba(236, 253, 245, 0.95);
+  color: #064e3b;
+}
+
+.calibration-overlay[data-phase="movement"] .calibration-pulse {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.calibration-overlay[data-phase="movement"] .calibration-progress div {
+  background: #059669;
+}
+
 .calibration-pulse {
   display: grid;
   width: 3.5rem;

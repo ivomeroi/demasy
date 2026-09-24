@@ -162,7 +162,7 @@
                                             <option value="extensor-left">S3 · Extensor izquierdo</option>
                                             <option value="extensor-right">S4 · Extensor derecho</option>
                                         </select>
-                                        <button class="btn-small calibration-button" id="calibrate-signal" title="Calibrar el nivel de reposo">
+                                        <button class="btn-small calibration-button" id="calibrate-signal" title="Calibrar reposo y rango de movimiento">
                                             <i class="fas fa-crosshairs"></i> Calibrar
                                         </button>
                                     </div>
@@ -173,8 +173,8 @@
                                 <canvas id="emg-chart" aria-label="Señales del músculo flexor izquierdo y derecho"></canvas>
                                 <div class="calibration-overlay" data-calibration-group="flexor" hidden role="status" aria-live="polite">
                                     <div class="calibration-pulse"><i class="fas fa-wave-square"></i></div>
-                                    <strong>Calibrando nivel de reposo</strong>
-                                    <span>Mantén los músculos relajados y evita movimientos.</span>
+                                    <strong class="calibration-title">Calibrando nivel de reposo</strong>
+                                    <span class="calibration-instruction">Mantén los músculos relajados y evita movimientos.</span>
                                     <output class="calibration-countdown">5.0 s</output>
                                     <div class="calibration-progress"><div class="calibration-progress-fill"></div></div>
                                 </div>
@@ -183,8 +183,8 @@
                                 <canvas id="extensor-chart" aria-label="Señales del músculo extensor izquierdo y derecho"></canvas>
                                 <div class="calibration-overlay" data-calibration-group="extensor" hidden role="status" aria-live="polite">
                                     <div class="calibration-pulse"><i class="fas fa-wave-square"></i></div>
-                                    <strong>Calibrando nivel de reposo</strong>
-                                    <span>Mantén los músculos relajados y evita movimientos.</span>
+                                    <strong class="calibration-title">Calibrando nivel de reposo</strong>
+                                    <span class="calibration-instruction">Mantén los músculos relajados y evita movimientos.</span>
                                     <output class="calibration-countdown">5.0 s</output>
                                     <div class="calibration-progress"><div class="calibration-progress-fill"></div></div>
                                 </div>
