@@ -72,16 +72,16 @@
                     <button class="btn-control" id="connect-esp32" title="Conectar ESP32 por USB">
                         <i class="fas fa-usb"></i> Conectar ESP32
                     </button>
-                    <button class="btn-control" id="disconnect-esp32" title="Desconectar ESP32" disabled>
+                    <button class="btn-control" id="disconnect-esp32" title="Desconectar ESP32" disabled hidden>
                         <i class="fas fa-unlink"></i> Desconectar
                     </button>
                     <button class="btn-control" id="connect-ble" title="Conectar ESP32 master por Bluetooth">
                         <i class="fas fa-bluetooth-b"></i> Bluetooth
                     </button>
-                    <button class="btn-control" id="disconnect-ble" title="Desconectar Bluetooth" disabled>
+                    <button class="btn-control" id="disconnect-ble" title="Desconectar Bluetooth" disabled hidden>
                         <i class="fas fa-unlink"></i> BT Off
                     </button>
-                    <button class="btn-control" id="save-session" disabled>
+                    <button class="btn-control" id="save-session" disabled hidden>
                         <i class="fas fa-save"></i> Guardar Sesión
                     </button>
                 </div>
@@ -102,10 +102,10 @@
                         </div>
                         <div class="session-workflow-actions">
                             <button class="btn-outline" id="configure-session">Configurar sesión</button>
-                            <button class="btn-control primary" id="start-session" disabled>Iniciar grabación</button>
-                            <button class="btn-outline" id="pause-session" disabled>Pausar</button>
-                            <button class="btn-outline" id="finish-session" disabled>Finalizar</button>
-                            <button class="btn-outline danger" id="discard-session" disabled>Descartar</button>
+                            <button class="btn-control primary" id="start-session" disabled hidden>Iniciar grabación</button>
+                            <button class="btn-outline" id="pause-session" disabled hidden>Pausar</button>
+                            <button class="btn-outline" id="finish-session" disabled hidden>Finalizar</button>
+                            <button class="btn-outline danger" id="discard-session" disabled hidden>Descartar</button>
                         </div>
                     </div>
                     <div class="dashboard-grid">

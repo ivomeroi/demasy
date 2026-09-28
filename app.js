@@ -1227,15 +1227,15 @@ class KinesioEMGApp {
         const discard = document.getElementById('discard-session');
         const save = document.getElementById('save-session');
 
-        if (configure) configure.disabled = !this.recordingController.can('configure');
-        if (start) start.disabled = !this.recordingController.can('start');
+        this.setActionAvailability(configure, this.recordingController.can('configure'));
+        this.setActionAvailability(start, this.recordingController.can('start'));
         if (pause) {
-            pause.disabled = !['recording', 'paused'].includes(state);
+            this.setActionAvailability(pause, ['recording', 'paused'].includes(state));
             pause.textContent = state === 'paused' ? 'Reanudar' : 'Pausar';
         }
-        if (finish) finish.disabled = !this.recordingController.can('finish');
-        if (discard) discard.disabled = !this.recordingController.can('discard');
-        if (save) save.disabled = !this.recordingController.can('save') || this.sessionData.length === 0;
+        this.setActionAvailability(finish, this.recordingController.can('finish'));
+        this.setActionAvailability(discard, this.recordingController.can('discard'));
+        this.setActionAvailability(save, this.recordingController.can('save') && this.sessionData.length > 0);
         this.updateSessionTimer();
     }
 
@@ -2397,20 +2397,34 @@ class KinesioEMGApp {
         this.updateRecordingWorkflowUI();
     }
 
-    updateSerialControls(isConnected) {
-        const connectBtn = document.getElementById('connect-esp32');
-        const disconnectBtn = document.getElementById('disconnect-esp32');
-
-        if (connectBtn) connectBtn.disabled = isConnected;
-        if (disconnectBtn) disconnectBtn.disabled = !isConnected;
+    setActionAvailability(element, available) {
+        if (!element) return;
+        element.disabled = !available;
+        element.hidden = !available;
     }
 
-    updateBluetoothControls(isConnected) {
-        const connectBtn = document.getElementById('connect-ble');
-        const disconnectBtn = document.getElementById('disconnect-ble');
+    updateConnectionControls() {
+        const serialConnected = Boolean(this.serialManager?.isConnected);
+        const bluetoothConnected = Boolean(this.bluetoothManager?.isConnected);
+        const disconnected = !serialConnected && !bluetoothConnected;
 
-        if (connectBtn) connectBtn.disabled = isConnected;
-        if (disconnectBtn) disconnectBtn.disabled = !isConnected;
+        const connectBtn = document.getElementById('connect-esp32');
+        const disconnectBtn = document.getElementById('disconnect-esp32');
+        const connectBleBtn = document.getElementById('connect-ble');
+        const disconnectBleBtn = document.getElementById('disconnect-ble');
+
+        this.setActionAvailability(connectBtn, disconnected);
+        this.setActionAvailability(connectBleBtn, disconnected);
+        this.setActionAvailability(disconnectBtn, serialConnected);
+        this.setActionAvailability(disconnectBleBtn, bluetoothConnected);
+    }
+
+    updateSerialControls() {
+        this.updateConnectionControls();
+    }
+
+    updateBluetoothControls() {
+        this.updateConnectionControls();
     }
 
     updateConnectionStatus(status) {
