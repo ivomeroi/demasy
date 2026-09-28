@@ -10,9 +10,10 @@
 #define EMG_PIN 0
 #define BATTERY_PIN 1
 #define BATTERY_LED_PIN 3
-#define SAMPLE_RATE_HZ 500
-#define BLE_RATE_HZ 100
-#define BUFFER_SIZE 128
+#define SAMPLE_RATE_HZ 1000
+#define BLE_RATE_HZ 50
+#define ADC_OVERSAMPLE_COUNT 4
+#define BUFFER_SIZE 256  // 256 ms, igual que 128 muestras a 500 Hz.
 #define BATTERY_LOW_MV 3400
 #define BATTERY_DIVIDER 2.0f       // Divisor resistivo 47k/47k.
 #define BATTERY_CALIBRATION 1.00f  // Ajustar comparando con un multimetro.
@@ -64,8 +65,8 @@ class SensorServerCallbacks : public NimBLEServerCallbacks {
 
 int readEmgADC() {
   long total = 0;
-  for (int i = 0; i < 8; i++) total += analogRead(EMG_PIN);
-  return total / 8;
+  for (int i = 0; i < ADC_OVERSAMPLE_COUNT; i++) total += analogRead(EMG_PIN);
+  return total / ADC_OVERSAMPLE_COUNT;
 }
 
 uint16_t readBatteryMv() {
@@ -86,35 +87,35 @@ int getEnvelope(int absoluteEmg) {
   return envelopeSum / BUFFER_SIZE;
 }
 
+typedef struct {
+  float b0;
+  float b1;
+  float b2;
+  float a1;
+  float a2;
+  float z1;
+  float z2;
+} Biquad;
+
+// Cascada diseñada para Fs=1000 Hz: pasa banda 20-450 Hz y notch de red a
+// 50 Hz. No reutilizar estos coeficientes con otra frecuencia de muestreo.
+Biquad emgFilterStages[] = {
+  { 0.91496914f, -1.82993829f,  0.91496914f, -1.82269493f, 0.83718165f, 0, 0 },
+  { 0.99479124f, -1.89220538f,  0.99479124f, -1.89220538f, 0.98958248f, 0, 0 },
+  { 0.80059240f,  1.60118481f,  0.80059240f,  1.56101808f, 0.64135154f, 0, 0 }
+};
+
+float processBiquad(Biquad &stage, float input) {
+  const float output = stage.b0 * input + stage.z1;
+  stage.z1 = stage.b1 * input - stage.a1 * output + stage.z2;
+  stage.z2 = stage.b2 * input - stage.a2 * output;
+  return output;
+}
+
 float EMGFilter(float input) {
   float output = input;
-  {
-    static float z1 = 0, z2 = 0;
-    const float x = output - 0.05159732f * z1 - 0.36347401f * z2;
-    output = 0.01856301f * x + 0.03712602f * z1 + 0.01856301f * z2;
-    z2 = z1;
-    z1 = x;
-  }
-  {
-    static float z1 = 0, z2 = 0;
-    const float x = output + 0.53945795f * z1 - 0.39764934f * z2;
-    output = x - 2.0f * z1 + z2;
-    z2 = z1;
-    z1 = x;
-  }
-  {
-    static float z1 = 0, z2 = 0;
-    const float x = output - 0.47319594f * z1 - 0.70744137f * z2;
-    output = x + 2.0f * z1 + z2;
-    z2 = z1;
-    z1 = x;
-  }
-  {
-    static float z1 = 0, z2 = 0;
-    const float x = output + 1.00211112f * z1 - 0.74520226f * z2;
-    output = x - 2.0f * z1 + z2;
-    z2 = z1;
-    z1 = x;
+  for (Biquad &stage : emgFilterStages) {
+    output = processBiquad(stage, output);
   }
   return output;
 }
@@ -202,6 +203,7 @@ void loop() {
   static uint32_t lastSampleUs = 0;
   static uint32_t lastNotifyUs = 0;
   static uint32_t lastDebugMs = 0;
+  static uint32_t samplesSinceDebug = 0;
   const uint32_t nowUs = micros();
 
   if ((uint32_t)(nowUs - lastSampleUs) >= 1000000UL / SAMPLE_RATE_HZ) {
@@ -214,6 +216,7 @@ void loop() {
     latestSignal = signal;
     latestEnvelope = constrain(envelope, 0, 4095);
     latestFlags = classifySignal(raw, envelope);
+    samplesSinceDebug++;
   }
 
   if (masterConnected && (uint32_t)(nowUs - lastNotifyUs) >= 1000000UL / BLE_RATE_HZ) {
@@ -231,15 +234,22 @@ void loop() {
   updateBatteryAndLed();
 
   if (millis() - lastDebugMs >= 1000) {
-    lastDebugMs = millis();
+    const uint32_t nowMs = millis();
+    const uint32_t elapsedMs = nowMs - lastDebugMs;
+    const uint32_t actualSampleRate = elapsedMs > 0
+      ? (samplesSinceDebug * 1000UL) / elapsedMs
+      : 0;
+    lastDebugMs = nowMs;
     Serial.printf(
-      "node=%u, conectado=%u, raw=%u, signal=%.2f, env=%u, bat=%.2fV\n",
+      "node=%u, conectado=%u, sampleHz=%lu, raw=%u, signal=%.2f, env=%u, bat=%.2fV\n",
       SENSOR_NODE_ID,
       masterConnected,
+      (unsigned long)actualSampleRate,
       latestRaw,
       latestSignal,
       latestEnvelope,
       batteryMv / 1000.0f
     );
+    samplesSinceDebug = 0;
   }
 }

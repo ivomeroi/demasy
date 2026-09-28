@@ -2,7 +2,7 @@
 
 #define CHANNEL_COUNT 4
 #define REQUIRED_CONNECTIONS 5  // Chrome + four sensors
-#define STREAM_RATE_HZ 200
+#define STREAM_RATE_HZ 50
 #define STALE_TIMEOUT_MS 500
 #define STATUS_EVERY_MS 2000
 
@@ -599,7 +599,7 @@ bool connectPendingSensor() {
 
   client->setConnectionParams(
     24,
-    40,
+    32,
     0,
     300
   );
@@ -895,7 +895,8 @@ void publishStatus() {
     "S1=%s %.2fV "
     "S2=%s %.2fV "
     "S3=%s %.2fV "
-    "S4=%s %.2fV\n",
+    "S4=%s %.2fV "
+    "drops=%lu/%lu/%lu/%lu\n",
 
     webConnected
       ? "ON"
@@ -942,7 +943,12 @@ void publishStatus() {
       : "OFF",
 
     nodes[3].batteryMv
-      / 1000.0f
+      / 1000.0f,
+
+    (unsigned long)nodes[0].drops,
+    (unsigned long)nodes[1].drops,
+    (unsigned long)nodes[2].drops,
+    (unsigned long)nodes[3].drops
   );
 }
 
@@ -1030,12 +1036,12 @@ void setup() {
 
 
   scan->setInterval(
-    80
+    160
   );
 
 
   scan->setWindow(
-    40
+    24
   );
 
 

@@ -48,6 +48,18 @@ Cada sensor debe usar un `SENSOR_NODE_ID` unico:
 
 Usar NimBLE-Arduino 2.5.x tanto en el master como en los sensores.
 
+## Frecuencias y carga BLE
+
+Cada sensor adquiere y filtra localmente a 1000 Hz, pero notifica a la base a
+50 Hz. La base agrega los cuatro canales y notifica al navegador tambien a 50
+Hz. Esta separacion conserva el procesamiento de la banda EMG y evita intentar
+transportar cientos de notificaciones redundantes por cinco conexiones BLE.
+
+El escaneo activo utiliza un ciclo de trabajo reducido mientras falta algun
+sensor. Una vez conectados los cuatro, el escaneo se detiene automaticamente.
+El estado serie muestra `drops=S1/S2/S3/S4`; durante una prueba estable los
+contadores deben permanecer en cero o crecer solo de manera excepcional.
+
 ## Indicador de bateria de la base
 
 La base utiliza la misma medicion e indicacion que los sensores:

@@ -12,7 +12,9 @@ class EMGBluetoothManager extends EMGSerialManager {
         this.pendingText = '';
         this.serviceUuid = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
         this.txUuid = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-        this.sampleRate = 200;
+        // El master entrega una trama agregada de cuatro canales a 50 Hz.
+        // La adquisicion y el filtrado ocurren a 1000 Hz dentro de cada sensor.
+        this.sampleRate = 50;
         this.useFixedSampleClock = true;
     }
 
