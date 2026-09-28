@@ -395,8 +395,9 @@ input[type="range"] { accent-color: var(--primary-color); }
   top: calc(100% + 0.5rem);
   right: 0;
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.45rem;
-  width: 260px;
+  width: 390px;
   padding: 0.55rem;
   border: 1px solid #bfd0dc;
   border-radius: 0.7rem;
@@ -615,8 +616,15 @@ input[type="range"] { accent-color: var(--primary-color); }
   z-index: 20;
   top: calc(100% + 0.5rem);
   right: 0;
-  width: min(390px, calc(100vw - 3rem));
-  padding: 0.9rem;
+  display: grid;
+  grid-template-columns: minmax(270px, 1.25fr) minmax(220px, 0.9fr);
+  grid-template-areas:
+    "phase actions"
+    "phase calibration";
+  align-items: start;
+  gap: 0.65rem 0.8rem;
+  width: min(570px, calc(100vw - 3rem));
+  padding: 0.75rem;
   border: 1px solid #bfd0dc;
   border-radius: 0.75rem;
   background: var(--bg-primary);
@@ -624,18 +632,22 @@ input[type="range"] { accent-color: var(--primary-color); }
 }
 
 .signal-action-buttons {
+  grid-area: actions;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
-  margin: 0.75rem 0;
+  margin: 0;
 }
 
 .signal-action-buttons .btn-small { white-space: nowrap; }
 
 .advanced-chart-controls-panel .calibration-controls {
+  grid-area: calibration;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
 }
+
+.advanced-chart-controls-panel .calibration-controls label { grid-column: 1 / -1; }
 
 .advanced-chart-controls-panel .calibration-controls select {
   width: 100%;
@@ -643,8 +655,10 @@ input[type="range"] { accent-color: var(--primary-color); }
 }
 
 .advanced-chart-controls-panel .calibration-button {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
+
+.advanced-chart-controls-panel .cycling-controls { grid-area: phase; }
 
 /* Chart Container */
 .chart-container {
@@ -1753,11 +1767,13 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
   .advanced-chart-controls > summary { justify-content: space-between; }
   .advanced-chart-controls-panel {
     position: static;
+    display: block;
     width: 100%;
     margin-top: 0.5rem;
     box-shadow: 0 8px 22px rgba(15, 45, 66, 0.14);
   }
-  .signal-action-buttons { grid-template-columns: 1fr; }
+  .signal-action-buttons { margin: 0.65rem 0; }
+  .connection-selector-menu { grid-template-columns: 1fr; width: 260px; }
   
   .stats-grid {
     grid-template-columns: 1fr;
