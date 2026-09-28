@@ -47,3 +47,20 @@ Cada sensor debe usar un `SENSOR_NODE_ID` unico:
 - 4: extensor derecho
 
 Usar NimBLE-Arduino 2.5.x tanto en el master como en los sensores.
+
+## Indicador de bateria de la base
+
+La base utiliza la misma medicion e indicacion que los sensores:
+
+- `GPIO 1`: medicion mediante un divisor resistivo 47k/47k.
+- `GPIO 3`: LED indicador de bateria.
+- LED encendido fijo: bateria igual o superior a 3,40 V.
+- LED parpadeando cada 500 ms: bateria inferior a 3,40 V.
+
+El monitor serie informa el voltaje de la base como `base=...V`, junto con los
+voltajes recibidos de los cuatro sensores. Para ajustar la lectura contra un
+multimetro, modificar `BATTERY_CALIBRATION` en el sketch.
+
+Revisar que estos GPIO sean apropiados para el modelo concreto de ESP32-C3. La
+bateria no debe conectarse directamente al `GPIO 1`: el divisor 47k/47k es
+obligatorio para mantener la tension del ADC dentro del rango permitido.
