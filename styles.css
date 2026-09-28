@@ -587,6 +587,16 @@ input[type="range"] { accent-color: var(--primary-color); }
   grid-row: auto;
 }
 
+.stats-card > h3,
+.quality-card > h3,
+.analysis-card > h3 {
+  margin: 0;
+  padding: 1.5rem 1.5rem 0;
+  color: var(--primary-dark);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
 /* Cards */
 .card {
   background: var(--bg-primary);
@@ -774,7 +784,7 @@ input[type="range"] { accent-color: var(--primary-color); }
 .live-asymmetry-grid { display: grid; gap: 0.45rem; margin-top: 0.7rem; }
 .live-asymmetry-grid > div { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.55rem 0.7rem; border: 1px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-secondary); font-size: 0.84rem; }
 .live-asymmetry-grid strong { white-space: nowrap; color: var(--primary-dark); }
-.metric-glossary { margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 0.65rem; background: var(--bg-primary); }
+.metric-glossary { margin: 0 1.5rem 1.5rem; border: 1px solid var(--border-color); border-radius: 0.65rem; background: var(--bg-primary); }
 .metric-glossary summary { cursor: pointer; padding: 0.85rem 1rem; color: var(--primary-dark); font-weight: 700; }
 .metric-glossary-content { padding: 0 1rem 1rem; color: var(--text-secondary); }
 .metric-glossary-content dl { display: grid; grid-template-columns: minmax(140px, 0.35fr) 1fr; gap: 0.65rem 1rem; margin: 0.5rem 0; }
@@ -864,15 +874,12 @@ input[type="range"] { accent-color: var(--primary-color); }
 }
 
 /* Quality Indicator */
-.quality-card .card-header + * {
-  padding: 1.5rem;
-}
-
 .quality-indicator {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+  padding: 1.25rem 1.5rem 0;
 }
 
 .quality-bar {
@@ -900,6 +907,7 @@ input[type="range"] { accent-color: var(--primary-color); }
 .quality-metrics {
   display: grid;
   gap: 0.75rem;
+  padding: 0 1.5rem 1.5rem;
 }
 
 .metric {
