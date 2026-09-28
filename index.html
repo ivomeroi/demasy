@@ -69,14 +69,25 @@
                     </div>
                 </div>
                 <div class="header-right" id="emg-header-actions">
-                    <button class="btn-control" id="connect-esp32" title="Conectar ESP32 por USB">
-                        <i class="fas fa-usb"></i> Conectar ESP32
-                    </button>
+                    <details class="connection-selector" id="esp32-connection-menu">
+                        <summary title="Elegir método de conexión ESP32">
+                            <i class="fas fa-plug" aria-hidden="true"></i>
+                            <span>Conectar ESP32</span>
+                            <i class="fas fa-chevron-down connection-selector-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <div class="connection-selector-menu" aria-label="Método de conexión ESP32">
+                            <button class="btn-control" id="connect-esp32" title="Conectar ESP32 por USB">
+                                <i class="fas fa-usb" aria-hidden="true"></i>
+                                <span><strong>USB</strong><small>Web Serial mediante cable</small></span>
+                            </button>
+                            <button class="btn-control" id="connect-ble" title="Conectar ESP32 master por Bluetooth">
+                                <i class="fas fa-bluetooth-b" aria-hidden="true"></i>
+                                <span><strong>Bluetooth</strong><small>Conexión inalámbrica BLE</small></span>
+                            </button>
+                        </div>
+                    </details>
                     <button class="btn-control" id="disconnect-esp32" title="Desconectar ESP32" disabled hidden>
                         <i class="fas fa-unlink"></i> Desconectar
-                    </button>
-                    <button class="btn-control" id="connect-ble" title="Conectar ESP32 master por Bluetooth">
-                        <i class="fas fa-bluetooth-b"></i> Bluetooth
                     </button>
                     <button class="btn-control" id="disconnect-ble" title="Desconectar Bluetooth" disabled hidden>
                         <i class="fas fa-unlink"></i> BT Off
@@ -122,50 +133,61 @@
                                         <option value="gluteus">Glúteo ↔ Flexores de cadera</option>
                                         <option value="soleus">Sóleo ↔ Tibial anterior</option>
                                     </select>
-                                    <div class="cycling-controls">
-                                        <div class="phase-control">
-                                            <label for="phase-shift-control">Retraso temporal derecho · ambos músculos: <span id="phase-display">0</span>°</label>
-                                            <input type="range" id="phase-shift-control" min="-180" max="180" value="0" step="5" />
-                                            <div class="phase-buttons">
-                                                <button class="btn-small" id="phase-auto-align" title="Superposición Automática">
-                                                    <i class="fas fa-magic"></i> Auto
+                                    <details class="advanced-chart-controls" id="advanced-chart-controls">
+                                        <summary>
+                                            <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                                            <span>Controles de señal</span>
+                                            <i class="fas fa-chevron-down advanced-controls-chevron" aria-hidden="true"></i>
+                                        </summary>
+                                        <div class="advanced-chart-controls-panel">
+                                            <div class="cycling-controls">
+                                                <div class="phase-control">
+                                                    <label for="phase-shift-control">Retraso temporal derecho · ambos músculos: <span id="phase-display">0</span>°</label>
+                                                    <input type="range" id="phase-shift-control" min="-180" max="180" value="0" step="5" />
+                                                    <div class="phase-buttons">
+                                                        <button class="btn-small" id="phase-auto-align" title="Superposición Automática">
+                                                            <i class="fas fa-magic"></i> Auto
+                                                        </button>
+                                                        <button class="btn-small" id="phase-reset" title="Sin Retraso (0°)">
+                                                            <i class="fas fa-undo"></i> Reset
+                                                        </button>
+                                                        <button class="btn-small" id="phase-invert" title="Invertir Retraso">
+                                                            <i class="fas fa-exchange-alt"></i> 180°
+                                                        </button>
+                                                    </div>
+                                                    <div class="phase-info">
+                                                        <small><i class="fas fa-info-circle"></i> Se aplica al flexor y al extensor con la misma referencia temporal.</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="signal-action-buttons" aria-label="Acciones del gráfico">
+                                                <button class="btn-small" id="freeze-chart" title="Pausar/Reanudar">
+                                                    <i class="fas fa-pause"></i> Pausar/Reanudar
                                                 </button>
-                                                <button class="btn-small" id="phase-reset" title="Sin Retraso (0°)">
-                                                    <i class="fas fa-undo"></i> Reset
+                                                <button class="btn-small" id="reset-chart" title="Resetear Vista">
+                                                    <i class="fas fa-refresh"></i> Resetear
                                                 </button>
-                                                <button class="btn-small" id="phase-invert" title="Invertir Retraso">
-                                                    <i class="fas fa-exchange-alt"></i> 180°
+                                                <button class="btn-small" id="clear-chart" title="Limpiar Gráfico">
+                                                    <i class="fas fa-eraser"></i> Limpiar
                                                 </button>
                                             </div>
-                                            <div class="phase-info">
-                                                <small><i class="fas fa-info-circle"></i> Se aplica al flexor y al extensor con la misma referencia temporal.</small>
+                                            <div class="calibration-controls">
+                                                <label for="calibration-target">Calibrar:</label>
+                                                <select id="calibration-target" aria-label="Sensores que se calibrarán">
+                                                    <option value="all">Los 4 sensores</option>
+                                                    <option value="flexor">Ambos flexores (S1 y S2)</option>
+                                                    <option value="extensor">Ambos extensores (S3 y S4)</option>
+                                                    <option value="flexor-left">S1 · Flexor izquierdo</option>
+                                                    <option value="flexor-right">S2 · Flexor derecho</option>
+                                                    <option value="extensor-left">S3 · Extensor izquierdo</option>
+                                                    <option value="extensor-right">S4 · Extensor derecho</option>
+                                                </select>
+                                                <button class="btn-small calibration-button" id="calibrate-signal" title="Calibrar reposo y rango de movimiento">
+                                                    <i class="fas fa-crosshairs"></i> Calibrar
+                                                </button>
                                             </div>
                                         </div>
-                                    </div>
-                                    <button class="btn-small" id="freeze-chart" title="Pausar/Reanudar">
-                                        <i class="fas fa-pause"></i>
-                                    </button>
-                                    <button class="btn-small" id="reset-chart" title="Resetear Vista">
-                                        <i class="fas fa-refresh"></i>
-                                    </button>
-                                    <button class="btn-small" id="clear-chart" title="Limpiar Gráfico">
-                                        <i class="fas fa-eraser"></i>
-                                    </button>
-                                    <div class="calibration-controls">
-                                        <label for="calibration-target">Calibrar:</label>
-                                        <select id="calibration-target" aria-label="Sensores que se calibrarán">
-                                            <option value="all">Los 4 sensores</option>
-                                            <option value="flexor">Ambos flexores (S1 y S2)</option>
-                                            <option value="extensor">Ambos extensores (S3 y S4)</option>
-                                            <option value="flexor-left">S1 · Flexor izquierdo</option>
-                                            <option value="flexor-right">S2 · Flexor derecho</option>
-                                            <option value="extensor-left">S3 · Extensor izquierdo</option>
-                                            <option value="extensor-right">S4 · Extensor derecho</option>
-                                        </select>
-                                        <button class="btn-small calibration-button" id="calibrate-signal" title="Calibrar reposo y rango de movimiento">
-                                            <i class="fas fa-crosshairs"></i> Calibrar
-                                        </button>
-                                    </div>
+                                    </details>
                                 </div>
                             </div>
                             <div class="four-channel-charts">

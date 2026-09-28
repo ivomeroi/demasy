@@ -513,6 +513,7 @@ class KinesioEMGApp {
 
         if (connectBtn) {
             connectBtn.addEventListener('click', () => {
+                document.getElementById('esp32-connection-menu')?.removeAttribute('open');
                 this.connectESP32();
             });
         }
@@ -525,6 +526,7 @@ class KinesioEMGApp {
 
         if (connectBleBtn) {
             connectBleBtn.addEventListener('click', () => {
+                document.getElementById('esp32-connection-menu')?.removeAttribute('open');
                 this.connectBluetoothESP32();
             });
         }
@@ -2403,20 +2405,27 @@ class KinesioEMGApp {
         element.hidden = !available;
     }
 
+    setElementVisibility(element, visible) {
+        if (element) element.hidden = !visible;
+    }
+
     updateConnectionControls() {
         const serialConnected = Boolean(this.serialManager?.isConnected);
         const bluetoothConnected = Boolean(this.bluetoothManager?.isConnected);
         const disconnected = !serialConnected && !bluetoothConnected;
 
+        const connectionMenu = document.getElementById('esp32-connection-menu');
         const connectBtn = document.getElementById('connect-esp32');
         const disconnectBtn = document.getElementById('disconnect-esp32');
         const connectBleBtn = document.getElementById('connect-ble');
         const disconnectBleBtn = document.getElementById('disconnect-ble');
 
+        this.setElementVisibility(connectionMenu, disconnected);
         this.setActionAvailability(connectBtn, disconnected);
         this.setActionAvailability(connectBleBtn, disconnected);
         this.setActionAvailability(disconnectBtn, serialConnected);
         this.setActionAvailability(disconnectBleBtn, bluetoothConnected);
+        if (!disconnected) connectionMenu?.removeAttribute('open');
     }
 
     updateSerialControls() {
