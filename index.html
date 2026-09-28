@@ -70,19 +70,21 @@
                 </div>
                 <div class="header-right" id="emg-header-actions">
                     <details class="connection-selector" id="esp32-connection-menu">
-                        <summary title="Elegir método de conexión ESP32">
-                            <i class="fas fa-plug" aria-hidden="true"></i>
-                            <span>Conectar ESP32</span>
+                        <summary title="Conectar un dispositivo ESP32" aria-label="Conectar un dispositivo ESP32">
+                            <span class="connection-selector-icon"><i class="fas fa-plug" aria-hidden="true"></i></span>
+                            <span>Conectar dispositivo</span>
                             <i class="fas fa-chevron-down connection-selector-chevron" aria-hidden="true"></i>
                         </summary>
                         <div class="connection-selector-menu" aria-label="Método de conexión ESP32">
-                            <button class="btn-control" id="connect-esp32" title="Conectar ESP32 por USB">
-                                <i class="fas fa-usb" aria-hidden="true"></i>
+                            <button class="connection-option" id="connect-esp32" title="Conectar ESP32 por USB">
+                                <span class="connection-option-icon"><i class="fas fa-usb" aria-hidden="true"></i></span>
                                 <span><strong>USB</strong><small>Web Serial mediante cable</small></span>
+                                <i class="fas fa-chevron-right connection-option-arrow" aria-hidden="true"></i>
                             </button>
-                            <button class="btn-control" id="connect-ble" title="Conectar ESP32 master por Bluetooth">
-                                <i class="fas fa-bluetooth-b" aria-hidden="true"></i>
+                            <button class="connection-option" id="connect-ble" title="Conectar ESP32 master por Bluetooth">
+                                <span class="connection-option-icon"><i class="fas fa-bluetooth-b" aria-hidden="true"></i></span>
                                 <span><strong>Bluetooth</strong><small>Conexión inalámbrica BLE</small></span>
+                                <i class="fas fa-chevron-right connection-option-arrow" aria-hidden="true"></i>
                             </button>
                         </div>
                     </details>
