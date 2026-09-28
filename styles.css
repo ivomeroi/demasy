@@ -410,9 +410,9 @@ input[type="range"] { accent-color: var(--primary-color); }
   top: calc(100% + 0.5rem);
   right: 0;
   display: grid;
-  gap: 0.25rem;
-  width: 270px;
-  padding: 0.4rem;
+  gap: 0;
+  width: 250px;
+  padding: 0.35rem 0;
   border: 1px solid #bfd0dc;
   border-radius: 0.8rem;
   background: var(--bg-primary);
@@ -421,13 +421,13 @@ input[type="range"] { accent-color: var(--primary-color); }
 
 .connection-option {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.6rem;
   width: 100%;
-  padding: 0.55rem 0.6rem;
+  padding: 0.65rem 0.85rem;
   border: 0;
-  border-radius: 0.6rem;
+  border-radius: 0;
   background: transparent;
   color: var(--text-primary);
   text-align: left;
@@ -437,22 +437,18 @@ input[type="range"] { accent-color: var(--primary-color); }
 
 .connection-option:hover,
 .connection-option:focus-visible {
-  background: #e9f5f8;
+  background: var(--bg-tertiary);
   color: #075e83;
   outline: none;
 }
 
 .connection-option-icon {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 0.55rem;
-  background: #e2f1f5;
+  width: 20px;
+  text-align: center;
   color: #087394;
 }
 
-.connection-option > span:not(.connection-option-icon) {
+.connection-option > span {
   display: grid;
   gap: 0.1rem;
 }
@@ -463,9 +459,8 @@ input[type="range"] { accent-color: var(--primary-color); }
   font-weight: 400;
 }
 
-.connection-option-arrow {
-  color: #8ba0ad;
-  font-size: 0.65rem;
+.connection-option + .connection-option {
+  border-top: 1px solid var(--border-color);
 }
 
 .mobile-menu-button {
