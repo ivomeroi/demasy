@@ -580,21 +580,29 @@ input[type="range"] { accent-color: var(--primary-color); }
 .quality-card {
   grid-column: 1;
   grid-row: auto;
+  padding: 1.5rem;
+  align-content: start;
 }
 
 .analysis-card {
   grid-column: 2;
   grid-row: auto;
+  padding: 1.5rem;
+  align-content: start;
 }
 
 .stats-card > h3,
 .quality-card > h3,
 .analysis-card > h3 {
   margin: 0;
-  padding: 1.5rem 1.5rem 0;
+  padding: 0;
   color: var(--primary-dark);
   font-size: 1.125rem;
   font-weight: 600;
+}
+
+.stats-card > h3 {
+  padding: 1.5rem 1.5rem 0;
 }
 
 /* Cards */
@@ -879,7 +887,7 @@ input[type="range"] { accent-color: var(--primary-color); }
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.25rem;
-  padding: 1.25rem 1.5rem 0;
+  padding: 1.25rem 0 0;
 }
 
 .quality-bar {
@@ -907,7 +915,7 @@ input[type="range"] { accent-color: var(--primary-color); }
 .quality-metrics {
   display: grid;
   gap: 0.75rem;
-  padding: 0 1.5rem 1.5rem;
+  padding: 0;
 }
 
 .metric {
@@ -925,7 +933,7 @@ input[type="range"] { accent-color: var(--primary-color); }
 
 /* Analysis Card */
 .analysis-content {
-  padding: 1.5rem;
+  padding: 1.5rem 0 0;
   display: grid;
   gap: 1rem;
 }
