@@ -3,27 +3,29 @@
  * Manages EMG simulation, real-time visualization, AI assistant, and user interface
  */
 
+const appDebug = (...args) => window.DemasyLogger?.debug(...args);
+
 class KinesioEMGApp {
     constructor() {
-        console.log('Inicializando DEMASY…');
+        appDebug('Inicializando DEMASY…');
         
         try {
             // Initialize core components
             this.emgSimulator = new EMGSimulator();
-            console.log('EMG Simulator created:', !!this.emgSimulator);
+            appDebug('EMG Simulator created:', !!this.emgSimulator);
 
             this.serialManager = new EMGSerialManager();
             this.bluetoothManager = new EMGBluetoothManager();
             this.signalSource = 'simulator';
-            console.log('Serial manager created:', !!this.serialManager);
-            console.log('Bluetooth manager created:', !!this.bluetoothManager);
+            appDebug('Serial manager created:', !!this.serialManager);
+            appDebug('Bluetooth manager created:', !!this.bluetoothManager);
             
             this.aiAssistant = new KinesiologyAIAssistant();  
             this.assistantService = null;
             this.chatPending = false;
             this.chatTranscriptService = new ChatTranscriptService(window.sessionStorage);
             this.chatTranscript = [];
-            console.log('AI Assistant created:', !!this.aiAssistant);
+            appDebug('AI Assistant created:', !!this.aiAssistant);
             
             // Initialize database and patient manager
             this.database = new DEMASYDatabase();
@@ -69,7 +71,7 @@ class KinesioEMGApp {
             this.activeCalibrationChannels = [];
             this.envelopeDisplaySource = null;
             
-            console.log('Controlador DEMASY creado correctamente');
+            appDebug('Controlador DEMASY creado correctamente');
         } catch (error) {
             console.error('Error al crear el controlador DEMASY:', error);
         }
@@ -121,7 +123,7 @@ class KinesioEMGApp {
             await this.restoreRecordingDraft();
             await this.onboardingTour.start();
             
-            console.log('DEMASY se inicializó correctamente');
+            appDebug('DEMASY se inicializó correctamente');
         } catch (error) {
             console.error('No se pudo inicializar la aplicación:', error);
             this.showError('No se pudo inicializar DEMASY. Recarga la página e inténtalo nuevamente.');
@@ -132,7 +134,7 @@ class KinesioEMGApp {
 
     async initializeDatabase() {
         try {
-            console.log('Initializing database...');
+            appDebug('Initializing database...');
             await this.database.initialize();
             
             // Initialize patient manager
@@ -142,7 +144,7 @@ class KinesioEMGApp {
             this.settingsService = new SettingsService(this.database);
             this.backupManager = new BackupManager(this.database, this.settingsService, preferences => this.applyDisplayPreferences(preferences));
             
-            console.log('Database and patient manager initialized successfully');
+            appDebug('Database and patient manager initialized successfully');
         } catch (error) {
             console.error('Error initializing database:', error);
             throw error;
@@ -480,7 +482,7 @@ class KinesioEMGApp {
         const connectBleBtn = document.getElementById('connect-ble');
         const disconnectBleBtn = document.getElementById('disconnect-ble');
         
-        console.log('Button elements found:', {
+        appDebug('Button elements found:', {
             save: !!saveBtn,
             connect: !!connectBtn,
             disconnect: !!disconnectBtn,
@@ -621,7 +623,7 @@ class KinesioEMGApp {
     }
 
     setupEMGSimulator() {
-        console.log('Setting up EMG simulator callbacks...');
+        appDebug('Setting up EMG simulator callbacks...');
         
         // Configure EMG simulator callbacks
         this.emgSimulator.onDataUpdate((data) => {
@@ -634,36 +636,36 @@ class KinesioEMGApp {
             this.ingestStats(stats);
         });
         
-        console.log('EMG simulator callbacks configured');
+        appDebug('EMG simulator callbacks configured');
 
         // Set initial cycling parameters
         // Validate EMG simulator methods
-        console.log('Validating EMG Simulator methods...');
+        appDebug('Validating EMG Simulator methods...');
         const requiredMethods = ['setPedalingEfficiency', 'setActivationLevel', 'start', 'stop'];
         const missingMethods = requiredMethods.filter(method => typeof this.emgSimulator[method] !== 'function');
         
         if (missingMethods.length > 0) {
             console.error('Missing EMG Simulator methods:', missingMethods);
         } else {
-            console.log('All EMG Simulator methods available');
+            appDebug('All EMG Simulator methods available');
         }
 
         // Set initial cycling parameters
-        console.log('Setting initial cycling parameters...');
+        appDebug('Setting initial cycling parameters...');
         try {
             this.emgSimulator.setCadence(80); // 80 RPM
             this.emgSimulator.setResistance(0.5); // 50% resistance  
             this.emgSimulator.setPedalingEfficiency(0.85); // 85% efficiency
             this.emgSimulator.setActivationLevel(0.3, 'both'); // Light baseline activation
             this.emgSimulator.start();
-            console.log('EMG Simulator initialized successfully');
+            appDebug('EMG Simulator initialized successfully');
         } catch (error) {
             console.error('Error initializing EMG Simulator:', error);
         }
     }
 
     setupSerialManager() {
-        console.log('Setting up ESP32 serial callbacks...');
+        appDebug('Setting up ESP32 serial callbacks...');
 
         this.serialManager.onDataUpdate((data) => {
             if (!this.isPaused && this.signalSource === 'serial') {
@@ -697,7 +699,7 @@ class KinesioEMGApp {
     }
 
     setupBluetoothManager() {
-        console.log('Setting up ESP32 Bluetooth callbacks...');
+        appDebug('Setting up ESP32 Bluetooth callbacks...');
 
         this.bluetoothManager.onDataUpdate((data) => {
             if (!this.isPaused && this.signalSource === 'bluetooth') {
@@ -974,7 +976,7 @@ class KinesioEMGApp {
     }
 
     startRecording() {
-        console.log('Starting EMG recording...');
+        appDebug('Starting EMG recording...');
         
         try {
             if (!this.recordingController.can('start')) {
@@ -997,7 +999,7 @@ class KinesioEMGApp {
             const configuration = this.recordingController.configuration;
             this.applySessionConfiguration(configuration);
             
-            console.log('Updating UI controls...');
+            appDebug('Updating UI controls...');
             this.updateRecordingControls(true);
             this.updateSerialControls(this.serialManager.isConnected);
             this.updateBluetoothControls(this.bluetoothManager.isConnected);
@@ -1022,16 +1024,16 @@ class KinesioEMGApp {
             }
             
             // Set initial activation for cycling
-            console.log('Setting initial activation...');
+            appDebug('Setting initial activation...');
             if (this.emgSimulator && typeof this.emgSimulator.setActivationLevel === 'function') {
                 this.emgSimulator.setActivationLevel(0.4, 'both');
             }
             
-            console.log('Starting EMG Simulator...');
+            appDebug('Starting EMG Simulator...');
             if (this.emgSimulator && typeof this.emgSimulator.start === 'function') {
                 this.emgSimulator.resetSignal();
                 this.emgSimulator.start();
-                console.log('EMG Simulator started successfully');
+                appDebug('EMG Simulator started successfully');
                 
                 // Show notification based on whether a patient is selected
                 if (this.patientManager?.currentPatient) {
@@ -1057,24 +1059,24 @@ class KinesioEMGApp {
     }
 
     startCyclingSimulations() {
-        console.log('Starting cycling simulation sequences...');
+        appDebug('Starting cycling simulation sequences...');
         
         // Simple warm-up
         setTimeout(() => {
-            console.log('Phase 1: Warm-up');
+            appDebug('Phase 1: Warm-up');
             try {
                 if (this.emgSimulator.simulateWarmUp) {
                     this.emgSimulator.simulateWarmUp();
                 }
             } catch (e) {
-                console.log('Warm-up simulation not available, using basic activation');
+                appDebug('Warm-up simulation not available, using basic activation');
                 this.emgSimulator.setActivationLevel(0.6, 'both');
             }
         }, 2000);
         
         // Steady state
         setTimeout(() => {
-            console.log('Phase 2: Steady State');
+            appDebug('Phase 2: Steady State');
             try {
                 if (this.emgSimulator.simulateSteadyStateCycling) {
                     this.emgSimulator.simulateSteadyStateCycling(15);
@@ -1082,13 +1084,13 @@ class KinesioEMGApp {
                     this.emgSimulator.setActivationLevel(0.7, 'both');
                 }
             } catch (e) {
-                console.log('Steady state simulation not available');
+                appDebug('Steady state simulation not available');
             }
         }, 8000);
         
         // Asymmetric pattern
         setTimeout(() => {
-            console.log('Phase 3: Asymmetric Pattern');
+            appDebug('Phase 3: Asymmetric Pattern');
             try {
                 if (this.emgSimulator.simulateAsymmetricPedaling) {
                     this.emgSimulator.simulateAsymmetricPedaling();
@@ -1097,7 +1099,7 @@ class KinesioEMGApp {
                     this.emgSimulator.setActivationLevel(0.6, 'both');
                 }
             } catch (e) {
-                console.log('Asymmetric simulation not available');
+                appDebug('Asymmetric simulation not available');
             }
         }, 20000);
     }
@@ -1118,7 +1120,7 @@ class KinesioEMGApp {
         this.updateConnectionStatus(this.serialManager.isConnected ? 'serial' : this.bluetoothManager.isConnected ? 'bluetooth' : 'mock');
         this.updateChartMode();
         
-        console.log('EMG recording stopped');
+        appDebug('EMG recording stopped');
     }
 
     toggleRecordingPause() {
@@ -1582,7 +1584,7 @@ class KinesioEMGApp {
         this.bluetoothManager.setMuscle(muscleType);
         this.resetChart({ resetProvider: false });
         
-        console.log(`Muscle changed to: ${muscleType}`);
+        appDebug(`Muscle changed to: ${muscleType}`);
         
         // Update AI context
         this.aiAssistant.updateEMGContext({
@@ -1637,7 +1639,7 @@ class KinesioEMGApp {
             icon.className = this.isPaused ? 'fas fa-play' : 'fas fa-pause';
         }
         
-        console.log(`Chart ${this.isPaused ? 'paused' : 'resumed'}`);
+        appDebug(`Chart ${this.isPaused ? 'paused' : 'resumed'}`);
     }
 
     resetChart(options = {}) {
@@ -1655,7 +1657,7 @@ class KinesioEMGApp {
         }
         
         if (options.resetProvider !== false) this.getActiveSignalProvider().reset();
-        console.log('Chart reset');
+        appDebug('Chart reset');
     }
 
     clearChart() {
@@ -1692,7 +1694,7 @@ class KinesioEMGApp {
 
         this.emgSimulator.setTimeDelay(degrees, 'right');
         this.updateElement('phase-display', degrees);
-        console.log(`Time delay set to ${degrees}° equivalent`);
+        appDebug(`Time delay set to ${degrees}° equivalent`);
         
         // Show notification for significant delays
         if (Math.abs(degrees) > 90) {
@@ -1722,7 +1724,7 @@ class KinesioEMGApp {
         if (phaseDisplay) phaseDisplay.textContent = newPhase;
         
         this.showNotification(`Alineación automática completada: ${newPhase}°`, 'success');
-        console.log(`Auto-align completed: ${newPhase}° equivalent`);
+        appDebug(`Auto-align completed: ${newPhase}° equivalent`);
     }
 
     resetPhaseShift() {
@@ -1746,7 +1748,7 @@ class KinesioEMGApp {
         if (phaseDisplay) phaseDisplay.textContent = '0';
         
         this.showNotification('Desfase temporal restablecido a 0°', 'success');
-        console.log('Time delay reset to 0°');
+        appDebug('Time delay reset to 0°');
     }
 
     invertPhase() {
@@ -1771,7 +1773,7 @@ class KinesioEMGApp {
         if (phaseDisplay) phaseDisplay.textContent = newPhase;
         
         this.showNotification(`Desfase temporal invertido: ${newPhase}°`, 'success');
-        console.log(`Time delay inverted: ${newPhase}° equivalent`);
+        appDebug(`Time delay inverted: ${newPhase}° equivalent`);
     }
 
     updateCyclingAnalysis(stats, leftActivation, rightActivation) {
@@ -2597,7 +2599,7 @@ class KinesioEMGApp {
         this.assistantService?.clearHistory();
         this.chatTranscript = [];
         this.chatTranscriptService.clear();
-        console.log('Chat cleared');
+        appDebug('Chat cleared');
     }
 
     updateElement(id, value) {

@@ -3,6 +3,8 @@
  * Handles patient registration, session management, and data visualization
  */
 
+const patientDebug = (...args) => window.DemasyLogger?.debug(...args);
+
 class PatientManager {
     constructor(database) {
         this.database = database;
@@ -995,7 +997,7 @@ class PatientManager {
         if (window.app && window.app.showNotification) {
             window.app.showNotification(message, type);
         } else {
-            console.log(`${type.toUpperCase()}: ${message}`);
+            patientDebug(`${type.toUpperCase()}: ${message}`);
         }
     }
 

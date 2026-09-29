@@ -102,6 +102,7 @@ async function main() {
         const localAssets = [
             'styles.css',
             'core/demasy-config.js',
+            'core/demasy-logger.js',
             'core/signal-source-contract.js',
             'core/recording-controller.js',
             'core/section-router.js',

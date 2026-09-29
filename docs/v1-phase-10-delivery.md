@@ -23,7 +23,7 @@ Entregar una versión reproducible, documentada y desplegable que pueda recorrer
 
 - `package.json` y `vercel.json` validados como JSON.
 - `run.sh` y `deploy.sh` validados sintácticamente por Bash.
-- Lint aprobado sobre 32 archivos JavaScript y controles estáticos de HTML/CSS.
+- Lint aprobado sobre 33 archivos JavaScript y controles estáticos de HTML/CSS.
 - 62 pruebas unitarias aprobadas.
 - Smoke test HTTP aprobado.
 - Instalación limpia con `npm ci` aprobada en un directorio temporal.

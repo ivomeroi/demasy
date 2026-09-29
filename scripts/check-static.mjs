@@ -11,6 +11,18 @@ const templateFiles = [
 const templates = templateFiles.map(path => ({ path, source: readFileSync(path, 'utf8') }));
 const html = templates[0].source;
 const css = readFileSync('styles.css', 'utf8');
+const runtimeLogFiles = [
+    'app.js',
+    'emg-simulator.js',
+    'database.js',
+    'database-init.js',
+    'patient-manager.js',
+    'analysis-manager.js',
+    'backup-manager.js',
+    'bluetooth-manager.js',
+    'serial-manager.js',
+    'ai-assistant.js'
+];
 const failures = [];
 
 function assert(condition, message) {
@@ -47,6 +59,12 @@ assert(inaccessibleCanvases.length === 0, `${inaccessibleCanvases.length} gráfi
 
 assert(/<html\b[^>]*\blang="es"/.test(html), 'El documento principal debe declarar lang="es"');
 assert(!/transition:\s*all\b/.test(css), 'Evita transition: all; declara únicamente las propiedades animadas');
+
+const noisyRuntimeFiles = runtimeLogFiles.filter(path => /console\.log\s*\(/.test(readFileSync(path, 'utf8')));
+assert(
+    noisyRuntimeFiles.length === 0,
+    `Usa DemasyLogger para el diagnóstico de producción: ${noisyRuntimeFiles.join(', ')}`
+);
 
 if (failures.length > 0) {
     console.error('Static quality checks failed:');

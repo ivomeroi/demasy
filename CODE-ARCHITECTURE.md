@@ -30,6 +30,7 @@ Las rutas `/emg-en-vivo`, `/analisis`, `/pacientes`, `/asistente-ia` y `/configu
 ### Dominio y servicios
 
 - `core/demasy-config.js`: versión, nombres de esquema, frecuencias, límites y umbrales.
+- `core/demasy-logger.js`: logging de diagnóstico opcional, desactivado por defecto en producción.
 - `core/signal-source-contract.js`: contrato común de fuentes.
 - `core/recording-controller.js`: máquina de estados de grabación.
 - `services/session-configuration-service.js`: validación de configuración.
