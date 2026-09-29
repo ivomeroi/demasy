@@ -41,7 +41,7 @@ class AnalysisManager {
                         </details>
                     </div>
                 </div>
-                <button class="btn-control primary analysis-submit" id="analyze-session" disabled><i class="fas fa-chart-area" aria-hidden="true"></i> Analizar selección</button>
+                <button type="button" class="btn-control primary analysis-submit" id="analyze-session" disabled><i class="fas fa-chart-area" aria-hidden="true"></i> Analizar selección</button>
             </div>
             <div id="analysis-results" class="analysis-results"><div class="empty-state analysis-empty-state"><span class="empty-state-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span><h3>Selecciona una o más sesiones guardadas</h3><p>Se calcularán las métricas de cada sesión y su evolución cronológica.</p></div></div>`;
         document.getElementById('analysis-patient').addEventListener('change', event => this.loadParticipantSessions(event.target.value));
@@ -173,7 +173,7 @@ class AnalysisManager {
             <div class="analysis-notice ${comparison.compatibility.compatible ? '' : 'error-state'}"><strong>${this.escape(status)}</strong></div>
             ${this.configurationComparison(first, second)}
             <div class="card"><h3>Comparación de métricas</h3>${this.comparisonTable(comparison)}</div>
-            <div class="modal-actions"><button class="btn-outline" id="export-comparison-json">Exportar JSON</button><button class="btn-outline" id="export-comparison-csv">Exportar CSV</button></div>
+            <div class="modal-actions"><button type="button" class="btn-outline" id="export-comparison-json">Exportar JSON</button><button type="button" class="btn-outline" id="export-comparison-csv">Exportar CSV</button></div>
             <div class="analysis-notice">Los porcentajes solo se calculan si cadencia, resistencia, duración y escenario son equivalentes. Los resultados son descriptivos y no expresan diagnóstico ni progreso clínico.</div>`;
         document.getElementById('export-comparison-json').addEventListener('click', () => this.download(JSON.stringify(comparison, null, 2), 'demasy-comparison.json', 'application/json'));
         document.getElementById('export-comparison-csv').addEventListener('click', () => this.download(this.comparisonCSV(comparison), 'demasy-comparison.csv', 'text/csv'));

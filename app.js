@@ -937,7 +937,7 @@ class KinesioEMGApp {
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Error al cargar pacientes</h3>
                         <p>${error.message}</p>
-                        <button class="btn-control" id="retry-patients">Reintentar</button>
+                        <button type="button" class="btn-control" id="retry-patients">Reintentar</button>
                     </div>
                 `;
                 document.getElementById('retry-patients')?.addEventListener('click', () => window.location.reload());
@@ -1261,7 +1261,7 @@ class KinesioEMGApp {
             <div class="modal-content">
                 <div class="modal-header">
                     <h2>Configurar sesión simulada</h2>
-                    <button class="modal-close" type="button" aria-label="Cerrar">&times;</button>
+                    <button type="button" class="modal-close" aria-label="Cerrar">&times;</button>
                 </div>
                 <form id="session-config-form" class="patient-form session-config-form">
                     <div class="form-grid">
@@ -1416,8 +1416,8 @@ class KinesioEMGApp {
                 </div>
                 <p><small>Datos generados mediante simulación. Los resultados son descriptivos y no constituyen un diagnóstico.</small></p>
                 <div class="modal-actions">
-                    <button class="btn-outline danger" data-action="discard">Descartar</button>
-                    <button class="btn-control primary" data-action="save">Guardar sesión</button>
+                    <button type="button" class="btn-outline danger" data-action="discard">Descartar</button>
+                    <button type="button" class="btn-control primary" data-action="save">Guardar sesión</button>
                 </div>
             </div>`;
         document.body.appendChild(modal);
@@ -1625,15 +1625,16 @@ class KinesioEMGApp {
         this.isPaused = !this.isPaused;
         const button = document.getElementById('freeze-chart');
         const icon = button?.querySelector('i');
-        
+
+        if (button) {
+            const action = this.isPaused ? 'Reanudar gráfico' : 'Pausar gráfico';
+            button.setAttribute('aria-pressed', String(this.isPaused));
+            button.setAttribute('aria-label', action);
+            button.title = action;
+        }
+
         if (icon) {
-            if (this.isPaused) {
-                icon.className = 'fas fa-play';
-                button.title = 'Resume';
-            } else {
-                icon.className = 'fas fa-pause';
-                button.title = 'Pause';
-            }
+            icon.className = this.isPaused ? 'fas fa-play' : 'fas fa-pause';
         }
         
         console.log(`Chart ${this.isPaused ? 'paused' : 'resumed'}`);

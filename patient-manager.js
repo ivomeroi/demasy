@@ -23,7 +23,7 @@ class PatientManager {
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>${patient ? 'Editar participante' : 'Registrar participante'}</h3>
-                        <button class="modal-close" data-patient-action="close-modal">
+                        <button type="button" class="modal-close" data-patient-action="close-modal">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -170,11 +170,11 @@ class PatientManager {
                                 <i class="fas fa-search" aria-hidden="true"></i>
                                 <input type="text" id="patient-search" placeholder="Buscar participante..." class="search-input">
                             </label>
-                            <button class="btn-outline" data-patient-action="toggle-archived">
+                            <button type="button" class="btn-outline" data-patient-action="toggle-archived">
                                 <i class="fas fa-archive" aria-hidden="true"></i>
                                 ${this.includeArchived ? 'Ocultar archivados' : 'Ver archivados'}
                             </button>
-                            <button class="btn-control primary" data-patient-action="register">
+                            <button type="button" class="btn-control primary" data-patient-action="register">
                                 <i class="fas fa-user-plus"></i> Nuevo participante
                             </button>
                         </div>
@@ -215,7 +215,7 @@ class PatientManager {
                     <i class="fas fa-users"></i>
                     <h3>${this.includeArchived ? 'No hay participantes para mostrar' : 'No hay participantes activos'}</h3>
                     <p>Registra un participante para comenzar</p>
-                    <button class="btn-control primary" data-patient-action="register">
+                    <button type="button" class="btn-control primary" data-patient-action="register">
                         Registrar Primer Paciente
                     </button>
                 </div>
@@ -241,7 +241,7 @@ class PatientManager {
                             <p class="patient-email">${this.escapeHTML(patient.email || 'Sin email')}</p>
                         </div>
                         <div class="patient-menu">
-                            <button class="btn-small" data-patient-action="menu" data-patient-id="${patient.id}">
+                            <button type="button" class="btn-small" data-patient-action="menu" data-patient-id="${patient.id}">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                         </div>
@@ -263,10 +263,10 @@ class PatientManager {
                     </div>
                     
                     <div class="patient-actions">
-                        <button class="btn-control primary" data-patient-action="select" data-patient-id="${patient.id}" ${patient.status === 'archived' ? 'disabled' : ''}>
+                        <button type="button" class="btn-control primary" data-patient-action="select" data-patient-id="${patient.id}" ${patient.status === 'archived' ? 'disabled' : ''}>
                             <i class="fas fa-play"></i> Nueva Sesión
                         </button>
-                        <button class="btn-outline" data-patient-action="history" data-patient-id="${patient.id}">
+                        <button type="button" class="btn-outline" data-patient-action="history" data-patient-id="${patient.id}">
                             <i class="fas fa-history"></i> Historial
                         </button>
                     </div>
@@ -321,7 +321,7 @@ class PatientManager {
                     <div class="modal-content large-modal">
                         <div class="modal-header">
                             <h3>Historial de ${this.escapeHTML(patient.participantCode)}</h3>
-                            <button class="modal-close" data-patient-action="close-modal">
+                            <button type="button" class="modal-close" data-patient-action="close-modal">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -355,17 +355,17 @@ class PatientManager {
                                 <select id="history-muscle"><option value="">Todos los músculos</option>${this.generateFilterOptions(sessions, 'muscleType')}</select>
                                 <select id="history-scenario"><option value="">Todos los escenarios</option>${this.generateScenarioOptions(sessions)}</select>
                                 <select id="history-status"><option value="">Todos los estados</option><option value="completed">Guardadas</option><option value="archived">Archivadas</option></select>
-                                <button class="btn-outline" data-patient-action="apply-filters">Aplicar</button>
-                                <button class="btn-small" data-patient-action="clear-filters">Limpiar</button>
+                                <button type="button" class="btn-outline" data-patient-action="apply-filters">Aplicar</button>
+                                <button type="button" class="btn-small" data-patient-action="clear-filters">Limpiar</button>
                             </div>
                             <div id="session-history-results">${this.generateSessionHistory(sessions)}</div>
                         </div>
                         
                         <div class="modal-actions">
-                            <button class="btn-outline" data-patient-action="export-patient" data-patient-id="${patientId}">
+                            <button type="button" class="btn-outline" data-patient-action="export-patient" data-patient-id="${patientId}">
                                 <i class="fas fa-download"></i> Exportar Datos
                             </button>
-                            <button class="btn-control primary" data-patient-action="select-close" data-patient-id="${patientId}">
+                            <button type="button" class="btn-control primary" data-patient-action="select-close" data-patient-id="${patientId}">
                                 Nueva Sesión
                             </button>
                         </div>
@@ -409,15 +409,15 @@ class PatientManager {
                                 <td>${this.escapeHTML(this.formatScenario(this.historyService.getScenario(session)))}</td>
                                 <td>${session.status === 'archived' ? 'Archivada' : 'Guardada'}</td>
                                 <td>
-                                    <button class="btn-small" title="Ver detalle" data-patient-action="session-details" data-session-id="${session.id}">
+                                    <button type="button" class="btn-small" title="Ver detalle" data-patient-action="session-details" data-session-id="${session.id}">
                                         <i class="fas fa-eye"></i><span class="sr-only">Ver detalle</span>
                                     </button>
-                                    <button class="btn-small" title="Exportar" data-patient-action="download-session" data-session-id="${session.id}">
+                                    <button type="button" class="btn-small" title="Exportar" data-patient-action="download-session" data-session-id="${session.id}">
                                         <i class="fas fa-download"></i><span class="sr-only">Exportar</span>
                                     </button>
                                     ${session.status === 'archived'
-                                        ? `<button class="btn-small" title="Restaurar" data-patient-action="restore-session" data-session-id="${session.id}"><i class="fas fa-undo"></i><span class="sr-only">Restaurar</span></button>`
-                                        : `<button class="btn-small" title="Archivar" data-patient-action="archive-session" data-session-id="${session.id}"><i class="fas fa-archive"></i><span class="sr-only">Archivar</span></button>`}
+                                        ? `<button type="button" class="btn-small" title="Restaurar" data-patient-action="restore-session" data-session-id="${session.id}"><i class="fas fa-undo"></i><span class="sr-only">Restaurar</span></button>`
+                                        : `<button type="button" class="btn-small" title="Archivar" data-patient-action="archive-session" data-session-id="${session.id}"><i class="fas fa-archive"></i><span class="sr-only">Archivar</span></button>`}
                                 </td>
                             </tr>
                         `).join('')}
@@ -473,7 +473,7 @@ class PatientManager {
             document.body.insertAdjacentHTML('beforeend', `
                 <div class="modal-overlay" id="session-detail-modal">
                     <div class="modal-content large-modal">
-                        <div class="modal-header"><h3>${this.escapeHTML(session.label || `Sesión ${session.id}`)}</h3><button class="modal-close" data-patient-action="close-session-details"><i class="fas fa-times"></i></button></div>
+                        <div class="modal-header"><h3>${this.escapeHTML(session.label || `Sesión ${session.id}`)}</h3><button type="button" class="modal-close" data-patient-action="close-session-details"><i class="fas fa-times"></i></button></div>
                         <div class="session-detail-grid">
                             <div><label>Fecha</label><strong>${this.formatDate(session.startedAt || session.date)}</strong></div>
                             <div><label>Duración</label><strong>${this.formatDuration(session.durationSeconds ?? session.duration)}</strong></div>
@@ -491,7 +491,7 @@ class PatientManager {
                         </div>
                         <div class="session-notes"><label>Notas</label><p>${this.escapeHTML(session.notes || 'Sin notas')}</p></div>
                         ${this.generateReplayPanel(session, samples)}
-                        <div class="modal-actions"><button class="btn-outline" data-patient-action="download-session" data-session-id="${session.id}">Exportar JSON</button></div>
+                        <div class="modal-actions"><button type="button" class="btn-outline" data-patient-action="download-session" data-session-id="${session.id}">Exportar JSON</button></div>
                     </div>
                 </div>`);
             if (samples.length) this.createReplayCharts(samples);
@@ -514,8 +514,8 @@ class PatientManager {
             <div class="replay-chart-container"><canvas id="replay-extensor-chart" aria-label="Ventana del extensor bilateral"></canvas></div>
             <div class="replay-track"><div id="replay-progress" class="replay-progress"></div></div>
             <div class="replay-controls">
-                <button class="btn-control primary" id="replay-toggle" data-patient-action="toggle-replay" data-session-id="${session.id}">Recorrer automáticamente</button>
-                <button class="btn-outline" data-patient-action="reset-replay" data-session-id="${session.id}">Reiniciar</button>
+                <button type="button" class="btn-control primary" id="replay-toggle" data-patient-action="toggle-replay" data-session-id="${session.id}">Recorrer automáticamente</button>
+                <button type="button" class="btn-outline" data-patient-action="reset-replay" data-session-id="${session.id}">Reiniciar</button>
                 <label>Velocidad <select id="replay-speed" data-patient-input="replay-speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
             </div>
         </div>`;
@@ -901,17 +901,17 @@ class PatientManager {
         const patient = await this.database.getPatient(patientId);
         if (!patient) return this.showNotification('Participante no encontrado', 'error');
         const action = patient.status === 'archived'
-            ? `<button class="btn-control primary" data-patient-action="restore-patient" data-patient-id="${patient.id}">Restaurar participante</button>`
-            : `<button class="btn-outline" data-patient-action="archive-patient" data-patient-id="${patient.id}">Archivar participante</button>`;
+            ? `<button type="button" class="btn-control primary" data-patient-action="restore-patient" data-patient-id="${patient.id}">Restaurar participante</button>`
+            : `<button type="button" class="btn-outline" data-patient-action="archive-patient" data-patient-id="${patient.id}">Archivar participante</button>`;
         document.body.insertAdjacentHTML('beforeend', `
             <div class="modal-overlay" id="patient-menu-modal">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>${this.escapeHTML(patient.participantCode)}</h3>
-                        <button class="modal-close" data-patient-action="close-modal"><i class="fas fa-times"></i></button>
+                        <button type="button" class="modal-close" data-patient-action="close-modal"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="modal-actions">
-                        <button class="btn-outline" data-patient-action="edit-close" data-patient-id="${patient.id}">Editar datos</button>
+                        <button type="button" class="btn-outline" data-patient-action="edit-close" data-patient-id="${patient.id}">Editar datos</button>
                         ${action}
                     </div>
                 </div>

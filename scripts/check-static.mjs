@@ -1,0 +1,57 @@
+import { readFileSync } from 'node:fs';
+
+const templateFiles = [
+    'index.html',
+    'app.js',
+    'analysis-manager.js',
+    'backup-manager.js',
+    'patient-manager.js',
+    'services/onboarding-tour.js'
+];
+const templates = templateFiles.map(path => ({ path, source: readFileSync(path, 'utf8') }));
+const html = templates[0].source;
+const css = readFileSync('styles.css', 'utf8');
+const failures = [];
+
+function assert(condition, message) {
+    if (!condition) failures.push(message);
+}
+
+const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+const duplicateIds = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+assert(duplicateIds.length === 0, `IDs duplicados: ${duplicateIds.join(', ')}`);
+
+const buttons = templates.flatMap(({ path, source }) => (
+    [...source.matchAll(/<button\b[^>]*>/g)].map(match => ({ path, tag: match[0] }))
+));
+const buttonsWithoutType = buttons.filter(({ tag }) => !/\btype="(?:button|submit|reset)"/.test(tag));
+const buttonFiles = [...new Set(buttonsWithoutType.map(({ path }) => path))];
+assert(
+    buttonsWithoutType.length === 0,
+    `${buttonsWithoutType.length} botones sin un type explícito en: ${buttonFiles.join(', ')}`
+);
+const buttonsWithDuplicateType = buttons.filter(({ tag }) => (tag.match(/\btype=/g) || []).length > 1);
+assert(buttonsWithDuplicateType.length === 0, `${buttonsWithDuplicateType.length} botones con type duplicado`);
+
+const images = [...html.matchAll(/<img\b[^>]*>/g)].map(match => match[0]);
+const imagesWithoutAlt = images.filter(image => !/\balt="[^"]*"/.test(image));
+assert(imagesWithoutAlt.length === 0, `${imagesWithoutAlt.length} imágenes sin texto alternativo`);
+
+const canvases = [...html.matchAll(/<canvas\b([^>]*)>([\s\S]*?)<\/canvas>/g)];
+const inaccessibleCanvases = canvases.filter(([, attributes, fallback]) => (
+    !/\brole="img"/.test(attributes)
+    || !/\baria-label="[^"]+"/.test(attributes)
+    || fallback.trim().length === 0
+));
+assert(inaccessibleCanvases.length === 0, `${inaccessibleCanvases.length} gráficos canvas sin nombre o contenido alternativo`);
+
+assert(/<html\b[^>]*\blang="es"/.test(html), 'El documento principal debe declarar lang="es"');
+assert(!/transition:\s*all\b/.test(css), 'Evita transition: all; declara únicamente las propiedades animadas');
+
+if (failures.length > 0) {
+    console.error('Static quality checks failed:');
+    failures.forEach(failure => console.error(`- ${failure}`));
+    process.exit(1);
+}
+
+console.log(`Checked static markup and styles: ${ids.length} IDs, ${buttons.length} buttons, ${canvases.length} canvases.`);

@@ -22,6 +22,12 @@
   --shadow-sm: 0 2px 8px rgb(6 47 77 / 0.07);
   --shadow-md: 0 10px 24px rgb(6 47 77 / 0.11);
   --shadow-lg: 0 18px 42px rgb(6 47 77 / 0.16);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.65rem;
+  --radius-lg: 1rem;
+  --space-card: 1.5rem;
+  --transition-interactive: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   
   --sidebar-width: 280px;
   --header-height: 80px;
@@ -173,8 +179,8 @@ body.sidebar-collapsed .sidebar:focus-within .status-indicator {
 .nav-item {
   margin: 0.3rem 0.75rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 0.65rem;
+  transition: var(--transition-interactive);
+  border-radius: var(--radius-md);
 }
 
 .nav-item:hover {
@@ -483,10 +489,10 @@ input[type="range"] { accent-color: var(--primary-color); }
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
   color: var(--text-primary);
-  border-radius: 0.65rem;
+  border-radius: var(--radius-md);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
   text-decoration: none;
   font-size: 0.875rem;
 }
@@ -515,9 +521,9 @@ input[type="range"] { accent-color: var(--primary-color); }
   padding: 0.5rem;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
-  border-radius: 0.375rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
   color: var(--text-secondary);
 }
 
@@ -531,10 +537,10 @@ input[type="range"] { accent-color: var(--primary-color); }
   border: 1px solid var(--primary-color);
   background: transparent;
   color: var(--primary-color);
-  border-radius: 0.65rem;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
 }
 
 .btn-outline:hover {
@@ -580,14 +586,14 @@ input[type="range"] { accent-color: var(--primary-color); }
 .quality-card {
   grid-column: 1;
   grid-row: auto;
-  padding: 1.5rem;
+  padding: var(--space-card);
   align-content: start;
 }
 
 .analysis-card {
   grid-column: 2;
   grid-row: auto;
-  padding: 1.5rem;
+  padding: var(--space-card);
   align-content: start;
 }
 
@@ -602,17 +608,17 @@ input[type="range"] { accent-color: var(--primary-color); }
 }
 
 .stats-card > h3 {
-  padding: 1.5rem 1.5rem 0;
+  padding: var(--space-card) var(--space-card) 0;
 }
 
 /* Cards */
 .card {
   background: var(--bg-primary);
-  border-radius: 1rem;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
   overflow: hidden;
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
 }
 
 .card:hover {
@@ -621,7 +627,7 @@ input[type="range"] { accent-color: var(--primary-color); }
 }
 
 .card-header {
-  padding: 1.5rem 1.5rem 0;
+  padding: var(--space-card) var(--space-card) 0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -1502,7 +1508,7 @@ input[type="range"] { accent-color: var(--primary-color); }
   border-radius: 1.5rem;
   font-size: 0.875rem;
   outline: none;
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
 }
 
 #chat-input-field:focus {
@@ -1518,7 +1524,7 @@ input[type="range"] { accent-color: var(--primary-color); }
   color: var(--text-white);
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1549,7 +1555,7 @@ input[type="range"] { accent-color: var(--primary-color); }
   cursor: pointer;
   font-size: 0.75rem;
   color: var(--text-secondary);
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1600,7 +1606,7 @@ input[type="range"] { accent-color: var(--primary-color); }
 .settings-grid .card {
   padding: 2rem;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
 }
 
 .settings-grid .settings-preferences { text-align: left; }
@@ -1677,7 +1683,7 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
   border-radius: 0.8rem;
   box-shadow: 0 0 0 5px rgb(85 194 232 / 0.3), 0 0 0 9999px rgb(3 18 30 / 0.72);
   pointer-events: none;
-  transition: all 0.25s ease;
+  transition: border-radius 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .onboarding-dialog {
@@ -2158,7 +2164,7 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
 .patient-status {
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -2423,7 +2429,7 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: 0.25rem;
-  transition: all 0.2s ease;
+  transition: var(--transition-interactive);
 }
 
 .modal-close:hover {
