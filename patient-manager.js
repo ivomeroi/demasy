@@ -160,11 +160,19 @@ class PatientManager {
             const listHTML = `
                 <div class="patients-container">
                     <div class="patients-header">
-                        <h2>Gestión de participantes</h2>
+                        <div class="patients-title-group">
+                            <span class="section-eyebrow"><i class="fas fa-users" aria-hidden="true"></i> Seguimiento clínico</span>
+                            <h2>Gestión de participantes</h2>
+                            <p>Consulta perfiles, revisa sesiones anteriores o comienza una nueva medición.</p>
+                        </div>
                         <div class="patients-actions">
-                            <input type="text" id="patient-search" placeholder="Buscar por código, nombre o email..." class="search-input">
+                            <label class="patient-search-control" for="patient-search">
+                                <i class="fas fa-search" aria-hidden="true"></i>
+                                <input type="text" id="patient-search" placeholder="Buscar participante..." class="search-input">
+                            </label>
                             <button class="btn-outline" data-patient-action="toggle-archived">
-                                ${this.includeArchived ? 'Ocultar archivados' : 'Mostrar archivados'}
+                                <i class="fas fa-archive" aria-hidden="true"></i>
+                                ${this.includeArchived ? 'Ocultar archivados' : 'Ver archivados'}
                             </button>
                             <button class="btn-control primary" data-patient-action="register">
                                 <i class="fas fa-user-plus"></i> Nuevo participante
@@ -173,17 +181,17 @@ class PatientManager {
                     </div>
                     
                     <div class="patients-stats">
-                        <div class="stat-card">
-                            <h4>Total de participantes</h4>
-                            <span class="stat-number">${statistics.totalPatients}</span>
+                        <div class="stat-card stat-card-total">
+                            <span class="stat-card-icon"><i class="fas fa-users" aria-hidden="true"></i></span>
+                            <div><h4>Total</h4><span class="stat-number">${statistics.totalPatients}</span></div>
                         </div>
-                        <div class="stat-card">
-                            <h4>Participantes activos</h4>
-                            <span class="stat-number">${statistics.activePatients}</span>
+                        <div class="stat-card stat-card-active">
+                            <span class="stat-card-icon"><i class="fas fa-user-check" aria-hidden="true"></i></span>
+                            <div><h4>Participantes activos</h4><span class="stat-number">${statistics.activePatients}</span></div>
                         </div>
-                        <div class="stat-card">
-                            <h4>Archivados</h4>
-                            <span class="stat-number">${statistics.archivedPatients}</span>
+                        <div class="stat-card stat-card-archived">
+                            <span class="stat-card-icon"><i class="fas fa-archive" aria-hidden="true"></i></span>
+                            <div><h4>Archivados</h4><span class="stat-number">${statistics.archivedPatients}</span></div>
                         </div>
                     </div>
                     
@@ -225,7 +233,10 @@ class PatientManager {
                             ${this.escapeHTML((patient.name || patient.participantCode).charAt(0).toUpperCase())}
                         </div>
                         <div class="patient-info">
-                            <h4>${this.escapeHTML(patient.participantCode)}</h4>
+                            <div class="patient-title-row">
+                                <h4>${this.escapeHTML(patient.participantCode)}</h4>
+                                <span class="patient-status ${patient.status === 'archived' ? 'is-archived' : 'is-active'}">${patient.status === 'archived' ? 'Archivado' : 'Activo'}</span>
+                            </div>
                             <p>${this.escapeHTML(patient.name || 'Sin nombre identificatorio')}</p>
                             <p class="patient-email">${this.escapeHTML(patient.email || 'Sin email')}</p>
                         </div>
@@ -238,21 +249,21 @@ class PatientManager {
                     
                     <div class="patient-details">
                         <div class="detail-row">
-                            <span class="detail-label">Edad:</span>
+                            <span class="detail-label"><i class="fas fa-birthday-cake" aria-hidden="true"></i> Edad</span>
                             <span>${this.calculateAge(patient.dateOfBirth)} años</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">Sesiones:</span>
+                            <span class="detail-label"><i class="fas fa-wave-square" aria-hidden="true"></i> Sesiones</span>
                             <span>${sessions.length}</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">Última sesión:</span>
+                            <span class="detail-label"><i class="far fa-calendar-alt" aria-hidden="true"></i> Última sesión</span>
                             <span>${lastSession ? this.formatDate(lastSession.date) : 'Nunca'}</span>
                         </div>
                     </div>
                     
                     <div class="patient-actions">
-                        <button class="btn-outline" data-patient-action="select" data-patient-id="${patient.id}" ${patient.status === 'archived' ? 'disabled' : ''}>
+                        <button class="btn-control primary" data-patient-action="select" data-patient-id="${patient.id}" ${patient.status === 'archived' ? 'disabled' : ''}>
                             <i class="fas fa-play"></i> Nueva Sesión
                         </button>
                         <button class="btn-outline" data-patient-action="history" data-patient-id="${patient.id}">
