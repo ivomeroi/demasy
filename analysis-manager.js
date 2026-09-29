@@ -15,22 +15,35 @@ class AnalysisManager {
         const container = document.getElementById('analysis-content');
         if (!container) return;
         container.innerHTML = `
-            <div class="analysis-header"><div><h2>Análisis descriptivo de sesiones</h2><p>Resultados computacionales de apoyo; no constituyen diagnóstico clínico.</p></div></div>
-            <div class="card analysis-selector">
-                <label>Participante<select id="analysis-patient"><option value="">Seleccionar…</option>${participants.map(item => `<option value="${item.id}">${this.escape(item.participantCode)}${item.name ? ` · ${this.escape(item.name)}` : ''}</option>`).join('')}</select></label>
-                <div class="analysis-session-field">
-                    <span>Sesiones</span>
-                    <details id="analysis-session-picker" class="analysis-multiselect">
-                        <summary id="analysis-session-summary">Selecciona un participante</summary>
-                        <div class="analysis-multiselect-panel">
-                            <div class="analysis-multiselect-actions"><button type="button" id="analysis-select-all">Seleccionar todas</button><button type="button" id="analysis-clear-all">Limpiar</button></div>
-                            <div id="analysis-session-options" class="analysis-session-options"><p>No hay sesiones disponibles.</p></div>
-                        </div>
-                    </details>
+            <div class="analysis-header">
+                <div>
+                    <span class="section-eyebrow"><i class="fas fa-chart-line" aria-hidden="true"></i> Evolución EMG</span>
+                    <h2>Análisis descriptivo de sesiones</h2>
+                    <p>Compara métricas y observa su evolución entre mediciones compatibles.</p>
                 </div>
-                <button class="btn-control primary" id="analyze-session" disabled>Analizar selección</button>
+                <span class="analysis-scope-badge"><i class="fas fa-info-circle" aria-hidden="true"></i> Apoyo descriptivo</span>
             </div>
-            <div id="analysis-results" class="analysis-results"><div class="empty-state"><h3>Selecciona una o más sesiones guardadas</h3><p>Se calcularán las métricas de cada sesión y su evolución cronológica.</p></div></div>`;
+            <div class="card analysis-selector">
+                <div class="analysis-selector-step">
+                    <span class="analysis-step-number">1</span>
+                    <label>Participante<select id="analysis-patient"><option value="">Seleccionar…</option>${participants.map(item => `<option value="${item.id}">${this.escape(item.participantCode)}${item.name ? ` · ${this.escape(item.name)}` : ''}</option>`).join('')}</select></label>
+                </div>
+                <div class="analysis-selector-step">
+                    <span class="analysis-step-number">2</span>
+                    <div class="analysis-session-field">
+                        <span>Sesiones a comparar</span>
+                        <details id="analysis-session-picker" class="analysis-multiselect">
+                            <summary id="analysis-session-summary">Selecciona un participante</summary>
+                            <div class="analysis-multiselect-panel">
+                                <div class="analysis-multiselect-actions"><button type="button" id="analysis-select-all">Seleccionar todas</button><button type="button" id="analysis-clear-all">Limpiar</button></div>
+                                <div id="analysis-session-options" class="analysis-session-options"><p>No hay sesiones disponibles.</p></div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+                <button class="btn-control primary analysis-submit" id="analyze-session" disabled><i class="fas fa-chart-area" aria-hidden="true"></i> Analizar selección</button>
+            </div>
+            <div id="analysis-results" class="analysis-results"><div class="empty-state analysis-empty-state"><span class="empty-state-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span><h3>Selecciona una o más sesiones guardadas</h3><p>Se calcularán las métricas de cada sesión y su evolución cronológica.</p></div></div>`;
         document.getElementById('analysis-patient').addEventListener('change', event => this.loadParticipantSessions(event.target.value));
         document.getElementById('analysis-select-all').addEventListener('click', () => this.setAllSessions(true));
         document.getElementById('analysis-clear-all').addEventListener('click', () => this.setAllSessions(false));
@@ -77,14 +90,14 @@ class AnalysisManager {
             return this.database.updateSession(session.id, { analysis: { type: 'descriptive-v1', calculatedAt, ...entry.analysis } });
         }));
         document.getElementById('analysis-results').innerHTML = `
-            <div class="analysis-notice">Se analizaron <strong>${sessions.length}</strong> ${sessions.length === 1 ? 'sesión' : 'sesiones'}. La tabla muestra primero la más reciente; los gráficos avanzan cronológicamente de izquierda a derecha.</div>
+            <div class="analysis-notice analysis-success"><i class="fas fa-check-circle" aria-hidden="true"></i><span>Se analizaron <strong>${sessions.length}</strong> ${sessions.length === 1 ? 'sesión' : 'sesiones'}. La tabla muestra primero la más reciente; los gráficos avanzan cronológicamente de izquierda a derecha.</span></div>
             <div class="analysis-progress-grid">
-                <div class="card"><h3>Evolución de RMS</h3><div class="analysis-chart-container"><canvas id="analysis-rms-progress"></canvas></div></div>
-                <div class="card"><h3>Evolución de asimetrías</h3>${this.asymmetryMetricControls()}<div class="analysis-chart-container"><canvas id="analysis-symmetry-progress"></canvas></div></div>
+                <div class="card analysis-result-card"><div class="analysis-card-heading"><span class="analysis-card-icon"><i class="fas fa-wave-square" aria-hidden="true"></i></span><div><h3>Evolución de RMS</h3><p>Amplitud muscular por fecha</p></div></div><div class="analysis-chart-container"><canvas id="analysis-rms-progress"></canvas></div></div>
+                <div class="card analysis-result-card"><div class="analysis-card-heading"><span class="analysis-card-icon"><i class="fas fa-balance-scale" aria-hidden="true"></i></span><div><h3>Evolución de asimetrías</h3><p>Comparación bilateral longitudinal</p></div></div>${this.asymmetryMetricControls()}<div class="analysis-chart-container"><canvas id="analysis-symmetry-progress"></canvas></div></div>
             </div>
-            <div class="card"><h3>Métricas por sesión</h3><div class="analysis-table-scroll">${this.longitudinalTable(longitudinal.newestFirst)}</div></div>
+            <div class="card analysis-result-card analysis-table-card"><div class="analysis-card-heading"><span class="analysis-card-icon"><i class="fas fa-table" aria-hidden="true"></i></span><div><h3>Métricas por sesión</h3><p>Detalle ordenado desde la medición más reciente</p></div></div><div class="analysis-table-scroll">${this.longitudinalTable(longitudinal.newestFirst)}</div></div>
             ${this.metricGlossary()}
-            <div class="analysis-notice">Los resultados son descriptivos y no constituyen diagnóstico. Compara únicamente sesiones realizadas con el mismo protocolo, tarea y colocación de electrodos.</div>`;
+            <div class="analysis-notice"><i class="fas fa-exclamation-circle" aria-hidden="true"></i><span>Los resultados son descriptivos y no constituyen diagnóstico. Compara únicamente sesiones realizadas con el mismo protocolo, tarea y colocación de electrodos.</span></div>`;
         this.currentLongitudinalEntries = longitudinal.chronological;
         document.querySelectorAll('[data-asymmetry-metric]').forEach(input => input.addEventListener('change', event => this.toggleAsymmetryMetric(event.target)));
         this.renderProgressCharts(longitudinal.chronological);
