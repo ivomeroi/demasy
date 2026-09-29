@@ -728,22 +728,82 @@ input[type="range"] { accent-color: var(--primary-color); }
 
 .chart-footer {
   padding: 0 1.5rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   color: var(--text-secondary);
   font-size: 0.75rem;
 }
 
+.chart-footer-primary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.time-scale {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--primary-dark);
+}
+
 .chart-legend {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem 0.9rem;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.chart-footer-details {
+  border: 1px solid var(--border-color);
+  border-radius: 0.65rem;
+  background: var(--bg-secondary);
+}
+
+.chart-footer-details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  color: var(--primary-dark);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.chart-footer-details > summary::-webkit-details-marker { display: none; }
+
+.chart-footer-details-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(360px, 1.4fr) minmax(180px, 0.6fr);
+  gap: 0.75rem;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.chart-detail-group {
+  min-width: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.55rem;
+  background: var(--bg-primary);
+}
+
+.chart-detail-group h5 {
+  margin: 0 0 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .legend-color {
@@ -1123,50 +1183,35 @@ input[type="range"] { accent-color: var(--primary-color); }
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.cycling-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.75rem;
-}
-
 .pedal-position,
 .signal-range {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
 }
 
 .pedal-position span,
 .signal-range span {
   background: var(--bg-secondary);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.4rem;
   font-weight: 500;
-  min-width: 60px;
   text-align: center;
 }
 
-.signal-range {
-  flex-wrap: wrap;
+.sensor-state-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
 }
 
-.signal-range span {
-  min-width: 104px;
-}
-
-.signal-range .activity-state {
+.activity-state {
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.4rem;
   border: 1px solid var(--border-color);
   font-weight: 700;
+  text-align: center;
   transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.activity-state::before {
-  content: "Izq · ";
-}
-
-#activity-state-right::before {
-  content: "Der · ";
 }
 
 .activity-state[data-status="calibrating"] {
@@ -1753,6 +1798,8 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
 
 @media (max-width: 1024px) {
   .four-channel-charts { grid-template-columns: repeat(2, minmax(420px, 1fr)); }
+  .chart-footer-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chart-footer-details-grid .chart-detail-group:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
   .dashboard-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
@@ -1826,6 +1873,10 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
   }
 
   .card-header { flex-direction: column; gap: 0.75rem; }
+  .chart-footer-primary { align-items: flex-start; flex-direction: column; }
+  .chart-legend { justify-content: flex-start; }
+  .chart-footer-details-grid { grid-template-columns: 1fr; }
+  .chart-footer-details-grid .chart-detail-group:nth-child(2) { grid-column: auto; grid-row: auto; }
   .chart-controls { width: 100%; justify-content: stretch; }
   .chart-controls > select { width: 100%; min-width: 0; }
   .advanced-chart-controls { width: 100%; }
@@ -1863,7 +1914,8 @@ input[type="file"]::file-selector-button:hover { background: #e0ebf1; }
 @media (max-width: 480px) {
   .header-right { display: none; }
   .chart-container { height: 300px; padding: 0.75rem; }
-  .chart-footer { align-items: flex-start; flex-direction: column; gap: 0.5rem; }
+  .chart-footer { padding: 0 0.75rem 0.75rem; }
+  .sensor-state-grid { grid-template-columns: 1fr; }
 }
 
 /* Scrollbar Styling */

@@ -8,7 +8,7 @@
     <title>DEMASY - Análisis bilateral de EMG</title>
     <link rel="icon" type="image/jpeg" href="/DEMASY-LOGO.jpeg">
     <link href="/vendor/fontawesome/css/all.min.css" rel="stylesheet">
-    <link href="styles.css?v=20260928-3" rel="stylesheet">
+    <link href="styles.css?v=20260928-4" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
@@ -213,45 +213,48 @@
                             </div></div>
                             </div>
                             <div class="chart-footer">
-                                <div class="time-scale">
-                                    <span id="chart-window-label">Ventana temporal: 1 s</span>
-                                </div>
-                                <div class="chart-legend">
-                                    <div class="legend-item">
-                                        <div class="legend-color left"></div>
-                                        <span>Pierna Izquierda</span>
+                                <div class="chart-footer-primary">
+                                    <div class="time-scale">
+                                        <i class="far fa-clock" aria-hidden="true"></i>
+                                        <span id="chart-window-label">Ventana temporal: 1 s</span>
                                     </div>
-                                    <div class="legend-item">
-                                        <div class="legend-color right"></div>
-                                        <span>Pierna Derecha</span>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-color rms-left"></div>
-                                        <span>Actividad corregida izquierda</span>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-color rms-right"></div>
-                                        <span>Actividad corregida derecha</span>
+                                    <div class="chart-legend" aria-label="Leyenda del gráfico">
+                                        <div class="legend-item"><div class="legend-color left"></div><span>Izquierda</span></div>
+                                        <div class="legend-item"><div class="legend-color right"></div><span>Derecha</span></div>
+                                        <div class="legend-item"><div class="legend-color rms-left"></div><span>Actividad izq.</span></div>
+                                        <div class="legend-item"><div class="legend-color rms-right"></div><span>Actividad der.</span></div>
                                     </div>
                                 </div>
-                                <div class="cycling-info">
-                                    <div class="signal-range">
-                                        <small>Rango visible:</small>
-                                        <span id="signal-current">Actual: 0</span>
-                                        <span id="signal-min">Min: 0</span>
-                                        <span id="signal-max">Max: 0</span>
-                                        <span id="signal-peak-max">Pico max: 0</span>
-                                        <span class="activity-state" id="activity-state-flexor-left" data-status="uncalibrated">Flexor izq. sin calibrar</span>
-                                        <span class="activity-state" id="activity-state-flexor-right" data-status="uncalibrated">Flexor der. sin calibrar</span>
-                                        <span class="activity-state" id="activity-state-extensor-left" data-status="uncalibrated">Extensor izq. sin calibrar</span>
-                                        <span class="activity-state" id="activity-state-extensor-right" data-status="uncalibrated">Extensor der. sin calibrar</span>
+                                <details class="chart-footer-details">
+                                    <summary><i class="fas fa-info-circle" aria-hidden="true"></i> Detalles de señal y pedaleo</summary>
+                                    <div class="chart-footer-details-grid">
+                                        <section class="chart-detail-group" aria-labelledby="signal-range-title">
+                                            <h5 id="signal-range-title">Rango visible</h5>
+                                            <div class="signal-range">
+                                                <span id="signal-current">Actual: 0</span>
+                                                <span id="signal-min">Min: 0</span>
+                                                <span id="signal-max">Max: 0</span>
+                                                <span id="signal-peak-max">Pico max: 0</span>
+                                            </div>
+                                        </section>
+                                        <section class="chart-detail-group" aria-labelledby="sensor-state-title">
+                                            <h5 id="sensor-state-title">Estado de sensores</h5>
+                                            <div class="sensor-state-grid">
+                                                <span class="activity-state" id="activity-state-flexor-left" data-status="uncalibrated">Flexor izq. sin calibrar</span>
+                                                <span class="activity-state" id="activity-state-flexor-right" data-status="uncalibrated">Flexor der. sin calibrar</span>
+                                                <span class="activity-state" id="activity-state-extensor-left" data-status="uncalibrated">Extensor izq. sin calibrar</span>
+                                                <span class="activity-state" id="activity-state-extensor-right" data-status="uncalibrated">Extensor der. sin calibrar</span>
+                                            </div>
+                                        </section>
+                                        <section class="chart-detail-group" aria-labelledby="pedal-position-title">
+                                            <h5 id="pedal-position-title">Posición del pedal</h5>
+                                            <div class="pedal-position">
+                                                <span id="pedal-left">Izq: 0°</span>
+                                                <span id="pedal-right">Der: 180°</span>
+                                            </div>
+                                        </section>
                                     </div>
-                                    <div class="pedal-position">
-                                        <small>Posición del Pedal:</small>
-                                        <span id="pedal-left">Izq: 0°</span>
-                                        <span id="pedal-right">Der: 180°</span>
-                                    </div>
-                                </div>
+                                </details>
                             </div>
                         </div>
 
