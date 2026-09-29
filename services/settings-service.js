@@ -29,6 +29,7 @@
                 chartScaleMode: 'fixed',
                 showLeftSignal: true,
                 showRightSignal: true,
+                showRawSignal: false,
                 showRms: true
             });
         }
@@ -67,7 +68,7 @@
                 throw new RangeError('chartScaleMode must be auto or fixed');
             }
 
-            if (['showLeftSignal', 'showRightSignal', 'showRms'].includes(key) && typeof value !== 'boolean') {
+            if (['showLeftSignal', 'showRightSignal', 'showRawSignal', 'showRms'].includes(key) && typeof value !== 'boolean') {
                 throw new TypeError(`${key} must be a boolean`);
             }
 

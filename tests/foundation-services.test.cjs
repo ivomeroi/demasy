@@ -29,6 +29,7 @@ test('settings service applies defaults and validation', async () => {
     assert.equal(await settings.get('cadenceRpm'), 80);
     assert.equal(await settings.get('chartScaleMode'), 'fixed');
     assert.equal(await settings.get('showRms'), true);
+    assert.equal(await settings.get('showRawSignal'), false);
     assert.equal(await settings.set('cadenceRpm', 95), 95);
     assert.equal(await settings.set('chartScaleMode', 'auto'), 'auto');
     assert.equal(await settings.set('showLeftSignal', false), false);

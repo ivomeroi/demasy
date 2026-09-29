@@ -212,7 +212,8 @@ class KinesioEMGApp {
                     pointRadius: 0,
                     pointHoverRadius: 0,
                     tension: 0.1,
-                    fill: false
+                    fill: false,
+                    hidden: true
                 }, {
                     label: 'EMG Lado Derecho',
                     data: [...initialData],
@@ -222,7 +223,8 @@ class KinesioEMGApp {
                     pointRadius: 0,
                     pointHoverRadius: 0,
                     tension: 0.1,
-                    fill: false
+                    fill: false,
+                    hidden: true
                 }, {
                     label: 'Envolvente izquierda',
                     data: [...initialData],
@@ -318,7 +320,8 @@ class KinesioEMGApp {
             data: { datasets: this.emgChart.data.datasets.map(dataset => ({
                 label: dataset.label, data: [...initialData], borderColor: dataset.borderColor,
                 backgroundColor: dataset.backgroundColor, borderWidth: dataset.borderWidth,
-                pointRadius: 0, pointHoverRadius: 0, tension: dataset.tension, fill: dataset.fill
+                pointRadius: 0, pointHoverRadius: 0, tension: dataset.tension, fill: dataset.fill,
+                hidden: dataset.hidden
             })) },
             plugins: [recordingMarkerPlugin],
             options: this.createLiveChartOptions()
@@ -370,8 +373,8 @@ class KinesioEMGApp {
             const range = this.getChartYRange(chart);
             chart.options.scales.y.min = fixed ? -range : undefined;
             chart.options.scales.y.max = fixed ? range : undefined;
-            chart.data.datasets[0].hidden = this.displayPreferences.showLeftSignal === false;
-            chart.data.datasets[1].hidden = this.displayPreferences.showRightSignal === false;
+            chart.data.datasets[0].hidden = this.displayPreferences.showRawSignal !== true || this.displayPreferences.showLeftSignal === false;
+            chart.data.datasets[1].hidden = this.displayPreferences.showRawSignal !== true || this.displayPreferences.showRightSignal === false;
             chart.data.datasets[2].hidden = this.displayPreferences.showRms === false || this.displayPreferences.showLeftSignal === false;
             chart.data.datasets[3].hidden = this.displayPreferences.showRms === false || this.displayPreferences.showRightSignal === false;
             chart.options.scales.x.max = this.chartConfig.timeWindow;
