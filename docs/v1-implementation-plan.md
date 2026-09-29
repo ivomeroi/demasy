@@ -541,19 +541,19 @@ Estabilizar el punto de partida y fijar decisiones de producto antes de modifica
 
 #### Tareas
 
-- [ ] Crear una rama de trabajo para v1.
-- [ ] Ejecutar y registrar `npm test`.
-- [ ] Verificar manualmente el recorrido actual.
-- [ ] Inventariar botones y funciones incompletas.
-- [ ] Decidir si nombre, correo y fecha de nacimiento serán obligatorios u opcionales.
-- [ ] Definir duración máxima de una sesión simulada.
-- [ ] Definir frecuencia real de almacenamiento, separada de la frecuencia visual.
-- [ ] Aprobar las fórmulas y umbrales de simetría.
-- [ ] Decidir si la comparación v1 exige mismo músculo y mismo tipo de prueba.
-- [ ] Definir navegadores soportados.
-- [ ] Definir si los datos de ejemplo se cargan manualmente o solo en modo desarrollo.
-- [ ] Inventariar todas las referencias heredadas a `KinesioEMG` en código, interfaz, base de datos, configuración, documentación y despliegues.
-- [ ] Definir una estrategia de migración de nombre que preserve la base IndexedDB existente o importe sus datos en el nuevo esquema.
+- [x] Crear una rama de trabajo para v1.
+- [x] Ejecutar y registrar `npm test`.
+- [x] Verificar manualmente el recorrido actual.
+- [x] Inventariar botones y funciones incompletas.
+- [x] Decidir si nombre, correo y fecha de nacimiento serán obligatorios u opcionales.
+- [x] Definir duración máxima de una sesión simulada.
+- [x] Definir frecuencia real de almacenamiento, separada de la frecuencia visual.
+- [x] Aprobar las fórmulas y umbrales de simetría.
+- [x] Decidir si la comparación v1 exige mismo músculo y mismo tipo de prueba.
+- [x] Definir navegadores soportados.
+- [x] Definir si los datos de ejemplo se cargan manualmente o solo en modo desarrollo.
+- [x] Inventariar todas las referencias heredadas a `KinesioEMG` en código, interfaz, base de datos, configuración, documentación y despliegues.
+- [x] Definir una estrategia de migración de nombre que preserve la base IndexedDB existente o importe sus datos en el nuevo esquema.
 
 #### Entregables
 
@@ -577,16 +577,16 @@ Separar la lógica necesaria para que las siguientes funciones puedan probarse y
 
 #### Tareas
 
-- [ ] Crear estructura para controladores, servicios y utilidades.
-- [ ] Definir tipos mediante JSDoc o esquemas documentados.
-- [ ] Crear contrato común de fuentes de señal.
-- [ ] Adaptar el simulador al contrato sin cambiar su comportamiento visible.
-- [ ] Crear fuente de reproducción.
-- [ ] Crear servicio de análisis con funciones puras.
-- [ ] Crear servicio de configuración persistente.
-- [ ] Centralizar constantes, umbrales y unidades.
-- [ ] Incorporar un identificador de versión de aplicación y esquema.
-- [ ] Agregar entorno de pruebas unitarias si el actual no es suficiente.
+- [x] Crear estructura para controladores, servicios y utilidades.
+- [x] Definir tipos mediante JSDoc o esquemas documentados.
+- [x] Crear contrato común de fuentes de señal.
+- [x] Adaptar el simulador al contrato sin cambiar su comportamiento visible.
+- [x] Crear fuente de reproducción.
+- [x] Crear servicio de análisis con funciones puras.
+- [x] Crear servicio de configuración persistente.
+- [x] Centralizar constantes, umbrales y unidades.
+- [x] Incorporar un identificador de versión de aplicación y esquema.
+- [x] Agregar entorno de pruebas unitarias si el actual no es suficiente.
 
 #### Pruebas
 
@@ -612,28 +612,28 @@ Implementar el recorrido principal desde configuración hasta revisión de una s
 
 #### Tareas de interfaz
 
-- [ ] Crear panel o modal de nueva sesión.
-- [ ] Seleccionar paciente.
-- [ ] Elegir músculo y tipo de prueba.
-- [ ] Configurar cadencia, resistencia y duración.
-- [ ] Elegir escenario y parámetros.
-- [ ] Mostrar validaciones en línea.
-- [ ] Mostrar estado “Previsualización”.
-- [ ] Incorporar botones Iniciar, Pausar, Reanudar, Finalizar y Descartar.
-- [ ] Mostrar tiempo transcurrido y tiempo previsto.
-- [ ] Confirmar abandono de una sesión activa.
-- [ ] Crear pantalla/modal de revisión.
+- [x] Crear panel o modal de nueva sesión.
+- [x] Seleccionar paciente.
+- [x] Elegir músculo y tipo de prueba.
+- [x] Configurar cadencia, resistencia y duración.
+- [x] Elegir escenario y parámetros.
+- [x] Mostrar validaciones en línea.
+- [x] Mostrar estado “Previsualización”.
+- [x] Incorporar botones Iniciar, Pausar, Reanudar, Finalizar y Descartar.
+- [x] Mostrar tiempo transcurrido y tiempo previsto.
+- [x] Confirmar abandono de una sesión activa.
+- [x] Crear pantalla/modal de revisión.
 
 #### Tareas de lógica
 
-- [ ] Implementar la máquina de estados.
-- [ ] Separar previsualización de captura.
-- [ ] Reiniciar buffers al iniciar.
-- [ ] Evitar captura mientras está pausada.
-- [ ] Calcular duración con un reloj monotónico.
-- [ ] Limitar muestras según duración y política de almacenamiento.
-- [ ] Conservar la sesión en memoria si falla el guardado.
-- [ ] Generar resumen al finalizar.
+- [x] Implementar la máquina de estados.
+- [x] Separar previsualización de captura.
+- [x] Reiniciar buffers al iniciar.
+- [x] Evitar captura mientras está pausada.
+- [x] Calcular duración con un reloj monotónico.
+- [x] Limitar muestras según duración y política de almacenamiento.
+- [x] Conservar la sesión en memoria si falla el guardado.
+- [x] Generar resumen al finalizar.
 
 #### Pruebas
 
@@ -760,10 +760,10 @@ Reemplazar la sección de marcador de posición por análisis reproducibles y co
 - [x] Mostrar lado dominante.
 - [x] Mostrar fórmula o ayuda contextual.
 - [x] Marcar las interpretaciones como descriptivas.
-- [x] Crear selector de dos sesiones compatibles.
+- [x] Crear selector múltiple de sesiones del participante.
 - [x] Definir reglas de compatibilidad.
 - [x] Comparar valores absolutos y diferencias porcentuales.
-- [x] Mostrar configuración de ambas sesiones para evitar comparaciones engañosas.
+- [x] Ordenar sesiones cronológicamente y conservar su configuración para evitar comparaciones engañosas.
 - [x] Permitir exportar el resumen comparativo como JSON o CSV.
 
 #### Pruebas
@@ -776,7 +776,7 @@ Reemplazar la sección de marcador de posición por análisis reproducibles y co
 
 #### Criterio de aceptación
 
-La sección Análisis no contiene controles vacíos y explica claramente resultados de una o dos sesiones.
+La sección Análisis no contiene controles vacíos y explica claramente los resultados de una o múltiples sesiones.
 
 #### Punto de validación 5
 
@@ -1039,7 +1039,7 @@ Recorridos mínimos:
 1. Crear participante y guardar sesión simétrica.
 2. Guardar sesión con fatiga unilateral.
 3. Abrir y reproducir una sesión.
-4. Comparar dos sesiones.
+4. Seleccionar y comparar múltiples sesiones cronológicamente.
 5. Exportar, limpiar e importar respaldo.
 6. Usar asistente con API ausente.
 7. Recargar durante estados seguros y verificar persistencia.
@@ -1134,7 +1134,6 @@ No incorporar durante la ejecución salvo nueva aprobación:
 - almacenamiento en Drive o Dropbox;
 - aplicación móvil;
 - actualización remota del firmware;
-- análisis conjunto de más de dos sesiones;
 - panel institucional.
 - análisis de fatiga;
 
@@ -1183,7 +1182,7 @@ Actualizar esta tabla al cerrar cada punto de validación:
 | 7. Asistente | Aprobada | 2026-09-02 | Codex + responsable | `docs/v1-phase-7-assistant.md` | Gemini remoto validado; errores y límites de cuota visibles |
 | 8. UX | Aprobada | 2026-08-29 | Codex + responsable | `docs/v1-phase-8-ux.md` | Identidad y refinamiento visual aprobados; lista para integrar |
 | 9. Calidad | Aprobada | 2026-09-05 | Codex + responsable | `docs/v1-phase-9-quality.md` | Pruebas automáticas y validación local completadas; lista para integrar |
-| 10. Entrega | Aprobada | 2026-09-05 | Codex + responsable | `docs/v1-phase-10-delivery.md` | Preview validado y autorizado para producción |
+| 10. Entrega | Aprobada | 2026-09-05 | Codex + responsable | `docs/v1-phase-10-delivery.md` | Integrada y desplegada en producción |
 
 Estados permitidos: `Pendiente`, `En curso`, `En validación`, `Aprobada`, `Pospuesta`, `Bloqueada`.
 

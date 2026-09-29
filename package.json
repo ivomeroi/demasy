@@ -70,7 +70,7 @@
   "config": {
     "emg": {
       "sampleRate": 1000,
-      "maxChannels": 8,
+      "maxChannels": 4,
       "bufferSize": 10000
     }
   },
@@ -85,11 +85,24 @@
   },
   "hardware": {
     "esp32": {
-      "supportedBoards": ["ESP32-WROOM-32", "ESP32-S3", "ESP32-C3"],
-      "communicationMethods": ["Serial", "Bluetooth"],
-      "sampleRateRange": [200, 500],
+      "topology": {
+        "baseBoard": "ESP32-C3",
+        "sensorBoard": "ESP32-C3",
+        "sensorCount": 4,
+        "inputChannels": 4,
+        "requiredBleConnections": 5
+      },
+      "communicationMethod": "Bluetooth Low Energy",
+      "acquisitionSampleRateHz": 1000,
+      "sensorBleRateHz": 50,
+      "webStreamRateHz": 50,
+      "bandpassHz": [20, 450],
+      "notchHz": 50,
       "adcResolution": "12-bit",
-      "inputChannels": 2
+      "firmware": {
+        "base": "ESP32/esp_base_4ch_ble_c3/esp_base_4ch_ble_c3.ino",
+        "sensor": "ESP32/esp_sensor_4ch_c3/esp_sensor_4ch_c3.ino"
+      }
     }
   }
 }

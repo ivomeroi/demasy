@@ -1,15 +1,17 @@
 # Punto de reanudación de DEMASY
 
-- **Actualizado:** 2026-09-05
-- **Rama actual:** `feature/demasy-v1-phase-10`
-- **Base integrada:** `feature/demasy-v1` con Fases 0 a 9
-- **Fase actual:** Fase 10 — documentación y despliegue (aprobada)
+- **Actualizado:** 2026-09-29
+- **Rama actual:** `feature/demasy-v1`
+- **Base integrada:** Fases 0 a 10 y mejoras posteriores de hardware, análisis y UX
+- **Fase actual:** DEMASY v1 implementada y publicada; pendiente de etiqueta final
 
 ## Estado general
 
-- Fases 0 a 9 aprobadas, confirmadas e integradas en `feature/demasy-v1`.
-- Fase 10 aprobada por el responsable después de validar el Preview de Vercel.
+- Fases 0 a 10 aprobadas, confirmadas e integradas en `feature/demasy-v1`.
+- Producción validada y disponible en `https://demasy.vercel.app`.
 - La aplicación funciona íntegramente con simulación y persistencia local.
+- El análisis permite seleccionar múltiples sesiones y muestra su evolución cronológica.
+- La adquisición física vigente utiliza cuatro sensores ESP32-C3 y una base ESP32-C3.
 - Gemini continúa siendo opcional y requiere un servidor que proteja `GEMINI_API_KEY`.
 - El análisis de fatiga permanece fuera del alcance de DEMASY v1.
 
@@ -26,17 +28,16 @@
 ## Validación automática
 
 - `npm test`: aprobado.
-- Lint: 28 archivos JavaScript aprobados.
-- Pruebas unitarias: 55 aprobadas.
+- Lint: 31 archivos JavaScript aprobados.
+- Pruebas unitarias: 62 aprobadas.
 - Smoke test HTTP: aprobado.
 - Instalación limpia con `npm ci`: aprobada en un directorio temporal.
 - JSON, sintaxis Bash y diferencias Git: validados.
 
-## Pendiente para publicar la versión
+## Pendiente para cerrar formalmente la versión
 
-1. Integrar y publicar la Fase 10 en `feature/demasy-v1`.
-2. Confirmar que Vercel completa el deployment de producción.
-3. Crear y publicar la etiqueta `v1.0.0` después de validar producción.
+1. Ejecutar una última validación manual del recorrido completo y de cuatro sensores simultáneos.
+2. Crear y publicar la etiqueta `v1.0.0`.
 
 No incluir `/home/ivomeroi/.env.local` ni ninguna clave Gemini en Git.
 
