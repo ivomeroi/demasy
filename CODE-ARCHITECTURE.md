@@ -21,7 +21,9 @@ fuente de señal ──► app.js ──► gráfico y flujo de grabación
 ### Presentación
 
 - `index.html`: estructura de las cinco subrutas.
-- `styles.css`: sistema visual, responsive, estados y accesibilidad.
+- `styles/base.css`: tokens, shell, navegación, controles y componentes base.
+- `styles/dashboard.css`: visualización EMG, calibración, estadísticas y calidad de señal.
+- `styles/features.css`: asistente, análisis, pacientes, modales, flujo de sesión y responsive.
 - `app.js`: composición de servicios, navegación, gráfico y flujo de sesión.
 - `patient-manager.js`, `analysis-manager.js`, `backup-manager.js`: controladores de pantallas dinámicas.
 

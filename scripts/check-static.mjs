@@ -10,7 +10,8 @@ const templateFiles = [
 ];
 const templates = templateFiles.map(path => ({ path, source: readFileSync(path, 'utf8') }));
 const html = templates[0].source;
-const css = readFileSync('styles.css', 'utf8');
+const stylesheetPaths = ['styles/base.css', 'styles/dashboard.css', 'styles/features.css'];
+const css = stylesheetPaths.map(path => readFileSync(path, 'utf8')).join('');
 const runtimeLogFiles = [
     'app.js',
     'emg-simulator.js',
@@ -59,6 +60,12 @@ assert(inaccessibleCanvases.length === 0, `${inaccessibleCanvases.length} gráfi
 
 assert(/<html\b[^>]*\blang="es"/.test(html), 'El documento principal debe declarar lang="es"');
 assert(!/transition:\s*all\b/.test(css), 'Evita transition: all; declara únicamente las propiedades animadas');
+let previousStylesheetIndex = -1;
+for (const path of stylesheetPaths) {
+    const stylesheetIndex = html.indexOf(`href="${path}`);
+    assert(stylesheetIndex > previousStylesheetIndex, `Falta ${path} o está fuera del orden de cascada esperado`);
+    previousStylesheetIndex = stylesheetIndex;
+}
 
 const noisyRuntimeFiles = runtimeLogFiles.filter(path => /console\.log\s*\(/.test(readFileSync(path, 'utf8')));
 assert(

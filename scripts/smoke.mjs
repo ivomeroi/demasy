@@ -82,7 +82,7 @@ async function main() {
             if (response.status !== 403) throw new Error(`${privatePath} was not blocked.`);
         }
 
-        const headerProbe = await request('/styles.css');
+        const headerProbe = await request('/styles/base.css');
         if (headerProbe.status !== 200) throw new Error('Unable to inspect static response headers.');
         if (headerProbe.headers['x-content-type-options'] !== 'nosniff' || !headerProbe.headers['content-security-policy']) {
             throw new Error('Static security headers are missing.');
@@ -100,7 +100,9 @@ async function main() {
         }
 
         const localAssets = [
-            'styles.css',
+            'styles/base.css',
+            'styles/dashboard.css',
+            'styles/features.css',
             'core/demasy-config.js',
             'core/demasy-logger.js',
             'core/signal-source-contract.js',
