@@ -295,7 +295,7 @@ Describir la estructura general del software implementado.
 
 Contenido sugerido:
 - `index.html` como estructura de la interfaz;
-- `styles.css` como definicion visual y responsive;
+- `styles/base.css`, `styles/dashboard.css` y `styles/features.css` como definición visual y responsive;
 - `app.js` como controlador principal;
 - inicializacion de componentes;
 - eventos de usuario;

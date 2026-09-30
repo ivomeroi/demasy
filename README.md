@@ -116,7 +116,7 @@ Los umbrales descriptivos están centralizados en `core/demasy-config.js`. Son o
 npm test
 ```
 
-Ejecuta validación sintáctica, 62 pruebas unitarias y un smoke test HTTP sobre rutas, recursos locales, API de salud, cabeceras de seguridad y archivos privados.
+Ejecuta validación sintáctica, 63 pruebas unitarias y un smoke test HTTP sobre rutas, recursos locales, API de salud, cabeceras de seguridad y archivos privados.
 
 ## Despliegue
 

@@ -21,8 +21,15 @@ fuente de señal ──► app.js ──► gráfico y flujo de grabación
 ### Presentación
 
 - `index.html`: estructura de las cinco subrutas.
-- `styles.css`: sistema visual, responsive, estados y accesibilidad.
-- `app.js`: composición de servicios, navegación, gráfico y flujo de sesión.
+- `styles/base.css`: tokens, shell, navegación, controles y componentes base.
+- `styles/dashboard.css`: visualización EMG, calibración, estadísticas y calidad de señal.
+- `styles/features.css`: asistente, análisis, pacientes, modales, flujo de sesión y responsive.
+- `app.js`: composición de servicios, navegación, asistente y utilidades compartidas.
+- `controllers/live-chart-controller.js`: creación y preferencias de los gráficos en vivo.
+- `controllers/device-connection-controller.js`: simulador y conexiones USB/Bluetooth.
+- `controllers/recording-workflow-controller.js`: configuración, grabación, revisión y guardado.
+- `controllers/signal-processing-controller.js`: calibración, presentación de señal y métricas en vivo.
+- `bootstrap.js`: arranque, service worker y manejo global de errores.
 - `patient-manager.js`, `analysis-manager.js`, `backup-manager.js`: controladores de pantallas dinámicas.
 
 Las rutas `/emg-en-vivo`, `/analisis`, `/pacientes`, `/asistente-ia` y `/configuracion` comparten el shell de la SPA. `SectionRouter` mantiene URL, historial y recarga.
@@ -30,6 +37,7 @@ Las rutas `/emg-en-vivo`, `/analisis`, `/pacientes`, `/asistente-ia` y `/configu
 ### Dominio y servicios
 
 - `core/demasy-config.js`: versión, nombres de esquema, frecuencias, límites y umbrales.
+- `core/demasy-logger.js`: logging de diagnóstico opcional, desactivado por defecto en producción.
 - `core/signal-source-contract.js`: contrato común de fuentes.
 - `core/recording-controller.js`: máquina de estados de grabación.
 - `services/session-configuration-service.js`: validación de configuración.

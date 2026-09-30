@@ -8,7 +8,9 @@
     <title>DEMASY - Análisis bilateral de EMG</title>
     <link rel="icon" type="image/jpeg" href="/DEMASY-LOGO.jpeg">
     <link href="/vendor/fontawesome/css/all.min.css" rel="stylesheet">
-    <link href="styles.css?v=20260929-1" rel="stylesheet">
+    <link href="styles/base.css?v=20260929-3" rel="stylesheet">
+    <link href="styles/dashboard.css?v=20260929-3" rel="stylesheet">
+    <link href="styles/features.css?v=20260929-3" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
@@ -61,7 +63,7 @@
         <main class="main-content">
             <!-- Header -->
             <header class="header">
-                <button class="mobile-menu-button" id="mobile-menu-button" aria-label="Abrir menú principal" aria-expanded="false"><i class="fas fa-bars" aria-hidden="true"></i></button>
+                <button class="mobile-menu-button" id="mobile-menu-button" type="button" aria-label="Abrir menú principal" aria-expanded="false"><i class="fas fa-bars" aria-hidden="true"></i></button>
                 <div class="header-left">
                     <h1 id="section-title">Monitoreo EMG en Vivo</h1>
                     <div class="breadcrumb">
@@ -76,23 +78,23 @@
                             <i class="fas fa-chevron-down connection-selector-chevron" aria-hidden="true"></i>
                         </summary>
                         <div class="connection-selector-menu" aria-label="Método de conexión ESP32">
-                            <button class="connection-option" id="connect-esp32" title="Conectar ESP32 por USB">
+                            <button class="connection-option" id="connect-esp32" type="button" title="Conectar ESP32 por USB">
                                 <i class="fas fa-usb connection-option-icon" aria-hidden="true"></i>
                                 <span><strong>USB</strong><small>Web Serial mediante cable</small></span>
                             </button>
-                            <button class="connection-option" id="connect-ble" title="Conectar ESP32 master por Bluetooth">
+                            <button class="connection-option" id="connect-ble" type="button" title="Conectar ESP32 master por Bluetooth">
                                 <i class="fas fa-bluetooth-b connection-option-icon" aria-hidden="true"></i>
                                 <span><strong>Bluetooth</strong><small>Conexión inalámbrica BLE</small></span>
                             </button>
                         </div>
                     </details>
-                    <button class="btn-control" id="disconnect-esp32" title="Desconectar ESP32" disabled hidden>
+                    <button class="btn-control" id="disconnect-esp32" type="button" title="Desconectar ESP32" disabled hidden>
                         <i class="fas fa-unlink"></i> Desconectar
                     </button>
-                    <button class="btn-control" id="disconnect-ble" title="Desconectar Bluetooth" disabled hidden>
+                    <button class="btn-control" id="disconnect-ble" type="button" title="Desconectar Bluetooth" disabled hidden>
                         <i class="fas fa-unlink"></i> BT Off
                     </button>
-                    <button class="btn-control" id="save-session" disabled hidden>
+                    <button class="btn-control" id="save-session" type="button" disabled hidden>
                         <i class="fas fa-save"></i> Guardar Sesión
                     </button>
                 </div>
@@ -112,11 +114,11 @@
                             <div class="session-timer" id="session-timer">00:00.0</div>
                         </div>
                         <div class="session-workflow-actions">
-                            <button class="btn-outline" id="configure-session">Configurar sesión</button>
-                            <button class="btn-control primary" id="start-session" disabled hidden>Iniciar grabación</button>
-                            <button class="btn-outline" id="pause-session" disabled hidden>Pausar</button>
-                            <button class="btn-outline" id="finish-session" disabled hidden>Finalizar</button>
-                            <button class="btn-outline danger" id="discard-session" disabled hidden>Descartar</button>
+                            <button class="btn-outline" id="configure-session" type="button">Configurar sesión</button>
+                            <button class="btn-control primary" id="start-session" type="button" disabled hidden>Iniciar grabación</button>
+                            <button class="btn-outline" id="pause-session" type="button" disabled hidden>Pausar</button>
+                            <button class="btn-outline" id="finish-session" type="button" disabled hidden>Finalizar</button>
+                            <button class="btn-outline danger" id="discard-session" type="button" disabled hidden>Descartar</button>
                         </div>
                     </div>
                     <div class="dashboard-grid">
@@ -145,13 +147,13 @@
                                                     <label for="phase-shift-control">Retraso temporal derecho · ambos músculos: <span id="phase-display">0</span>°</label>
                                                     <input type="range" id="phase-shift-control" min="-180" max="180" value="0" step="5" />
                                                     <div class="phase-buttons">
-                                                        <button class="btn-small" id="phase-auto-align" title="Superposición Automática">
+                                                        <button class="btn-small" id="phase-auto-align" type="button" title="Superposición Automática">
                                                             <i class="fas fa-magic"></i> Auto
                                                         </button>
-                                                        <button class="btn-small" id="phase-reset" title="Sin Retraso (0°)">
+                                                        <button class="btn-small" id="phase-reset" type="button" title="Sin Retraso (0°)">
                                                             <i class="fas fa-undo"></i> Reset
                                                         </button>
-                                                        <button class="btn-small" id="phase-invert" title="Invertir Retraso">
+                                                        <button class="btn-small" id="phase-invert" type="button" title="Invertir Retraso">
                                                             <i class="fas fa-exchange-alt"></i> 180°
                                                         </button>
                                                     </div>
@@ -161,13 +163,13 @@
                                                 </div>
                                             </div>
                                             <div class="signal-action-buttons" aria-label="Acciones del gráfico">
-                                                <button class="btn-small" id="freeze-chart" title="Pausar/Reanudar" aria-label="Pausar o reanudar gráfico">
+                                                <button class="btn-small" id="freeze-chart" type="button" title="Pausar gráfico" aria-label="Pausar gráfico" aria-pressed="false">
                                                     <i class="fas fa-pause"></i>
                                                 </button>
-                                                <button class="btn-small" id="reset-chart" title="Resetear Vista" aria-label="Resetear vista del gráfico">
+                                                <button class="btn-small" id="reset-chart" type="button" title="Resetear Vista" aria-label="Resetear vista del gráfico">
                                                     <i class="fas fa-refresh"></i>
                                                 </button>
-                                                <button class="btn-small" id="clear-chart" title="Limpiar Gráfico" aria-label="Limpiar gráfico">
+                                                <button class="btn-small" id="clear-chart" type="button" title="Limpiar Gráfico" aria-label="Limpiar gráfico">
                                                     <i class="fas fa-eraser"></i>
                                                 </button>
                                             </div>
@@ -182,7 +184,7 @@
                                                     <option value="extensor-left">S3 · Extensor izquierdo</option>
                                                     <option value="extensor-right">S4 · Extensor derecho</option>
                                                 </select>
-                                                <button class="btn-small calibration-button" id="calibrate-signal" title="Calibrar reposo y rango de movimiento">
+                                                <button class="btn-small calibration-button" id="calibrate-signal" type="button" title="Calibrar reposo y rango de movimiento">
                                                     <i class="fas fa-crosshairs"></i> Calibrar
                                                 </button>
                                             </div>
@@ -192,7 +194,7 @@
                             </div>
                             <div class="four-channel-charts">
                             <div class="chart-panel"><h4>Flexor · comparación bilateral</h4><div class="chart-container">
-                                <canvas id="emg-chart" aria-label="Señales del músculo flexor izquierdo y derecho"></canvas>
+                                <canvas id="emg-chart" role="img" aria-label="Señales del músculo flexor izquierdo y derecho">Gráfico en tiempo real de las señales del músculo flexor izquierdo y derecho.</canvas>
                                 <div class="calibration-overlay" data-calibration-group="flexor" hidden role="status" aria-live="polite">
                                     <div class="calibration-pulse"><i class="fas fa-wave-square"></i></div>
                                     <strong class="calibration-title">Calibrando nivel de reposo</strong>
@@ -202,7 +204,7 @@
                                 </div>
                             </div></div>
                             <div class="chart-panel"><h4>Extensor · comparación bilateral</h4><div class="chart-container">
-                                <canvas id="extensor-chart" aria-label="Señales del músculo extensor izquierdo y derecho"></canvas>
+                                <canvas id="extensor-chart" role="img" aria-label="Señales del músculo extensor izquierdo y derecho">Gráfico en tiempo real de las señales del músculo extensor izquierdo y derecho.</canvas>
                                 <div class="calibration-overlay" data-calibration-group="extensor" hidden role="status" aria-live="polite">
                                     <div class="calibration-pulse"><i class="fas fa-wave-square"></i></div>
                                     <strong class="calibration-title">Calibrando nivel de reposo</strong>
@@ -354,8 +356,8 @@
                                 <p>Consulta conceptos y descripciones educativas sobre EMG bilateral y asimetrías.</p>
                             </div>
                             <div class="chat-actions">
-                                <button class="btn-small" id="assistant-health" title="Comprobar servicio remoto"><i class="fas fa-heart-pulse"></i> Comprobar</button>
-                                <button class="btn-small" id="clear-chat">
+                                <button class="btn-small" id="assistant-health" type="button" title="Comprobar servicio remoto"><i class="fas fa-heart-pulse"></i> Comprobar</button>
+                                <button class="btn-small" id="clear-chat" type="button">
                                     <i class="fas fa-broom"></i> Limpiar Chat
                                 </button>
                             </div>
@@ -384,7 +386,7 @@
                         
                         <div class="chat-input">
                             <input type="text" id="chat-input-field" placeholder="Pregunta sobre análisis EMG bilateral, asimetrías, tratamientos..." maxlength="500">
-                            <button id="send-chat" aria-label="Enviar consulta" disabled>
+                            <button id="send-chat" type="button" aria-label="Enviar consulta" disabled>
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
@@ -440,6 +442,7 @@
 
     <script src="/vendor/chart.min.js"></script>
     <script src="core/demasy-config.js"></script>
+    <script src="core/demasy-logger.js"></script>
     <script src="core/emg-channel-contract.js"></script>
     <script src="core/signal-source-contract.js"></script>
     <script src="core/recording-controller.js"></script>
@@ -464,6 +467,11 @@
     <script src="bluetooth-manager.js"></script>
     <script src="ai-assistant.js"></script>
     <script src="app.js"></script>
+    <script src="controllers/live-chart-controller.js"></script>
+    <script src="controllers/device-connection-controller.js"></script>
+    <script src="controllers/recording-workflow-controller.js"></script>
+    <script src="controllers/signal-processing-controller.js"></script>
+    <script src="bootstrap.js"></script>
     <script src="database-init.js"></script>
 </body>
 </html>

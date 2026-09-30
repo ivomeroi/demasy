@@ -11,7 +11,7 @@
     "build": "node scripts/build.mjs",
     "test": "npm run lint && npm run test:unit && npm run smoke",
     "test:unit": "node --test tests/*.test.cjs",
-    "lint": "node scripts/check-js.mjs",
+    "lint": "node scripts/check-js.mjs && node scripts/check-static.mjs",
     "smoke": "node scripts/smoke.mjs",
     "db:backup": "echo 'Open http://localhost:8000 and run: window.dbUtils.exportAllData() in browser console'",
     "db:clear": "echo 'Open http://localhost:8000 and run: window.dbUtils.clearSampleData() in browser console'", 

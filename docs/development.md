@@ -16,7 +16,7 @@ No abras `index.html` directamente: las subrutas, el service worker, las cabecer
 ```bash
 npm start          # servidor en 127.0.0.1:8000
 npm start -- 8001  # puerto alternativo
-npm run lint       # sintaxis JavaScript
+npm run lint       # sintaxis JavaScript y controles estáticos HTML/CSS
 npm run test:unit  # pruebas de dominio
 npm run smoke      # servidor y rutas HTTP
 npm test           # validación completa
@@ -36,6 +36,8 @@ npm test           # validación completa
 ## Datos de desarrollo
 
 Configuración permite crear datos demo, exportar respaldos e importar con `merge` o `replace`. Las utilidades `window.dbUtils` sirven para diagnóstico local; el borrado total solicita confirmación.
+
+Los mensajes de diagnóstico del navegador están desactivados por defecto. Para una sesión puntual, abre DEMASY con `?debug=1`; para conservar el modo entre recargas usa `localStorage.setItem('demasy.debug', 'true')`. Los errores y advertencias operativas continúan visibles independientemente de este modo.
 
 ## Variables de entorno
 

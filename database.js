@@ -1,4 +1,6 @@
 /** DEMASY IndexedDB manager with non-destructive legacy migration. */
+const databaseDebug = (...args) => window.DemasyLogger?.debug(...args);
+
 class DEMASYDatabase {
     constructor(options = {}) {
         const schema = window.DEMASY_CONFIG.schema;
@@ -13,7 +15,7 @@ class DEMASYDatabase {
     }
 
     async initialize() {
-        console.log(`Inicializando base de datos ${this.dbName}...`);
+        databaseDebug(`Inicializando base de datos ${this.dbName}...`);
         this.db = await this.openDatabase(this.dbName, this.dbVersion, database => this.createSchema(database));
         await this.migrateLegacyDatabaseIfNeeded();
         return this.db;
@@ -85,7 +87,7 @@ class DEMASYDatabase {
                 targetCounts: counts
             };
             await this.setSetting(this.migrationSettingKey, result);
-            console.log('Migración de KinesioEMGDB a DEMASYDB completada', result);
+            databaseDebug('Migración de KinesioEMGDB a DEMASYDB completada', result);
             return result;
         } catch (error) {
             throw new Error(`No se pudo migrar ${this.legacyDbName} a ${this.dbName}: ${error.message}`);

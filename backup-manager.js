@@ -11,12 +11,12 @@ class BackupManager {
                 <div class="form-group"><label for="setting-window">Ventana temporal</label><select id="setting-window"><option value="1">1 segundo</option><option value="5">5 segundos</option><option value="10">10 segundos</option><option value="30">30 segundos</option></select></div>
                 <fieldset class="settings-fieldset"><legend>Escala vertical</legend><label><input type="radio" name="setting-scale" value="fixed"> Fija y comparable</label><label><input type="radio" name="setting-scale" value="auto"> Automática</label></fieldset>
                 <fieldset class="settings-fieldset"><legend>Series visibles</legend><label><input type="checkbox" id="setting-left"> Señal izquierda</label><label><input type="checkbox" id="setting-right"> Señal derecha</label><label><input type="checkbox" id="setting-rms"> Curvas RMS</label></fieldset>
-                <button class="btn-control primary" id="settings-save">Guardar preferencias</button>
+                <button type="button" class="btn-control primary" id="settings-save">Guardar preferencias</button>
             </div>
-            <div class="card"><h3>Respaldo completo</h3><p>Exporta participantes, sesiones, análisis y configuración en un JSON versionado.</p><button class="btn-control primary" id="backup-export">Exportar respaldo</button></div>
+            <div class="card"><h3>Respaldo completo</h3><p>Exporta participantes, sesiones, análisis y configuración en un JSON versionado.</p><button type="button" class="btn-control primary" id="backup-export">Exportar respaldo</button></div>
             <div class="card"><h3>Importar o restaurar</h3><p>Máximo 50 MB. El contenido se valida antes de modificar IndexedDB.</p><label class="file-input-label" for="backup-file">Seleccionar respaldo JSON</label><input type="file" id="backup-file" accept="application/json,.json"><div id="backup-file-error" class="form-error" role="alert"></div></div>
-            <div class="card"><h3>Datos de demostración</h3><p>Crea o actualiza únicamente los participantes DEMO-* y sus sesiones sintéticas.</p><button class="btn-outline" id="demo-data-action">Crear o actualizar demos</button></div>
-            <div class="card"><h3>Guía de usuario</h3><p>Vuelve a recorrer las funciones principales de DEMASY paso a paso.</p><button class="btn-outline" id="onboarding-restart">Iniciar tutorial</button></div>
+            <div class="card"><h3>Datos de demostración</h3><p>Crea o actualiza únicamente los participantes DEMO-* y sus sesiones sintéticas.</p><button type="button" class="btn-outline" id="demo-data-action">Crear o actualizar demos</button></div>
+            <div class="card"><h3>Guía de usuario</h3><p>Vuelve a recorrer las funciones principales de DEMASY paso a paso.</p><button type="button" class="btn-outline" id="onboarding-restart">Iniciar tutorial</button></div>
             <div class="card prototype-notice"><h3>Alcance de esta versión</h3><p>DEMASY v1 es un prototipo académico. Los datos se guardan localmente en este navegador y no están cifrados.</p><p>Utiliza códigos de participante, evita datos sensibles y conserva respaldos periódicos.</p></div>
         </div></div>`;
         document.getElementById('setting-window').value = String(preferences.chartWindowSeconds);
@@ -71,12 +71,12 @@ class BackupManager {
     showPreview(preview, filename) {
         document.getElementById('backup-preview-modal')?.remove();
         document.body.insertAdjacentHTML('beforeend', `<div class="modal-overlay" id="backup-preview-modal" role="dialog" aria-modal="true" aria-labelledby="backup-preview-title"><div class="modal-content">
-            <div class="modal-header"><h3 id="backup-preview-title">Previsualizar respaldo</h3><button class="modal-close" id="backup-preview-close" aria-label="Cerrar previsualización"><i class="fas fa-times" aria-hidden="true"></i></button></div>
+            <div class="modal-header"><h3 id="backup-preview-title">Previsualizar respaldo</h3><button type="button" class="modal-close" id="backup-preview-close" aria-label="Cerrar previsualización"><i class="fas fa-times" aria-hidden="true"></i></button></div>
             <p>${this.escape(filename)}</p><div class="summary-grid">
                 <div class="summary-item"><label>Participantes</label><strong>${preview.patients}</strong></div><div class="summary-item"><label>Sesiones</label><strong>${preview.sessions}</strong></div>
                 <div class="summary-item"><label>Análisis</label><strong>${preview.analyses}</strong></div><div class="summary-item"><label>Preferencias</label><strong>${preview.settings}</strong></div>
             </div><div class="analysis-notice">Combinar conserva los registros actuales y omite duplicados. Reemplazar elimina primero todos los datos locales.</div>
-            <div class="modal-actions"><button class="btn-outline" id="backup-merge">Combinar</button><button class="btn-outline danger" id="backup-replace">Reemplazar todo</button></div>
+            <div class="modal-actions"><button type="button" class="btn-outline" id="backup-merge">Combinar</button><button type="button" class="btn-outline danger" id="backup-replace">Reemplazar todo</button></div>
         </div></div>`);
         document.getElementById('backup-merge').addEventListener('click', () => this.importPending('merge'));
         document.getElementById('backup-replace').addEventListener('click', () => this.confirmReplace());

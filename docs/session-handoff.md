@@ -28,8 +28,8 @@
 ## Validación automática
 
 - `npm test`: aprobado.
-- Lint: 31 archivos JavaScript aprobados.
-- Pruebas unitarias: 62 aprobadas.
+- Lint: 38 archivos JavaScript y controles estáticos de HTML/CSS aprobados.
+- Pruebas unitarias: 63 aprobadas.
 - Smoke test HTTP: aprobado.
 - Instalación limpia con `npm ci`: aprobada en un directorio temporal.
 - JSON, sintaxis Bash y diferencias Git: validados.

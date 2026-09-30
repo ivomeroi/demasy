@@ -1,6 +1,9 @@
 const DEMASY_SIMULATOR_CONFIG = typeof window !== 'undefined'
     ? window.DEMASY_CONFIG
     : require('./core/demasy-config.js');
+const simulatorDebug = (...args) => {
+    if (typeof DemasyLogger !== 'undefined') DemasyLogger.debug(...args);
+};
 
 /**
  * Bilateral EMG Signal Simulator
@@ -10,7 +13,7 @@ const DEMASY_SIMULATOR_CONFIG = typeof window !== 'undefined'
 
 class EMGSimulator {
     constructor() {
-        console.log('Initializing EMGSimulator...');
+        simulatorDebug('Initializing EMGSimulator...');
         
         this.isRunning = false;
         this.isPaused = false;
@@ -170,7 +173,7 @@ class EMGSimulator {
         // Initialize with default asymmetry factor
         this.setAsymmetryFactor(0.95); // 5% natural asymmetry
         
-        console.log('EMGSimulator initialized successfully with muscle:', this.currentMuscle);
+        simulatorDebug('EMGSimulator initialized successfully with muscle:', this.currentMuscle);
     }
 
     setMuscle(muscleType) {
@@ -208,7 +211,7 @@ class EMGSimulator {
         const delaySeconds = (degrees / 360) * cycleDuration;
         
         this.timeDelay[side] = Math.max(-0.5, Math.min(0.5, delaySeconds));
-        console.log(`Time delay set: ${side} = ${this.timeDelay[side].toFixed(3)}s (${degrees}°)`);
+        simulatorDebug(`Time delay set: ${side} = ${this.timeDelay[side].toFixed(3)}s (${degrees}°)`);
     }
 
     getTimeDelay(side = 'right') {
@@ -222,7 +225,7 @@ class EMGSimulator {
     resetTimeDelay() {
         this.timeDelay.left = 0;
         this.timeDelay.right = 0;
-        console.log('Time delay reset to 0s for both sides');
+        simulatorDebug('Time delay reset to 0s for both sides');
     }
 
     invertDelay(side = 'right') {
@@ -236,7 +239,7 @@ class EMGSimulator {
         
         // Keep within bounds
         this.timeDelay[side] = Math.max(-0.5, Math.min(0.5, this.timeDelay[side]));
-        console.log(`Delay inverted: ${side} = ${this.timeDelay[side].toFixed(3)}s`);
+        simulatorDebug(`Delay inverted: ${side} = ${this.timeDelay[side].toFixed(3)}s`);
     }
 
     autoAlignDelays() {
@@ -255,7 +258,7 @@ class EMGSimulator {
             this.timeDelay.right = 0;
         }
         
-        console.log(`Auto-aligned delays for ${this.currentMuscle}: right = ${this.timeDelay.right.toFixed(3)}s`);
+        simulatorDebug(`Auto-aligned delays for ${this.currentMuscle}: right = ${this.timeDelay.right.toFixed(3)}s`);
     }
 
     simulatePathology(type) {
@@ -303,10 +306,10 @@ class EMGSimulator {
     }
 
     start() {
-        console.log('EMGSimulator.start() called');
+        simulatorDebug('EMGSimulator.start() called');
         
         if (!this.isRunning) {
-            console.log('Starting EMG simulation...');
+            simulatorDebug('Starting EMG simulation...');
             this.isRunning = true;
             this.isPaused = false;
             this.time = 0;
@@ -315,17 +318,17 @@ class EMGSimulator {
             this.fatigueLevel = { left: 0, right: 0 };
             this.signalBuffer = { left: [], right: [] };
             
-            console.log('Initial state set, starting signal generation...');
+            simulatorDebug('Initial state set, starting signal generation...');
             try {
                 this.generateSignal();
-                console.log('Signal generation started successfully');
+                simulatorDebug('Signal generation started successfully');
             } catch (error) {
                 console.error('Error starting signal generation:', error);
                 this.isRunning = false;
                 throw error;
             }
         } else {
-            console.log('EMG Simulator already running');
+            simulatorDebug('EMG Simulator already running');
         }
     }
 
@@ -850,7 +853,7 @@ class EMGSimulator {
     }
 
     simulateWarmUp() {
-        console.log('Starting warm-up simulation');
+        simulatorDebug('Starting warm-up simulation');
         try {
             // Simulate cycling warm-up: gradual increase in intensity
             this.setCadence(60);
@@ -872,7 +875,7 @@ class EMGSimulator {
                     this.setActivationLevel(newActivation, 'both');
                 } else {
                     clearInterval(warmUpInterval);
-                    console.log('Warm-up completed');
+                    simulatorDebug('Warm-up completed');
                 }
             }, 1000);
         } catch (error) {
@@ -931,7 +934,7 @@ class EMGSimulator {
     }
 
     simulateAsymmetricPedaling() {
-        console.log('Starting asymmetric pedaling simulation');
+        simulatorDebug('Starting asymmetric pedaling simulation');
         try {
             // Simulate compensatory pedaling (e.g., after leg injury)
             this.setAsymmetryFactor(0.65); // 35% weakness in one leg
@@ -939,7 +942,7 @@ class EMGSimulator {
             this.setResistance(0.5);
             this.setActivationLevel(0.6, 'both');
             
-            console.log('Asymmetric pedaling started - 35% weakness in right leg');
+            simulatorDebug('Asymmetric pedaling started - 35% weakness in right leg');
         } catch (error) {
             console.error('Error in simulateAsymmetricPedaling:', error);
         }
@@ -964,7 +967,7 @@ class EMGSimulator {
     }
 
     simulateSteadyStateCycling(duration = 30) {
-        console.log('Starting steady state cycling for', duration, 'seconds');
+        simulatorDebug('Starting steady state cycling for', duration, 'seconds');
         try {
             // Simulate steady-state cycling
             this.setCadence(80);
@@ -973,7 +976,7 @@ class EMGSimulator {
             this.setPedalingEfficiency(0.9);
             
             setTimeout(() => {
-                console.log('Steady state cycling completed');
+                simulatorDebug('Steady state cycling completed');
             }, duration * 1000);
         } catch (error) {
             console.error('Error in simulateSteadyStateCycling:', error);

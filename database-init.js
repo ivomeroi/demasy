@@ -6,6 +6,9 @@
 const DEMO_DATASET_VERSION = 7;
 const DEMO_DATASET_KEY = `demoDataset.v${DEMO_DATASET_VERSION}`;
 const RETIRED_DEMO_CODES = ['DEMO-006', 'DEMO-007', 'DEMO-008', 'DEMO-009', 'DEMO-010'];
+const databaseInitDebug = (...args) => {
+    if (typeof DemasyLogger !== 'undefined') DemasyLogger.debug(...args);
+};
 
 function buildSessionSeries(options) {
     const sessionCount = 10;
@@ -80,12 +83,12 @@ const DEMO_PROFILES = [
 ];
 
 async function initializeSampleData(options = {}) {
-    console.log('Setting up sample database data...');
+    databaseInitDebug('Setting up sample database data...');
     
     try {
         // Wait for the database to be initialized
         if (!window.app || !window.app.database) {
-            console.log('Waiting for database initialization...');
+            databaseInitDebug('Waiting for database initialization...');
             return;
         }
         
@@ -93,13 +96,13 @@ async function initializeSampleData(options = {}) {
         
         const existingPatients = await db.listPatients({ includeArchived: true });
         if (!options.force && await db.getSetting(DEMO_DATASET_KEY, false)) {
-            console.log('Coherent demo dataset already initialized');
+            databaseInitDebug('Coherent demo dataset already initialized');
             return;
         }
 
         const existingByCode = new Map(existingPatients.map(patient => [patient.participantCode, patient]));
         if (!options.force && existingPatients.length > 0 && !DEMO_PROFILES.some(profile => existingByCode.has(profile.participant.participantCode))) {
-            console.log('User database detected without demo participants; sample data was not added');
+            databaseInitDebug('User database detected without demo participants; sample data was not added');
             await db.setSetting(DEMO_DATASET_KEY, { status: 'skipped', reason: 'user-data-present' });
             return;
         }
@@ -116,7 +119,7 @@ async function initializeSampleData(options = {}) {
 
         await db.setSetting(DEMO_DATASET_KEY, { status: 'completed', version: DEMO_DATASET_VERSION, updatedAt: new Date().toISOString() });
         
-        console.log('Sample data initialization completed');
+        databaseInitDebug('Sample data initialization completed');
         
         // Show notification if the app is ready
         if (window.app && window.app.showNotification) {
@@ -324,7 +327,7 @@ async function getDatabaseStats() {
     
     try {
         const stats = await window.app.database.getStatistics();
-        console.log('Database Statistics:', stats);
+        databaseInitDebug('Database Statistics:', stats);
         return stats;
     } catch (error) {
         console.error('Error getting database stats:', error);
@@ -347,15 +350,15 @@ if (typeof window !== 'undefined') {
                 else if (attempts < maxAttempts) {
                     attempts++;
                     setTimeout(tryInitialize, 1000);
-                } else console.log('Could not initialize sample data - database not ready');
+                } else databaseInitDebug('Could not initialize sample data - database not ready');
             };
             await tryInitialize();
         }, 2000);
     });
 
-    console.log('Database initialization script loaded. Available commands:');
-    console.log('- window.dbUtils.initializeSampleData() - Initialize sample participants');
-    console.log('- window.dbUtils.clearSampleData() - Clear all data');
-    console.log('- window.dbUtils.exportAllData() - Export database');
-    console.log('- window.dbUtils.getDatabaseStats() - Get statistics');
+    databaseInitDebug('Database initialization script loaded. Available commands:');
+    databaseInitDebug('- window.dbUtils.initializeSampleData() - Initialize sample participants');
+    databaseInitDebug('- window.dbUtils.clearSampleData() - Clear all data');
+    databaseInitDebug('- window.dbUtils.exportAllData() - Export database');
+    databaseInitDebug('- window.dbUtils.getDatabaseStats() - Get statistics');
 }

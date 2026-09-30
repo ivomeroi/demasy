@@ -82,7 +82,7 @@ async function main() {
             if (response.status !== 403) throw new Error(`${privatePath} was not blocked.`);
         }
 
-        const headerProbe = await request('/styles.css');
+        const headerProbe = await request('/styles/base.css');
         if (headerProbe.status !== 200) throw new Error('Unable to inspect static response headers.');
         if (headerProbe.headers['x-content-type-options'] !== 'nosniff' || !headerProbe.headers['content-security-policy']) {
             throw new Error('Static security headers are missing.');
@@ -92,7 +92,15 @@ async function main() {
             throw new Error('The script CSP must reject inline handlers.');
         }
 
-        for (const scriptPath of ['/app.js', '/patient-manager.js', '/backup-manager.js']) {
+        for (const scriptPath of [
+            '/app.js',
+            '/controllers/live-chart-controller.js',
+            '/controllers/device-connection-controller.js',
+            '/controllers/recording-workflow-controller.js',
+            '/controllers/signal-processing-controller.js',
+            '/patient-manager.js',
+            '/backup-manager.js'
+        ]) {
             const script = await request(scriptPath);
             if (/\son(?:click|change|input)\s*=/.test(script.body)) {
                 throw new Error(`${scriptPath} still contains an inline event handler.`);
@@ -100,8 +108,11 @@ async function main() {
         }
 
         const localAssets = [
-            'styles.css',
+            'styles/base.css',
+            'styles/dashboard.css',
+            'styles/features.css',
             'core/demasy-config.js',
+            'core/demasy-logger.js',
             'core/signal-source-contract.js',
             'core/recording-controller.js',
             'core/section-router.js',
@@ -122,6 +133,11 @@ async function main() {
             'bluetooth-manager.js',
             'ai-assistant.js',
             'app.js',
+            'controllers/live-chart-controller.js',
+            'controllers/device-connection-controller.js',
+            'controllers/recording-workflow-controller.js',
+            'controllers/signal-processing-controller.js',
+            'bootstrap.js',
             'database-init.js',
             'service-worker.js',
             'DEMASY-LOGO.jpeg'
@@ -134,7 +150,8 @@ async function main() {
             }
         }
 
-        if (!index.body.includes('rel="icon"') || !index.body.includes('service-worker.js') && !(await request('/app.js')).body.includes('service-worker.js')) {
+        const bootstrap = await request('/bootstrap.js');
+        if (!index.body.includes('rel="icon"') || !bootstrap.body.includes('service-worker.js')) {
             throw new Error('Favicon or offline service worker is not configured.');
         }
 
