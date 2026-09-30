@@ -87,7 +87,7 @@ int getEnvelope(int absoluteEmg) {
   return envelopeSum / BUFFER_SIZE;
 }
 
-typedef struct {
+struct Biquad {
   float b0;
   float b1;
   float b2;
@@ -95,7 +95,14 @@ typedef struct {
   float a2;
   float z1;
   float z2;
-} Biquad;
+
+  float process(float input) {
+    const float output = b0 * input + z1;
+    z1 = b1 * input - a1 * output + z2;
+    z2 = b2 * input - a2 * output;
+    return output;
+  }
+};
 
 // Cascada diseñada para Fs=1000 Hz: pasa banda 20-450 Hz y notch de red a
 // 50 Hz. No reutilizar estos coeficientes con otra frecuencia de muestreo.
@@ -105,17 +112,10 @@ Biquad emgFilterStages[] = {
   { 0.80059240f,  1.60118481f,  0.80059240f,  1.56101808f, 0.64135154f, 0, 0 }
 };
 
-float processBiquad(Biquad &stage, float input) {
-  const float output = stage.b0 * input + stage.z1;
-  stage.z1 = stage.b1 * input - stage.a1 * output + stage.z2;
-  stage.z2 = stage.b2 * input - stage.a2 * output;
-  return output;
-}
-
 float EMGFilter(float input) {
   float output = input;
   for (Biquad &stage : emgFilterStages) {
-    output = processBiquad(stage, output);
+    output = stage.process(output);
   }
   return output;
 }
