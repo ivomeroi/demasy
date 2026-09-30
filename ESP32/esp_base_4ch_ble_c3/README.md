@@ -60,6 +60,12 @@ sensor. Una vez conectados los cuatro, el escaneo se detiene automaticamente.
 El estado serie muestra `drops=S1/S2/S3/S4`; durante una prueba estable los
 contadores deben permanecer en cero o crecer solo de manera excepcional.
 
+Cada trama enviada al navegador termina con una mascara de cuatro bits. Los
+bits 0 a 3 representan S1 a S4 y solo se activan cuando el sensor esta
+conectado y envio datos dentro de `STALE_TIMEOUT_MS`. La pagina utiliza esta
+mascara para mostrar que sensores estan realmente transmitiendo, sin confundir
+una medicion valida de cero con una desconexion.
+
 ## Indicador de bateria de la base
 
 La base utiliza la misma medicion e indicacion que los sensores:

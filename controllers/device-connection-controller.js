@@ -49,6 +49,7 @@
         appDebug('Setting up ESP32 serial callbacks...');
 
         this.serialManager.onDataUpdate((data) => {
+            this.updateSensorConnectionIndicators(data.sensorStatus);
             if (!this.isPaused && this.signalSource === 'serial') {
                 this.ingestSignalData(data);
             }
@@ -64,6 +65,7 @@
             const isConnected = status === 'connected';
             this.updateSerialControls(isConnected);
             this.signalSource = isConnected ? 'serial' : 'simulator';
+            if (!isConnected) this.updateSensorConnectionIndicators(null);
             this.updateConnectionStatus(isConnected ? 'serial' : 'mock');
             this.updateChartMode();
         });
@@ -83,6 +85,7 @@
         appDebug('Setting up ESP32 Bluetooth callbacks...');
 
         this.bluetoothManager.onDataUpdate((data) => {
+            this.updateSensorConnectionIndicators(data.sensorStatus);
             if (!this.isPaused && this.signalSource === 'bluetooth') {
                 this.ingestSignalData(data);
             }
@@ -98,6 +101,7 @@
             const isConnected = status === 'connected';
             this.updateBluetoothControls(isConnected);
             this.signalSource = isConnected ? 'bluetooth' : 'simulator';
+            if (!isConnected) this.updateSensorConnectionIndicators(null);
             this.updateConnectionStatus(isConnected ? 'bluetooth' : 'mock');
             this.updateChartMode();
         });
@@ -182,6 +186,25 @@
             console.error('Error disconnecting Bluetooth ESP32:', error);
             this.showNotification(`Error al desconectar Bluetooth: ${error.message}`, 'error');
         }
+    }
+
+    updateSensorConnectionIndicators(sensorStatus) {
+        const labels = [
+            'S1 · Flexor izquierdo',
+            'S2 · Flexor derecho',
+            'S3 · Extensor izquierdo',
+            'S4 · Extensor derecho'
+        ];
+        labels.forEach((label, index) => {
+            const indicator = document.getElementById(`sensor-link-${index + 1}`);
+            if (!indicator) return;
+            const active = Array.isArray(sensorStatus) ? sensorStatus[index] === true : false;
+            indicator.dataset.connected = active ? 'true' : 'false';
+            indicator.title = `${label}: ${active ? 'conectado y transmitiendo' : 'sin datos recientes'}`;
+            indicator.setAttribute('aria-label', indicator.title);
+            const state = indicator.querySelector('.sensor-link-state');
+            if (state) state.textContent = active ? 'Activo' : 'Sin señal';
+        });
     }
 
     }

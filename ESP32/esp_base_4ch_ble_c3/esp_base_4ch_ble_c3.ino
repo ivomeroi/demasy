@@ -767,6 +767,7 @@ void setupWebBle() {
 // S2Battery,
 // S3Battery,
 // S4Battery
+// ActiveSensorMask (bits 0..3 = S1..S4 conectados y con datos recientes)
 //
 // Las baterias se envian en milivoltios.
 // ============================================================
@@ -792,6 +793,8 @@ void publishFrame() {
   const uint32_t now =
     millis();
 
+  uint8_t activeSensorMask = 0;
+
 
   // Comprobar datos desactualizados
   for (
@@ -800,13 +803,14 @@ void publishFrame() {
     i++
   ) {
 
-    if (
-      !channels[i].valid ||
-      now
-        - channels[i].lastUpdateMs
-        > STALE_TIMEOUT_MS
-    ) {
+    const bool active =
+      sensorConnected[i] &&
+      channels[i].valid &&
+      now - channels[i].lastUpdateMs <= STALE_TIMEOUT_MS;
 
+    if (active) {
+      activeSensorMask |= (1U << i);
+    } else {
       channels[i].signal = 0;
 
       channels[i].envelope = 0;
@@ -831,7 +835,7 @@ void publishFrame() {
       "%.2f,%u,%u,"
       "%.2f,%u,%u,"
       "%.2f,%u,%u,"
-      "%u,%u,%u,%u,%u\n",
+      "%u,%u,%u,%u,%u,%u\n",
 
       // SENSOR 1
       channels[0].signal,
@@ -860,7 +864,10 @@ void publishFrame() {
       channels[0].batteryMv,
       channels[1].batteryMv,
       channels[2].batteryMv,
-      channels[3].batteryMv
+      channels[3].batteryMv,
+
+      // Sensores conectados y transmitiendo datos recientes
+      activeSensorMask
     );
 
 

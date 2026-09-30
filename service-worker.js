@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demasy-v1-polish-15';
+const CACHE_NAME = 'demasy-v1-polish-16';
 const APP_SHELL = [
     '/', '/index.html', '/styles/base.css', '/styles/dashboard.css', '/styles/features.css', '/DEMASY-LOGO.jpeg',
     '/vendor/chart.min.js', '/vendor/fontawesome/css/all.min.css',

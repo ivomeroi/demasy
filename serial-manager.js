@@ -180,6 +180,8 @@ class EMGSerialManager {
             source: 'serial',
             raw: sample.raw,
             channelSchema: 'flexor-extensor-4ch',
+            sensorStatus: sample.sensorStatus || null,
+            batteryMv: sample.batteryMv || null,
             flexor: this.createMuscleSample(sample.flexor),
             extensor: this.createMuscleSample(sample.extensor)
         };
@@ -242,7 +244,21 @@ class EMGSerialManager {
             envelope: this.toFirmwareSignalValue(Math.abs(values[offset + 1])),
             flags: values[offset + 2] || 0
         });
-        return { flexor: { left: channel(0), right: channel(3) }, extensor: { left: channel(6), right: channel(9) }, raw };
+        const batteryMv = values.length >= 17 ? {
+            base: values[12],
+            sensors: values.slice(13, 17)
+        } : null;
+        const activeMask = values.length >= 18 ? Math.trunc(values[17]) : null;
+        const sensorStatus = activeMask === null
+            ? null
+            : [0, 1, 2, 3].map(index => Boolean(activeMask & (1 << index)));
+        return {
+            flexor: { left: channel(0), right: channel(3) },
+            extensor: { left: channel(6), right: channel(9) },
+            batteryMv,
+            sensorStatus,
+            raw
+        };
     }
 
     legacyPair(left, right, envelopeLeft, envelopeRight, flagsLeft, flagsRight, raw) {
