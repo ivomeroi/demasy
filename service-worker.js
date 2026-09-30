@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demasy-v1-polish-14';
+const CACHE_NAME = 'demasy-v1-polish-15';
 const APP_SHELL = [
     '/', '/index.html', '/styles/base.css', '/styles/dashboard.css', '/styles/features.css', '/DEMASY-LOGO.jpeg',
     '/vendor/chart.min.js', '/vendor/fontawesome/css/all.min.css',
@@ -15,7 +15,10 @@ const APP_SHELL = [
     '/services/onboarding-tour.js',
     '/database.js', '/patient-manager.js', '/analysis-manager.js', '/backup-manager.js',
     '/emg-simulator.js', '/serial-manager.js', '/bluetooth-manager.js',
-    '/ai-assistant.js', '/app.js', '/database-init.js'
+    '/ai-assistant.js', '/app.js',
+    '/controllers/live-chart-controller.js', '/controllers/device-connection-controller.js',
+    '/controllers/recording-workflow-controller.js', '/controllers/signal-processing-controller.js',
+    '/bootstrap.js', '/database-init.js'
 ];
 
 self.addEventListener('install', event => {

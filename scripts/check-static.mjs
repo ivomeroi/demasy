@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 const templateFiles = [
     'index.html',
     'app.js',
+    'controllers/recording-workflow-controller.js',
     'analysis-manager.js',
     'backup-manager.js',
     'patient-manager.js',
@@ -12,8 +13,22 @@ const templates = templateFiles.map(path => ({ path, source: readFileSync(path, 
 const html = templates[0].source;
 const stylesheetPaths = ['styles/base.css', 'styles/dashboard.css', 'styles/features.css'];
 const css = stylesheetPaths.map(path => readFileSync(path, 'utf8')).join('');
+const controllerScriptPaths = [
+    'app.js',
+    'controllers/live-chart-controller.js',
+    'controllers/device-connection-controller.js',
+    'controllers/recording-workflow-controller.js',
+    'controllers/signal-processing-controller.js',
+    'bootstrap.js',
+    'database-init.js'
+];
 const runtimeLogFiles = [
     'app.js',
+    'controllers/live-chart-controller.js',
+    'controllers/device-connection-controller.js',
+    'controllers/recording-workflow-controller.js',
+    'controllers/signal-processing-controller.js',
+    'bootstrap.js',
     'emg-simulator.js',
     'database.js',
     'database-init.js',
@@ -67,10 +82,22 @@ for (const path of stylesheetPaths) {
     previousStylesheetIndex = stylesheetIndex;
 }
 
+let previousScriptIndex = -1;
+for (const path of controllerScriptPaths) {
+    const scriptIndex = html.indexOf(`src="${path}`);
+    assert(scriptIndex > previousScriptIndex, `Falta ${path} o está fuera del orden de carga esperado`);
+    previousScriptIndex = scriptIndex;
+}
+
 const noisyRuntimeFiles = runtimeLogFiles.filter(path => /console\.log\s*\(/.test(readFileSync(path, 'utf8')));
 assert(
     noisyRuntimeFiles.length === 0,
     `Usa DemasyLogger para el diagnóstico de producción: ${noisyRuntimeFiles.join(', ')}`
+);
+const broadTransitionFiles = runtimeLogFiles.filter(path => /transition:\s*all\b/.test(readFileSync(path, 'utf8')));
+assert(
+    broadTransitionFiles.length === 0,
+    `Evita transition: all en estilos generados desde JavaScript: ${broadTransitionFiles.join(', ')}`
 );
 
 if (failures.length > 0) {

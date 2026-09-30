@@ -6,7 +6,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(root, 'dist');
 const runtimeFiles = [
     'index.html', 'service-worker.js', 'DEMASY-LOGO.jpeg',
-    'ai-assistant.js', 'analysis-manager.js', 'app.js', 'backup-manager.js',
+    'ai-assistant.js', 'analysis-manager.js', 'app.js', 'backup-manager.js', 'bootstrap.js',
     'bluetooth-manager.js', 'database-init.js', 'database.js',
     'emg-simulator.js', 'patient-manager.js', 'serial-manager.js'
 ];
@@ -19,6 +19,7 @@ for (const file of runtimeFiles) {
 }
 
 await cp(join(root, 'core'), join(output, 'core'), { recursive: true });
+await cp(join(root, 'controllers'), join(output, 'controllers'), { recursive: true });
 await cp(join(root, 'services'), join(output, 'services'), { recursive: true });
 await cp(join(root, 'styles'), join(output, 'styles'), { recursive: true });
 await mkdir(join(output, 'docs'), { recursive: true });
