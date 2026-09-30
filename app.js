@@ -70,6 +70,9 @@ class KinesioEMGApp {
             this.calibrationPhaseStartedAt = null;
             this.activeCalibrationChannels = [];
             this.envelopeDisplaySource = null;
+            this.latestSensorStatus = null;
+            this.calibratedLiveBuffer = [];
+            this.latestSourceStats = null;
             
             appDebug('Controlador DEMASY creado correctamente');
         } catch (error) {

@@ -10,6 +10,7 @@
 
     const number = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
     const channel = (value, envelope, flags) => ({
+        ...(value && typeof value === 'object' ? value : {}),
         amplitude: number(value?.amplitude ?? value?.emg ?? value),
         activation: number(value?.activation),
         envelope: number(value?.envelope ?? envelope),

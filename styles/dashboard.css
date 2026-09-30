@@ -173,6 +173,12 @@
   grid-column: auto;
 }
 
+.advanced-chart-controls-panel .calibration-method-note {
+  grid-column: 1 / -1;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
 .advanced-chart-controls-panel .cycling-controls { grid-area: phase; }
 
 /* Chart Container */

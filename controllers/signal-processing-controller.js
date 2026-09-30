@@ -256,13 +256,12 @@
                 leftSignal.data.push({ x: data.time, y: data[group].left.amplitude });
                 rightSignal.data.push({ x: data.time, y: data[group].right.amplitude });
                 const leftEnvelope = Number.isFinite(data[group].left.envelope)
-                    ? this.smoothEnvelope(`${group}-left`, data[group].left.envelope, data.time) : this.calculateRMSFromDataset(leftSignal);
+                    ? data[group].left.envelope : this.calculateRMSFromDataset(leftSignal);
                 const rightEnvelope = Number.isFinite(data[group].right.envelope)
-                    ? this.smoothEnvelope(`${group}-right`, data[group].right.envelope, data.time) : this.calculateRMSFromDataset(rightSignal);
-                this.captureCalibrationMovement(`${group}-left`, data[group].left.amplitude, leftEnvelope);
-                this.captureCalibrationMovement(`${group}-right`, data[group].right.amplitude, rightEnvelope);
-                leftEnvelopeData.data.push({ x: data.time, y: leftEnvelope });
-                rightEnvelopeData.data.push({ x: data.time, y: rightEnvelope });
+                    ? data[group].right.envelope : this.calculateRMSFromDataset(rightSignal);
+                const visualGain = this.isExternalSignalSource() ? this.chartConfig.activityVisualGain : 1;
+                leftEnvelopeData.data.push({ x: data.time, y: leftEnvelope * visualGain });
+                rightEnvelopeData.data.push({ x: data.time, y: rightEnvelope * visualGain });
             });
             chart.data.datasets.forEach(dataset => { while (dataset.data.length > this.chartConfig.maxDataPoints) dataset.data.shift(); });
             allDatasets.push(...chart.data.datasets);
@@ -295,16 +294,34 @@
             baselineSamples: [],
             movementSamples: [],
             baseline: null,
+            noiseSigma: null,
+            threshold: null,
             calibrated: false,
             active: false,
             candidate: null,
-            candidateSince: null
+            candidateSince: null,
+            calibrationSampleCount: 0,
+            calibrationClippedCount: 0,
+            lastCorrected: 0
         };
     }
 
     resetEnvelopeDisplay() {
         this.envelopeDisplay = this.createEnvelopeDisplayMap();
+        this.calibratedLiveBuffer = [];
         Object.keys(this.envelopeDisplay).forEach(key => this.updateActivityBadge(key, 'uncalibrated'));
+    }
+
+    getCalibrationSnapshot() {
+        return Object.fromEntries(Object.entries(this.envelopeDisplay).map(([channel, state]) => [channel, {
+            calibrated: state.calibrated,
+            baseline: state.baseline,
+            noiseSigma: state.noiseSigma,
+            threshold: state.threshold,
+            sampleCount: state.calibrationSampleCount,
+            method: 'median-mad-3sigma',
+            gainApplied: 1
+        }]));
     }
 
     createEnvelopeDisplayMap() {
@@ -337,9 +354,18 @@
 
         const target = document.getElementById('calibration-target')?.value || 'all';
         this.activeCalibrationChannels = this.getCalibrationChannels(target);
+        if (Array.isArray(this.latestSensorStatus)) {
+            const channelIndex = { 'flexor-left': 0, 'flexor-right': 1, 'extensor-left': 2, 'extensor-right': 3 };
+            const unavailable = this.activeCalibrationChannels.filter(channel => !this.latestSensorStatus[channelIndex[channel]]);
+            if (unavailable.length) {
+                this.showNotification(`No se puede calibrar: ${unavailable.map(channel => `S${channelIndex[channel] + 1}`).join(', ')} no transmite datos recientes.`, 'warning');
+                return;
+            }
+        }
         this.activeCalibrationChannels.forEach(channel => {
             this.envelopeDisplay[channel] = this.createEnvelopeDisplayState();
         });
+        this.calibratedLiveBuffer = [];
         this.calibrationInProgress = true;
         this.calibrationPhase = 'rest';
         this.calibrationPhaseStartedAt = performance.now();
@@ -374,10 +400,7 @@
         let channelsWithBaseline = 0;
         this.activeCalibrationChannels.forEach(channel => {
             const state = this.envelopeDisplay[channel];
-            if (state.baselineSamples.length) {
-                const ordered = [...state.baselineSamples].sort((a, b) => a - b);
-                state.baseline = ordered[Math.floor(ordered.length / 2)];
-                state.calibrated = true;
+            if (this.finalizeRestCalibration(state)) {
                 channelsWithBaseline++;
             }
             state.baselineSamples = [];
@@ -417,13 +440,9 @@
         let channelsWithMovement = 0;
         this.activeCalibrationChannels.forEach(channel => {
             const state = this.envelopeDisplay[channel];
-            if (!state.calibrated && state.baselineSamples.length > 0) {
-                const ordered = [...state.baselineSamples].sort((a, b) => a - b);
-                state.baseline = ordered[Math.floor(ordered.length / 2)];
-                state.calibrated = true;
-            }
+            if (!state.calibrated) this.finalizeRestCalibration(state);
             if (state.calibrated) calibratedChannels++;
-            if (state.movementSamples.length) channelsWithMovement++;
+            if (this.hasValidCalibrationMovement(state)) channelsWithMovement++;
             this.updateActivityBadge(channel, state.calibrated ? 'rest' : 'uncalibrated');
             state.baselineSamples = [];
         });
@@ -452,7 +471,37 @@
     captureCalibrationMovement(channel, rawAmplitude, displayedEnvelope) {
         if (!this.calibrationInProgress || this.calibrationPhase !== 'movement' || !this.activeCalibrationChannels.includes(channel)) return;
         const state = this.envelopeDisplay[channel];
-        [rawAmplitude, displayedEnvelope].map(value => Math.abs(Number(value))).filter(Number.isFinite).forEach(value => state.movementSamples.push(value));
+        const value = Math.abs(Number(displayedEnvelope));
+        if (Number.isFinite(value)) state.movementSamples.push(value);
+    }
+
+    median(values) {
+        const ordered = values.map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+        if (!ordered.length) return null;
+        const middle = Math.floor(ordered.length / 2);
+        return ordered.length % 2 ? ordered[middle] : (ordered[middle - 1] + ordered[middle]) / 2;
+    }
+
+    finalizeRestCalibration(state) {
+        const minimumSamples = Math.max(50, Math.min(100, Math.floor((this.getActiveSignalProvider()?.sampleRate || 50) * 2)));
+        if (state.baselineSamples.length < minimumSamples) return false;
+        const baseline = this.median(state.baselineSamples);
+        const mad = this.median(state.baselineSamples.map(value => Math.abs(value - baseline)));
+        if (!Number.isFinite(baseline) || !Number.isFinite(mad)) return false;
+        state.baseline = baseline;
+        state.noiseSigma = Math.max(0.05, mad * 1.4826);
+        state.threshold = baseline + Math.max(0.25, state.noiseSigma * 3);
+        state.calibrationSampleCount = state.baselineSamples.length;
+        state.calibrated = state.calibrationClippedCount / state.calibrationSampleCount < 0.05;
+        return state.calibrated;
+    }
+
+    hasValidCalibrationMovement(state) {
+        if (!state.calibrated || state.movementSamples.length < 50) return false;
+        const ordered = [...state.movementSamples].filter(Number.isFinite).sort((a, b) => a - b);
+        if (!ordered.length) return false;
+        const peak95 = ordered[Math.min(ordered.length - 1, Math.floor(ordered.length * 0.95))];
+        return peak95 >= Math.max(0.5, state.noiseSigma * 3);
     }
 
     applyCalibrationChartRanges(channels) {
@@ -466,7 +515,8 @@
                 .sort((a, b) => a - b);
             if (!values.length) return;
             const robustPeak = values[Math.min(values.length - 1, Math.floor(values.length * 0.99))];
-            const range = Math.max(3, Math.ceil(robustPeak * 1.2 / 5) * 5);
+            const displayedPeak = robustPeak * this.chartConfig.activityVisualGain;
+            const range = Math.max(3, Math.ceil(displayedPeak * 1.2 / 5) * 5);
             this.chartConfig.calibratedYRanges[group] = range;
             labels.push(`${group === 'flexor' ? 'flexor' : 'extensor'} ±${range}`);
         });
@@ -482,13 +532,9 @@
             : state.smoothed + alpha * (Math.max(0, value) - state.smoothed);
 
         if (this.calibrationInProgress && this.calibrationPhase === 'rest' && this.activeCalibrationChannels.includes(channel)) {
-            state.baselineSamples.push(state.smoothed);
+            state.baselineSamples.push(Math.max(0, Number(value)));
             this.updateActivityBadge(channel, 'calibrating');
             return 0;
-        }
-
-        if (state.calibrated && !state.active && this.calibrationPhase !== 'movement') {
-            state.baseline += 0.002 * (state.smoothed - state.baseline);
         }
 
         if (!state.calibrated || state.baseline === null) {
@@ -496,8 +542,8 @@
             return this.isExternalSignalSource() ? 0 : state.smoothed;
         }
 
-        const activationThreshold = Math.max(state.baseline * 1.65, state.baseline + 2.5);
-        const releaseThreshold = Math.max(state.baseline * 1.30, state.baseline + 1.0);
+        const activationThreshold = state.threshold;
+        const releaseThreshold = state.baseline + Math.max(0.15, state.noiseSigma * 1.5);
         const desiredState = state.active
             ? state.smoothed > releaseThreshold
             : state.smoothed >= activationThreshold;
@@ -523,9 +569,41 @@
 
         // Display-only transformation. The original sample and envelope remain
         // untouched for recording, export and analysis.
-        const noiseFloor = Math.max(0.5, state.baseline * 0.15);
-        const correctedActivity = Math.max(0, state.smoothed - state.baseline - noiseFloor);
-        return correctedActivity * this.chartConfig.activityVisualGain;
+        state.lastCorrected = Math.max(0, state.smoothed - state.threshold);
+        return state.lastCorrected;
+    }
+
+    applyCalibrationToSample(sample) {
+        if (!this.isExternalSignalSource()) return sample;
+        const calibrated = { ...sample, calibrationApplied: true };
+        ['flexor', 'extensor'].forEach(group => {
+            calibrated[group] = { ...sample[group] };
+            ['left', 'right'].forEach(side => {
+                const key = `${group}-${side}`;
+                const original = sample[group][side];
+                const state = this.envelopeDisplay[key];
+                if (this.calibrationInProgress && this.calibrationPhase === 'rest' && (original.flags & 0x01)) {
+                    state.calibrationClippedCount++;
+                }
+                const correctedEnvelope = this.smoothEnvelope(key, original.envelope, sample.time);
+                if (this.calibrationPhase === 'movement') {
+                    this.captureCalibrationMovement(key, original.amplitude, correctedEnvelope);
+                }
+                calibrated[group][side] = {
+                    ...original,
+                    rawAmplitude: original.rawAmplitude ?? original.amplitude,
+                    rawEnvelope: original.rawEnvelope ?? original.envelope,
+                    amplitude: state.calibrated && correctedEnvelope <= 0 ? 0 : original.amplitude,
+                    envelope: correctedEnvelope,
+                    calibration: state.calibrated ? {
+                        baseline: state.baseline,
+                        noiseSigma: state.noiseSigma,
+                        threshold: state.threshold
+                    } : null
+                };
+            });
+        });
+        return calibrated;
     }
 
     isExternalSignalSource() {
@@ -540,6 +618,10 @@
             ? 'Contracción'
             : status === 'rest' ? 'Reposo'
                 : status === 'calibrating' ? 'Calibrando…' : 'Sin calibrar';
+        const state = this.envelopeDisplay[channel];
+        badge.title = state?.calibrated
+            ? `Baseline ${state.baseline.toFixed(2)} mV · ruido σ ${state.noiseSigma.toFixed(2)} mV · umbral ${state.threshold.toFixed(2)} mV`
+            : 'Este canal todavía no tiene una calibración válida';
     }
 
     calculateRMSFromDataset(dataset) {
@@ -557,6 +639,10 @@
     ingestSignalData(data) {
         const now = performance.now();
         data = window.EMGChannelContract.normalizeSample(data);
+        data = this.applyCalibrationToSample(data);
+
+        this.calibratedLiveBuffer.push(data);
+        if (this.calibratedLiveBuffer.length > 500) this.calibratedLiveBuffer.shift();
 
         if (!this.sessionStartTime) {
             this.sessionStartTime = new Date();
@@ -595,6 +681,16 @@
                 Math.abs(data.flexor.left.amplitude), Math.abs(data.flexor.right.amplitude),
                 Math.abs(data.extensor.left.amplitude), Math.abs(data.extensor.right.amplitude)
             ));
+        }
+
+        if (this.isExternalSignalSource() && now - this.lastStatsUpdateAt >= this.chartConfig.statsUpdateInterval) {
+            this.lastStatsUpdateAt = now;
+            const stats = this.analysisService.analyzeSamples(this.calibratedLiveBuffer.slice(-250));
+            stats.bilateral.snr = this.latestSourceStats?.bilateral?.snr ?? 0;
+            stats.bilateral.artifacts = this.latestSourceStats?.bilateral?.artifacts ?? 'Ninguno';
+            this.updateStatistics(stats);
+            this.updateSignalQuality(stats);
+            this.aiAssistant.updateEMGContext(stats);
         }
     }
 
@@ -644,6 +740,8 @@
     }
 
     ingestStats(stats) {
+        this.latestSourceStats = stats;
+        if (this.isExternalSignalSource()) return;
         const now = performance.now();
         if (now - this.lastStatsUpdateAt < this.chartConfig.statsUpdateInterval) return;
 

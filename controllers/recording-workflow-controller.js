@@ -535,6 +535,7 @@
                 statistics: this.sessionReview?.statistics || this.analysisService.analyzeSamples(this.sessionData),
                 notes: configuration.notes,
                 configuration,
+                calibration: this.getCalibrationSnapshot(),
                 source: configuration.source,
                 label: configuration.label
             };
@@ -570,6 +571,7 @@
                 : Math.floor(this.sessionData.length / provider.sampleRate),
             dataPoints: this.sessionData.length,
             stats: provider.getStats(),
+            calibration: this.getCalibrationSnapshot(),
             patient: this.patientManager?.currentPatient?.name || 'Sin paciente'
         };
 

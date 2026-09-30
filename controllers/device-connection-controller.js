@@ -49,6 +49,7 @@
         appDebug('Setting up ESP32 serial callbacks...');
 
         this.serialManager.onDataUpdate((data) => {
+            this.latestSensorStatus = data.sensorStatus;
             this.updateSensorConnectionIndicators(data.sensorStatus);
             if (!this.isPaused && this.signalSource === 'serial') {
                 this.ingestSignalData(data);
@@ -85,6 +86,7 @@
         appDebug('Setting up ESP32 Bluetooth callbacks...');
 
         this.bluetoothManager.onDataUpdate((data) => {
+            this.latestSensorStatus = data.sensorStatus;
             this.updateSensorConnectionIndicators(data.sensorStatus);
             if (!this.isPaused && this.signalSource === 'bluetooth') {
                 this.ingestSignalData(data);
