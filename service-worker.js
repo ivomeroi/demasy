@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demasy-v1-polish-18';
+const CACHE_NAME = 'demasy-v1-polish-19';
 const APP_SHELL = [
     '/', '/index.html', '/styles/base.css', '/styles/dashboard.css', '/styles/features.css', '/DEMASY-LOGO.jpeg',
     '/vendor/chart.min.js', '/vendor/fontawesome/css/all.min.css',
@@ -41,6 +41,21 @@ self.addEventListener('fetch', event => {
 
     if (request.mode === 'navigate') {
         event.respondWith(fetch(request).catch(() => caches.match('/index.html')));
+        return;
+    }
+
+    // Prefer the deployed version for code and styles so a new HTML shell is
+    // never paired with stale interaction logic. Fall back to cache offline.
+    if (['script', 'style'].includes(request.destination)) {
+        event.respondWith(fetch(request)
+            .then(response => {
+                if (response.ok) {
+                    const copy = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+                }
+                return response;
+            })
+            .catch(() => caches.match(request)));
         return;
     }
 

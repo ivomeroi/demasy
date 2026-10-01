@@ -102,6 +102,10 @@ class KinesioEMGApp {
             calibratedYRanges: { flexor: null, extensor: null },
             signalUnit: 'mV'
         };
+
+        // The transversal assistant must remain available even if a slower
+        // subsystem (IndexedDB, charts or hardware) has not finished loading.
+        this.setupAssistantPanelControls();
         
         // Initialize application
         this.init();
@@ -375,10 +379,6 @@ class KinesioEMGApp {
             } catch (error) { this.showNotification(`Servicio remoto no disponible: ${error.message}`, 'warning'); }
         });
 
-        document.getElementById('assistant-launcher')?.addEventListener('click', () => this.toggleAssistantPanel());
-        document.getElementById('assistant-panel-close')?.addEventListener('click', () => this.toggleAssistantPanel(false));
-        document.getElementById('assistant-panel-backdrop')?.addEventListener('click', () => this.toggleAssistantPanel(false));
-
         // Chat suggestions
         document.querySelectorAll('.suggestion-chip').forEach(chip => {
             chip.addEventListener('click', (e) => {
@@ -389,6 +389,14 @@ class KinesioEMGApp {
                 }
             });
         });
+    }
+
+    setupAssistantPanelControls() {
+        if (this.assistantPanelControlsReady) return;
+        this.assistantPanelControlsReady = true;
+        document.getElementById('assistant-launcher')?.addEventListener('click', () => this.toggleAssistantPanel());
+        document.getElementById('assistant-panel-close')?.addEventListener('click', () => this.toggleAssistantPanel(false));
+        document.getElementById('assistant-panel-backdrop')?.addEventListener('click', () => this.toggleAssistantPanel(false));
     }
 
 
