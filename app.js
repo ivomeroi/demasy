@@ -73,6 +73,7 @@ class KinesioEMGApp {
             this.latestSensorStatus = null;
             this.calibratedLiveBuffer = [];
             this.latestSourceStats = null;
+            this.currentSection = 'dashboard';
             
             appDebug('Controlador DEMASY creado correctamente');
         } catch (error) {
@@ -204,6 +205,10 @@ class KinesioEMGApp {
 
         document.addEventListener('keydown', event => {
             if (event.key !== 'Escape') return;
+            if (document.getElementById('ai-assistant')?.classList.contains('assistant-drawer-open')) {
+                this.toggleAssistantPanel(false);
+                return;
+            }
             const modal = [...document.querySelectorAll('.modal-overlay')].at(-1);
             if (modal) modal.remove();
             document.querySelector('.sidebar')?.classList.remove('open');
@@ -370,6 +375,10 @@ class KinesioEMGApp {
             } catch (error) { this.showNotification(`Servicio remoto no disponible: ${error.message}`, 'warning'); }
         });
 
+        document.getElementById('assistant-launcher')?.addEventListener('click', () => this.toggleAssistantPanel());
+        document.getElementById('assistant-panel-close')?.addEventListener('click', () => this.toggleAssistantPanel(false));
+        document.getElementById('assistant-panel-backdrop')?.addEventListener('click', () => this.toggleAssistantPanel(false));
+
         // Chat suggestions
         document.querySelectorAll('.suggestion-chip').forEach(chip => {
             chip.addEventListener('click', (e) => {
@@ -484,6 +493,7 @@ class KinesioEMGApp {
 
     async navigateToSection(section, options = {}) {
         const target = this.sectionRouter.routes[section] ? section : 'dashboard';
+        this.currentSection = target;
         if (target === 'patients') await this.loadPatientsSection();
         if (target === 'analysis') await this.analysisManager?.render();
         if (target === 'settings') await this.backupManager?.render();
@@ -496,9 +506,36 @@ class KinesioEMGApp {
         this.updatePageTitle(target);
         const emgHeaderActions = document.getElementById('emg-header-actions');
         if (emgHeaderActions) emgHeaderActions.hidden = target !== 'dashboard';
+        const assistantLauncher = document.getElementById('assistant-launcher');
+        if (assistantLauncher) assistantLauncher.hidden = target === 'ai-assistant';
+        if (target === 'ai-assistant') this.toggleAssistantPanel(false);
         if (options.updateHistory !== false) {
             const method = options.replaceHistory ? 'replaceState' : 'pushState';
             window.history[method]({ section: target }, '', this.sectionRouter.getPath(target));
+        }
+    }
+
+    toggleAssistantPanel(forceOpen) {
+        const panel = document.getElementById('ai-assistant');
+        const launcher = document.getElementById('assistant-launcher');
+        const backdrop = document.getElementById('assistant-panel-backdrop');
+        if (!panel || panel.classList.contains('active')) return;
+        const open = typeof forceOpen === 'boolean'
+            ? forceOpen
+            : !panel.classList.contains('assistant-drawer-open');
+        panel.classList.toggle('assistant-drawer-open', open);
+        document.body.classList.toggle('assistant-panel-open', open);
+        launcher?.setAttribute('aria-expanded', String(open));
+        launcher?.setAttribute('aria-label', open ? 'Cerrar asistente DEMASY' : 'Abrir asistente DEMASY');
+        if (backdrop) backdrop.hidden = !open;
+        if (open) {
+            window.setTimeout(() => {
+                document.getElementById('chat-input-field')?.focus();
+                const messages = document.getElementById('chat-messages');
+                if (messages) messages.scrollTop = messages.scrollHeight;
+            }, 50);
+        } else {
+            launcher?.focus({ preventScroll: true });
         }
     }
 
@@ -643,10 +680,10 @@ class KinesioEMGApp {
         const loading = this.addChatLoading();
 
         try {
-            const result = await this.assistantService.request(
-                message, 
-                this.getActiveSignalProvider().getStats()
-            );
+            const result = await this.assistantService.request(message, {
+                ...this.getActiveSignalProvider().getStats(),
+                activeSection: this.currentSection
+            });
             if (result.remoteErrorCode === 'RATE_LIMIT') {
                 this.addChatMessage('ai', this.formatAssistantRateLimit(result.retryAfterSeconds), { source: 'error' });
             }
