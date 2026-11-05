@@ -50,6 +50,25 @@ test('calibra el reposo con mediana y dispersión robusta sin aplicar ganancia',
     assert.equal(app.getCalibrationSnapshot.call({ envelopeDisplay: { sensor: state } }).sensor.gainApplied, 1);
 });
 
+test('divide la calibración total en flexores y extensores consecutivos', () => {
+    class TestApp {}
+    const context = vm.createContext({ window: { KinesioEMGApp: TestApp } });
+    vm.runInContext(readFileSync('controllers/signal-processing-controller.js', 'utf8'), context);
+    const app = new TestApp();
+    app.envelopeDisplay = Object.fromEntries(
+        ['flexor-left', 'flexor-right', 'extensor-left', 'extensor-right'].map(channel => [channel, {}])
+    );
+
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(app.getCalibrationBatches('all'))),
+        [['flexor-left', 'flexor-right'], ['extensor-left', 'extensor-right']]
+    );
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(app.getCalibrationBatches('extensor-left'))),
+        [['extensor-left']]
+    );
+});
+
 test('conserva la muestra original y silencia únicamente actividad bajo el ruido', () => {
     class TestApp {}
     const context = vm.createContext({ window: { KinesioEMGApp: TestApp } });

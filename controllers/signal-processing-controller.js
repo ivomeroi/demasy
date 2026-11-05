@@ -338,6 +338,13 @@
         return this.envelopeDisplay[target] ? [target] : groups.all;
     }
 
+    getCalibrationBatches(target = 'all') {
+        if (target === 'all') {
+            return [this.getCalibrationChannels('flexor'), this.getCalibrationChannels('extensor')];
+        }
+        return [this.getCalibrationChannels(target)];
+    }
+
     setCalibrationOverlayVisibility(channels, visible) {
         const groups = new Set(channels.map(channel => channel.split('-')[0]));
         document.querySelectorAll('[data-calibration-group]').forEach(overlay => {
@@ -353,29 +360,33 @@
         if (this.calibrationInProgress) return;
 
         const target = document.getElementById('calibration-target')?.value || 'all';
-        this.activeCalibrationChannels = this.getCalibrationChannels(target);
+        const batches = this.getCalibrationBatches(target);
+        const requestedChannels = batches.flat();
         if (Array.isArray(this.latestSensorStatus)) {
             const channelIndex = { 'flexor-left': 0, 'flexor-right': 1, 'extensor-left': 2, 'extensor-right': 3 };
-            const unavailable = this.activeCalibrationChannels.filter(channel => !this.latestSensorStatus[channelIndex[channel]]);
+            const unavailable = requestedChannels.filter(channel => !this.latestSensorStatus[channelIndex[channel]]);
             if (unavailable.length) {
                 this.showNotification(`No se puede calibrar: ${unavailable.map(channel => `S${channelIndex[channel] + 1}`).join(', ')} no transmite datos recientes.`, 'warning');
                 return;
             }
         }
-        this.activeCalibrationChannels.forEach(channel => {
+        requestedChannels.forEach(channel => {
             this.envelopeDisplay[channel] = this.createEnvelopeDisplayState();
         });
         this.calibratedLiveBuffer = [];
         this.calibrationInProgress = true;
-        this.calibrationPhase = 'rest';
-        this.calibrationPhaseStartedAt = performance.now();
+        this.calibrationQueue = batches.slice(1);
+        this.calibrationSummary = {
+            expectedChannels: requestedChannels.length,
+            calibratedChannels: 0,
+            channelsWithMovement: 0,
+            ranges: []
+        };
         const button = document.getElementById('calibrate-signal');
         const selector = document.getElementById('calibration-target');
-        this.setCalibrationOverlayVisibility(this.activeCalibrationChannels, true);
-        this.updateCalibrationOverlay('rest');
         if (button) button.disabled = true;
         if (selector) selector.disabled = true;
-        this.activeCalibrationChannels.forEach(key => this.updateActivityBadge(key, 'calibrating'));
+        this.startCalibrationBatch(batches[0]);
 
         const updateCountdown = () => {
             const elapsed = performance.now() - this.calibrationPhaseStartedAt;
@@ -396,6 +407,15 @@
         this.calibrationTimer = window.setInterval(updateCountdown, 100);
     }
 
+    startCalibrationBatch(channels) {
+        this.activeCalibrationChannels = channels;
+        this.calibrationPhase = 'rest';
+        this.calibrationPhaseStartedAt = performance.now();
+        this.setCalibrationOverlayVisibility(channels, true);
+        this.updateCalibrationOverlay('rest');
+        channels.forEach(key => this.updateActivityBadge(key, 'calibrating'));
+    }
+
     startMovementCalibrationPhase() {
         let channelsWithBaseline = 0;
         this.activeCalibrationChannels.forEach(channel => {
@@ -407,7 +427,7 @@
             state.movementSamples = [];
         });
         if (!channelsWithBaseline) {
-            this.finishSignalCalibration();
+            this.finishSignalCalibrationBatch();
             return;
         }
         this.calibrationPhase = 'movement';
@@ -417,11 +437,13 @@
 
     updateCalibrationOverlay(phase) {
         const movement = phase === 'movement';
+        const activeGroup = this.activeCalibrationChannels[0]?.split('-')[0];
+        const groupLabel = activeGroup === 'extensor' ? 'Extensores' : 'Flexores';
         document.querySelectorAll('[data-calibration-group]').forEach(overlay => {
             overlay.dataset.phase = phase;
             const title = overlay.querySelector('.calibration-title');
             const instruction = overlay.querySelector('.calibration-instruction');
-            if (title) title.textContent = movement ? 'Calibrando rango de movimiento' : 'Calibrando nivel de reposo';
+            if (title) title.textContent = `${groupLabel} · ${movement ? 'rango de movimiento' : 'nivel de reposo'}`;
             if (instruction) instruction.textContent = movement
                 ? 'Realiza contracciones y movimientos normales durante cinco segundos.'
                 : 'Mantén los músculos relajados y evita movimientos.';
@@ -432,10 +454,6 @@
 
     finishSignalCalibration() {
         if (!this.calibrationInProgress) return;
-        this.calibrationInProgress = false;
-        window.clearInterval(this.calibrationTimer);
-        this.calibrationTimer = null;
-
         let calibratedChannels = 0;
         let channelsWithMovement = 0;
         this.activeCalibrationChannels.forEach(channel => {
@@ -449,23 +467,49 @@
 
         const calibratedRanges = this.applyCalibrationChartRanges(this.activeCalibrationChannels);
 
+        this.calibrationSummary.calibratedChannels += calibratedChannels;
+        this.calibrationSummary.channelsWithMovement += channelsWithMovement;
+        this.calibrationSummary.ranges.push(...calibratedRanges.filter(label => label !== 'sin ajuste'));
+
+        if (this.calibrationQueue.length) {
+            const nextChannels = this.calibrationQueue.shift();
+            const completedGroup = this.activeCalibrationChannels[0]?.startsWith('flexor') ? 'Flexores' : 'Extensores';
+            const nextGroup = nextChannels[0]?.startsWith('extensor') ? 'extensores' : 'flexores';
+            this.showNotification(`${completedGroup} completados. Ahora calibra los ${nextGroup}.`, 'info');
+            this.startCalibrationBatch(nextChannels);
+            return;
+        }
+
+        this.calibrationInProgress = false;
+        window.clearInterval(this.calibrationTimer);
+        this.calibrationTimer = null;
+
         const button = document.getElementById('calibrate-signal');
         const selector = document.getElementById('calibration-target');
         this.setCalibrationOverlayVisibility([], false);
         this.calibrationPhase = null;
         this.calibrationPhaseStartedAt = null;
+        this.activeCalibrationChannels = [];
+        this.calibrationQueue = [];
         if (button) button.disabled = false;
         if (selector) selector.disabled = false;
-        const expectedChannels = this.activeCalibrationChannels.length;
-        this.activeCalibrationChannels = [];
+        const { expectedChannels } = this.calibrationSummary;
+        calibratedChannels = this.calibrationSummary.calibratedChannels;
+        channelsWithMovement = this.calibrationSummary.channelsWithMovement;
+        const rangeLabels = this.calibrationSummary.ranges.length ? this.calibrationSummary.ranges : ['sin ajuste'];
+        this.calibrationSummary = null;
         this.showNotification(
             calibratedChannels === expectedChannels && channelsWithMovement === expectedChannels
-                ? `Calibración completada en ${calibratedChannels} sensor${calibratedChannels === 1 ? '' : 'es'}. Escala ajustada a ${calibratedRanges.join(' / ')} mV.`
+                ? `Calibración completada en ${calibratedChannels} sensor${calibratedChannels === 1 ? '' : 'es'}. Escala ajustada a ${rangeLabels.join(' / ')} mV.`
                 : calibratedChannels > 0
                     ? `Calibración parcial: reposo ${calibratedChannels}/${expectedChannels}, movimiento ${channelsWithMovement}/${expectedChannels}.`
                     : 'No se recibieron datos para calibrar.',
             calibratedChannels === expectedChannels && channelsWithMovement === expectedChannels ? 'success' : 'warning'
         );
+    }
+
+    finishSignalCalibrationBatch() {
+        this.finishSignalCalibration();
     }
 
     captureCalibrationMovement(channel, rawAmplitude, displayedEnvelope) {

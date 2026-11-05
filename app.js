@@ -69,6 +69,8 @@ class KinesioEMGApp {
             this.calibrationPhase = null;
             this.calibrationPhaseStartedAt = null;
             this.activeCalibrationChannels = [];
+            this.calibrationQueue = [];
+            this.calibrationSummary = null;
             this.envelopeDisplaySource = null;
             this.latestSensorStatus = null;
             this.calibratedLiveBuffer = [];
