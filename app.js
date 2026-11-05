@@ -25,6 +25,8 @@ class KinesioEMGApp {
             this.chatPending = false;
             this.chatTranscriptService = new ChatTranscriptService(window.sessionStorage);
             this.chatTranscript = [];
+            this.diagnosticLog = new DiagnosticLogService();
+            this.previousDiagnosticSensorStatus = null;
             appDebug('AI Assistant created:', !!this.aiAssistant);
             
             // Initialize database and patient manager
@@ -119,6 +121,7 @@ class KinesioEMGApp {
         try {
             // Initialize database first
             await this.initializeDatabase();
+            await this.diagnosticLog.initialize();
             this.displayPreferences = await this.settingsService.getAll();
             this.chartConfig.timeWindow = this.displayPreferences.chartWindowSeconds;
             
@@ -152,7 +155,12 @@ class KinesioEMGApp {
             await this.patientManager.initialize();
             this.analysisManager = new AnalysisManager(this.database);
             this.settingsService = new SettingsService(this.database);
-            this.backupManager = new BackupManager(this.database, this.settingsService, preferences => this.applyDisplayPreferences(preferences));
+            this.backupManager = new BackupManager(
+                this.database,
+                this.settingsService,
+                preferences => this.applyDisplayPreferences(preferences),
+                this.diagnosticLog
+            );
             
             appDebug('Database and patient manager initialized successfully');
         } catch (error) {

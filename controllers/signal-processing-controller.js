@@ -362,6 +362,7 @@
         const target = document.getElementById('calibration-target')?.value || 'all';
         const batches = this.getCalibrationBatches(target);
         const requestedChannels = batches.flat();
+        this.diagnosticLog.recordEvent('calibration-requested', { target, batches });
         if (Array.isArray(this.latestSensorStatus)) {
             const channelIndex = { 'flexor-left': 0, 'flexor-right': 1, 'extensor-left': 2, 'extensor-right': 3 };
             const unavailable = requestedChannels.filter(channel => !this.latestSensorStatus[channelIndex[channel]]);
@@ -414,6 +415,12 @@
         this.setCalibrationOverlayVisibility(channels, true);
         this.updateCalibrationOverlay('rest');
         channels.forEach(key => this.updateActivityBadge(key, 'calibrating'));
+        this.diagnosticLog.recordEvent('calibration-batch-started', {
+            group: channels[0]?.split('-')[0] || 'unknown',
+            channels,
+            phase: 'rest',
+            durationMs: this.calibrationDurationMs
+        });
     }
 
     startMovementCalibrationPhase() {
@@ -433,6 +440,13 @@
         this.calibrationPhase = 'movement';
         this.calibrationPhaseStartedAt = performance.now();
         this.updateCalibrationOverlay('movement');
+        this.diagnosticLog.recordEvent('calibration-phase-changed', {
+            group: this.activeCalibrationChannels[0]?.split('-')[0] || 'unknown',
+            channels: this.activeCalibrationChannels,
+            phase: 'movement',
+            durationMs: this.calibrationDurationMs,
+            calibration: Object.fromEntries(this.activeCalibrationChannels.map(channel => [channel, this.getCalibrationSnapshot()[channel]]))
+        });
     }
 
     updateCalibrationOverlay(phase) {
@@ -467,6 +481,15 @@
 
         const calibratedRanges = this.applyCalibrationChartRanges(this.activeCalibrationChannels);
 
+        this.diagnosticLog.recordEvent('calibration-batch-completed', {
+            group: this.activeCalibrationChannels[0]?.split('-')[0] || 'unknown',
+            channels: this.activeCalibrationChannels,
+            calibratedChannels,
+            channelsWithMovement,
+            ranges: calibratedRanges,
+            calibration: Object.fromEntries(this.activeCalibrationChannels.map(channel => [channel, this.getCalibrationSnapshot()[channel]]))
+        });
+
         this.calibrationSummary.calibratedChannels += calibratedChannels;
         this.calibrationSummary.channelsWithMovement += channelsWithMovement;
         this.calibrationSummary.ranges.push(...calibratedRanges.filter(label => label !== 'sin ajuste'));
@@ -497,7 +520,15 @@
         calibratedChannels = this.calibrationSummary.calibratedChannels;
         channelsWithMovement = this.calibrationSummary.channelsWithMovement;
         const rangeLabels = this.calibrationSummary.ranges.length ? this.calibrationSummary.ranges : ['sin ajuste'];
+        const completedSummary = {
+            expectedChannels,
+            calibratedChannels,
+            channelsWithMovement,
+            ranges: rangeLabels,
+            calibration: this.getCalibrationSnapshot()
+        };
         this.calibrationSummary = null;
+        this.diagnosticLog.recordEvent('calibration-completed', completedSummary);
         this.showNotification(
             calibratedChannels === expectedChannels && channelsWithMovement === expectedChannels
                 ? `Calibración completada en ${calibratedChannels} sensor${calibratedChannels === 1 ? '' : 'es'}. Escala ajustada a ${rangeLabels.join(' / ')} mV.`
@@ -682,8 +713,13 @@
 
     ingestSignalData(data) {
         const now = performance.now();
-        data = window.EMGChannelContract.normalizeSample(data);
-        data = this.applyCalibrationToSample(data);
+        const rawData = window.EMGChannelContract.normalizeSample(data);
+        data = this.applyCalibrationToSample(rawData);
+        this.diagnosticLog.recordSample(rawData, data, {
+            source: this.signalSource,
+            calibrationPhase: this.calibrationPhase,
+            activeCalibrationChannels: this.activeCalibrationChannels
+        });
 
         this.calibratedLiveBuffer.push(data);
         if (this.calibratedLiveBuffer.length > 500) this.calibratedLiveBuffer.shift();

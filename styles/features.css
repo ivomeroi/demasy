@@ -337,6 +337,21 @@
 .settings-grid .settings-preferences h3 { justify-content: flex-start; }
 .settings-grid .settings-preferences > p { text-align: left; }
 
+.settings-grid .settings-diagnostics { text-align: left; }
+.settings-grid .settings-diagnostics h3 { justify-content: flex-start; }
+.settings-grid .settings-diagnostics > p { text-align: left; }
+.diagnostic-status {
+  padding: 0.75rem;
+  border: 1px solid #c8d8e2;
+  border-radius: 0.65rem;
+  background: #f2f7fa;
+  color: var(--primary-dark) !important;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.settings-card-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-bottom: 1rem; }
+.settings-diagnostics > small { display: block; color: var(--text-secondary); line-height: 1.45; }
+
 input[type="file"] {
   width: 100%;
   color: var(--text-secondary);

@@ -1,11 +1,23 @@
 /** Backup, preview and restore UI for local DEMASY data. */
 class BackupManager {
-    constructor(database, settingsService, onPreferencesChanged) { this.database = database; this.settingsService = settingsService; this.onPreferencesChanged = onPreferencesChanged; this.service = new BackupService(); this.pendingPayload = null; }
+    constructor(database, settingsService, onPreferencesChanged, diagnosticLog = null) {
+        this.database = database;
+        this.settingsService = settingsService;
+        this.onPreferencesChanged = onPreferencesChanged;
+        this.diagnosticLog = diagnosticLog;
+        this.service = new BackupService();
+        this.pendingPayload = null;
+    }
 
     async render() {
         const container = document.getElementById('settings-content');
         if (!container) return;
         const preferences = await this.settingsService.getAll();
+        const diagnosticRuns = await this.diagnosticLog?.listRuns() || [];
+        const latestDiagnostic = diagnosticRuns[0];
+        const diagnosticStatus = latestDiagnostic
+            ? `${latestDiagnostic.status === 'recording' ? 'Grabando' : 'Finalizado'} · ${latestDiagnostic.sampleCount || 0} muestras · ${new Date(latestDiagnostic.startedAt).toLocaleString()}`
+            : 'Todavía no existen registros de hardware.';
         container.innerHTML = `<div class="settings-dashboard"><h2>Configuración y datos locales</h2><div class="settings-grid">
             <div class="card settings-preferences"><h3>Visualización de la señal</h3><p>Estas preferencias se guardan únicamente en este navegador.</p>
                 <div class="form-group"><label for="setting-window">Ventana temporal</label><select id="setting-window"><option value="1">1 segundo</option><option value="5">5 segundos</option><option value="10">10 segundos</option><option value="30">30 segundos</option></select></div>
@@ -16,6 +28,7 @@ class BackupManager {
             <div class="card"><h3>Respaldo completo</h3><p>Exporta participantes, sesiones, análisis y configuración en un JSON versionado.</p><button type="button" class="btn-control primary" id="backup-export">Exportar respaldo</button></div>
             <div class="card"><h3>Importar o restaurar</h3><p>Máximo 50 MB. El contenido se valida antes de modificar IndexedDB.</p><label class="file-input-label" for="backup-file">Seleccionar respaldo JSON</label><input type="file" id="backup-file" accept="application/json,.json"><div id="backup-file-error" class="form-error" role="alert"></div></div>
             <div class="card"><h3>Datos de demostración</h3><p>Crea o actualiza únicamente los participantes DEMO-* y sus sesiones sintéticas.</p><button type="button" class="btn-outline" id="demo-data-action">Crear o actualizar demos</button></div>
+            <div class="card settings-diagnostics"><h3><i class="fas fa-stethoscope" aria-hidden="true"></i> Registro diagnóstico</h3><p>Guarda localmente conexiones, sensores activos, baterías, señal original y calibrada, errores y parámetros de calibración.</p><p class="diagnostic-status" id="diagnostic-status">${this.escape(diagnosticStatus)}</p><div class="settings-card-actions"><button type="button" class="btn-control primary" id="diagnostic-export" ${latestDiagnostic ? '' : 'disabled'}>Exportar último registro</button><button type="button" class="btn-outline danger" id="diagnostic-clear" ${diagnosticRuns.length ? '' : 'disabled'}>Borrar registros</button></div><small>No incluye nombre ni datos identificatorios del participante.</small></div>
             <div class="card"><h3>Guía de usuario</h3><p>Vuelve a recorrer las funciones principales de DEMASY paso a paso.</p><button type="button" class="btn-outline" id="onboarding-restart">Iniciar tutorial</button></div>
             <div class="card prototype-notice"><h3>Alcance de esta versión</h3><p>DEMASY v1 es un prototipo académico. Los datos se guardan localmente en este navegador y no están cifrados.</p><p>Utiliza códigos de participante, evita datos sensibles y conserva respaldos periódicos.</p></div>
         </div></div>`;
@@ -31,7 +44,24 @@ class BackupManager {
             await window.dbUtils.initializeSampleData({ force: true });
             window.app?.showNotification('Datos demo creados o actualizados', 'success');
         });
+        document.getElementById('diagnostic-export')?.addEventListener('click', () => this.exportDiagnostics());
+        document.getElementById('diagnostic-clear')?.addEventListener('click', () => this.clearDiagnostics());
         document.getElementById('onboarding-restart').addEventListener('click', () => window.app?.startUserGuide());
+    }
+
+    async exportDiagnostics() {
+        const report = await this.diagnosticLog?.exportLatest();
+        if (!report) return window.app?.showNotification('No hay registros diagnósticos para exportar', 'warning');
+        const stamp = report.run.startedAt.slice(0, 19).replace(/:/g, '-');
+        this.download(JSON.stringify(report, null, 2), `demasy-diagnostico-${stamp}.json`);
+        window.app?.showNotification(`Diagnóstico exportado: ${report.samples.length} muestras`, 'success');
+    }
+
+    async clearDiagnostics() {
+        if (!window.confirm('¿Borrar todos los registros diagnósticos guardados en este navegador?')) return;
+        await this.diagnosticLog?.clear();
+        window.app?.showNotification('Registros diagnósticos eliminados', 'success');
+        await this.render();
     }
 
     async savePreferences() {

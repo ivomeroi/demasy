@@ -31,7 +31,8 @@ class EMGSerialManager {
             onDataUpdate: null,
             onStatsUpdate: null,
             onConnectionChange: null,
-            onError: null
+            onError: null,
+            onDiagnostic: null
         };
         this.stats = this.createEmptyStats();
         this.cyclingParams = {
@@ -130,6 +131,10 @@ class EMGSerialManager {
         this.callbacks.onError = callback;
     }
 
+    onDiagnostic(callback) {
+        this.callbacks.onDiagnostic = callback;
+    }
+
     async readLoop() {
         const decoder = new TextDecoder();
         let pendingText = '';
@@ -167,7 +172,10 @@ class EMGSerialManager {
 
     handleLine(line) {
         const sample = this.parseSample(line);
-        if (!sample) return;
+        if (!sample) {
+            if (line.trim()) this.callbacks.onDiagnostic?.({ type: 'parse-error', line: line.slice(0, 500) });
+            return;
+        }
 
         const now = performance.now();
         const dt = Math.max(0.001, Math.min(0.1, (now - this.lastSampleAt) / 1000));

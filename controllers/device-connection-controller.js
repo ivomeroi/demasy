@@ -53,6 +53,8 @@
             this.updateSensorConnectionIndicators(data.sensorStatus);
             if (!this.isPaused && this.signalSource === 'serial') {
                 this.ingestSignalData(data);
+            } else if (this.signalSource === 'serial') {
+                this.diagnosticLog.recordSample(data, null, { source: 'serial', paused: true });
             }
         });
 
@@ -64,6 +66,13 @@
 
         this.serialManager.onConnectionChange((status) => {
             const isConnected = status === 'connected';
+            if (isConnected) {
+                this.diagnosticLog.beginRun({ transport: 'serial', device: { type: 'ESP32 master USB' } });
+                this.diagnosticLog.recordEvent('base-connection', { transport: 'serial', status });
+            } else {
+                this.diagnosticLog.recordEvent('base-connection', { transport: 'serial', status });
+                this.diagnosticLog.endRun('serial-disconnected').catch(error => console.error('No se pudo cerrar el diagnóstico:', error));
+            }
             this.updateSerialControls(isConnected);
             this.signalSource = isConnected ? 'serial' : 'simulator';
             if (!isConnected) this.updateSensorConnectionIndicators(null);
@@ -72,6 +81,7 @@
         });
 
         this.serialManager.onError((error) => {
+            this.diagnosticLog.recordEvent('source-error', { transport: 'serial', message: error.message });
             console.error('ESP32 serial error:', error);
             this.showNotification(`Error de conexión ESP32: ${error.message}`, 'error');
             if (!this.serialManager.isConnected) {
@@ -80,6 +90,7 @@
                 this.updateSerialControls(false);
             }
         });
+        this.serialManager.onDiagnostic(event => this.diagnosticLog.recordEvent(event.type, { transport: 'serial', ...event }));
     }
 
     setupBluetoothManager() {
@@ -90,6 +101,8 @@
             this.updateSensorConnectionIndicators(data.sensorStatus);
             if (!this.isPaused && this.signalSource === 'bluetooth') {
                 this.ingestSignalData(data);
+            } else if (this.signalSource === 'bluetooth') {
+                this.diagnosticLog.recordSample(data, null, { source: 'bluetooth', paused: true });
             }
         });
 
@@ -101,6 +114,16 @@
 
         this.bluetoothManager.onConnectionChange((status) => {
             const isConnected = status === 'connected';
+            if (isConnected) {
+                this.diagnosticLog.beginRun({
+                    transport: 'bluetooth',
+                    device: { name: this.bluetoothManager.device?.name || 'DEMASY master' }
+                });
+                this.diagnosticLog.recordEvent('base-connection', { transport: 'bluetooth', status });
+            } else {
+                this.diagnosticLog.recordEvent('base-connection', { transport: 'bluetooth', status });
+                this.diagnosticLog.endRun('bluetooth-disconnected').catch(error => console.error('No se pudo cerrar el diagnóstico:', error));
+            }
             this.updateBluetoothControls(isConnected);
             this.signalSource = isConnected ? 'bluetooth' : 'simulator';
             if (!isConnected) this.updateSensorConnectionIndicators(null);
@@ -109,6 +132,7 @@
         });
 
         this.bluetoothManager.onError((error) => {
+            this.diagnosticLog.recordEvent('source-error', { transport: 'bluetooth', message: error.message });
             console.error('ESP32 Bluetooth error:', error);
             this.showNotification(`Error Bluetooth ESP32: ${error.message}`, 'error');
             if (!this.bluetoothManager.isConnected) {
@@ -117,6 +141,7 @@
                 this.updateBluetoothControls(false);
             }
         });
+        this.bluetoothManager.onDiagnostic(event => this.diagnosticLog.recordEvent(event.type, { transport: 'bluetooth', ...event }));
     }
 
     async connectESP32() {
@@ -207,6 +232,21 @@
             const state = indicator.querySelector('.sensor-link-state');
             if (state) state.textContent = active ? 'Activo' : 'Sin señal';
         });
+        if (Array.isArray(sensorStatus)) {
+            const previous = this.previousDiagnosticSensorStatus;
+            sensorStatus.forEach((active, index) => {
+                if (!previous || previous[index] !== active) {
+                    this.diagnosticLog.recordEvent('sensor-status', {
+                        sensor: index + 1,
+                        channel: ['flexor-left', 'flexor-right', 'extensor-left', 'extensor-right'][index],
+                        status: active ? 'transmitting' : 'inactive'
+                    });
+                }
+            });
+            this.previousDiagnosticSensorStatus = [...sensorStatus];
+        } else if (this.previousDiagnosticSensorStatus) {
+            this.previousDiagnosticSensorStatus = null;
+        }
     }
 
     }

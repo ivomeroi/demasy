@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demasy-v1-polish-19';
+const CACHE_NAME = 'demasy-v1-polish-20';
 const APP_SHELL = [
     '/', '/index.html', '/styles/base.css', '/styles/dashboard.css', '/styles/features.css', '/DEMASY-LOGO.jpeg',
     '/vendor/chart.min.js', '/vendor/fontawesome/css/all.min.css',
@@ -11,6 +11,7 @@ const APP_SHELL = [
     '/services/memory-storage-adapter.js', '/services/replay-signal-source.js',
     '/services/session-configuration-service.js', '/services/data-normalization-service.js',
     '/services/session-history-service.js', '/services/backup-service.js',
+    '/services/diagnostic-log-service.js',
     '/services/assistant-service.js', '/services/chat-transcript-service.js',
     '/services/onboarding-tour.js',
     '/database.js', '/patient-manager.js', '/analysis-manager.js', '/backup-manager.js',

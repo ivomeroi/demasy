@@ -124,6 +124,7 @@ async function main() {
         'services/data-normalization-service.js',
         'services/session-history-service.js',
         'services/backup-service.js',
+        'services/diagnostic-log-service.js',
             'database.js',
             'patient-manager.js',
             'analysis-manager.js',
