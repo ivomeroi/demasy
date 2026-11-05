@@ -69,7 +69,7 @@ test('divide la calibración total en flexores y extensores consecutivos', () =>
     );
 });
 
-test('conserva la muestra original y silencia únicamente actividad bajo el ruido', () => {
+test('conserva la muestra original y corrige potencia de ruido sin usar el umbral como zona muerta', () => {
     class TestApp {}
     const context = vm.createContext({ window: { KinesioEMGApp: TestApp } });
     vm.runInContext(readFileSync('controllers/signal-processing-controller.js', 'utf8'), context);
@@ -80,8 +80,8 @@ test('conserva la muestra original y silencia únicamente actividad bajo el ruid
     app.activeCalibrationChannels = [];
     app.updateActivityBadge = () => {};
     const state = () => ({
-        ...app.createEnvelopeDisplayState(), calibrated: true, baseline: 10,
-        noiseSigma: 1, threshold: 13, smoothed: 20
+        ...app.createEnvelopeDisplayState(), calibrated: true, baselineValid: true,
+        comparisonValid: true, baseline: 10, noiseSigma: 1, threshold: 13, smoothed: 20
     });
     app.envelopeDisplay = {
         'flexor-left': state(), 'flexor-right': state(),
@@ -96,14 +96,30 @@ test('conserva la muestra original y silencia únicamente actividad bajo el ruid
     assert.equal(result.flexor.left.rawAmplitude, 5);
     assert.equal(result.flexor.left.rawEnvelope, 20);
     assert.ok(result.flexor.left.envelope > 0);
-    assert.equal(result.flexor.left.amplitude, 5);
+    assert.ok(result.flexor.left.amplitude > 0);
+    assert.ok(result.flexor.left.amplitude < 5);
+    assert.equal(result.flexor.left.calibration.correctionMethod, 'noise-power-subtraction');
 
     app.envelopeDisplay['flexor-left'].smoothed = 11;
     const quiet = app.applyCalibrationToSample({
         time: 2, flexor: { left: { amplitude: 4, envelope: 11, flags: 0 }, right: channel },
         extensor: { left: channel, right: channel }
     });
-    assert.equal(quiet.flexor.left.envelope, 0);
-    assert.equal(quiet.flexor.left.amplitude, 0);
+    assert.ok(quiet.flexor.left.envelope > 0);
+    assert.ok(quiet.flexor.left.amplitude > 0);
     assert.equal(quiet.flexor.left.rawAmplitude, 4);
+});
+
+test('valida movimiento contra el umbral de detección sin alterar la amplitud corregida', () => {
+    class TestApp {}
+    const context = vm.createContext({ window: { KinesioEMGApp: TestApp } });
+    vm.runInContext(readFileSync('controllers/signal-processing-controller.js', 'utf8'), context);
+    const app = new TestApp();
+    const state = app.createEnvelopeDisplayState();
+    Object.assign(state, { baselineValid: true, baseline: 10, noiseSigma: 1, threshold: 13 });
+    state.movementSamples = Array(100).fill(12);
+    assert.equal(app.hasValidCalibrationMovement(state), false);
+    state.movementSamples = Array(100).fill(14);
+    assert.equal(app.hasValidCalibrationMovement(state), true);
+    assert.ok(app.noiseCorrectEnvelope(state, 12) > 0);
 });

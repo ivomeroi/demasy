@@ -297,6 +297,9 @@
             noiseSigma: null,
             threshold: null,
             calibrated: false,
+            baselineValid: false,
+            movementValid: false,
+            comparisonValid: false,
             active: false,
             candidate: null,
             candidateSince: null,
@@ -319,8 +322,13 @@
             noiseSigma: state.noiseSigma,
             threshold: state.threshold,
             sampleCount: state.calibrationSampleCount,
-            method: 'median-mad-3sigma',
-            gainApplied: 1
+            method: 'noise-power-subtraction',
+            detectionMethod: 'median-mad-3sigma',
+            baselineValid: state.baselineValid,
+            movementValid: state.movementValid,
+            comparisonValid: state.comparisonValid,
+            gainApplied: 1,
+            sharedVisualScale: this.chartConfig?.activityVisualGain ?? 1
         }]));
     }
 
@@ -468,24 +476,41 @@
 
     finishSignalCalibration() {
         if (!this.calibrationInProgress) return;
-        let calibratedChannels = 0;
+        let baselineChannels = 0;
         let channelsWithMovement = 0;
         this.activeCalibrationChannels.forEach(channel => {
             const state = this.envelopeDisplay[channel];
-            if (!state.calibrated) this.finalizeRestCalibration(state);
-            if (state.calibrated) calibratedChannels++;
-            if (this.hasValidCalibrationMovement(state)) channelsWithMovement++;
-            this.updateActivityBadge(channel, state.calibrated ? 'rest' : 'uncalibrated');
+            if (!state.baselineValid) this.finalizeRestCalibration(state);
+            if (state.baselineValid) baselineChannels++;
+            state.movementValid = this.hasValidCalibrationMovement(state);
+            if (state.movementValid) channelsWithMovement++;
             state.baselineSamples = [];
         });
 
-        const calibratedRanges = this.applyCalibrationChartRanges(this.activeCalibrationChannels);
+        // A bilateral comparison is valid only when every channel in the
+        // requested pair has a stable rest baseline and a measurable response.
+        // Never invent per-channel gains to force both sides to look alike.
+        const batchValid = baselineChannels === this.activeCalibrationChannels.length
+            && channelsWithMovement === this.activeCalibrationChannels.length;
+        this.activeCalibrationChannels.forEach(channel => {
+            const state = this.envelopeDisplay[channel];
+            state.comparisonValid = batchValid && this.activeCalibrationChannels.length > 1;
+            state.calibrated = batchValid;
+            this.updateActivityBadge(channel, batchValid ? 'rest' : 'invalid');
+        });
+        const calibratedChannels = batchValid ? this.activeCalibrationChannels.length : 0;
+
+        const calibratedRanges = batchValid
+            ? this.applyCalibrationChartRanges(this.activeCalibrationChannels)
+            : ['sin ajuste'];
 
         this.diagnosticLog.recordEvent('calibration-batch-completed', {
             group: this.activeCalibrationChannels[0]?.split('-')[0] || 'unknown',
             channels: this.activeCalibrationChannels,
             calibratedChannels,
+            baselineChannels,
             channelsWithMovement,
+            comparisonValid: batchValid,
             ranges: calibratedRanges,
             calibration: Object.fromEntries(this.activeCalibrationChannels.map(channel => [channel, this.getCalibrationSnapshot()[channel]]))
         });
@@ -567,16 +592,26 @@
         state.noiseSigma = Math.max(0.05, mad * 1.4826);
         state.threshold = baseline + Math.max(0.25, state.noiseSigma * 3);
         state.calibrationSampleCount = state.baselineSamples.length;
-        state.calibrated = state.calibrationClippedCount / state.calibrationSampleCount < 0.05;
-        return state.calibrated;
+        state.baselineValid = state.calibrationClippedCount / state.calibrationSampleCount < 0.05;
+        state.calibrated = state.baselineValid;
+        return state.baselineValid;
     }
 
     hasValidCalibrationMovement(state) {
-        if (!state.calibrated || state.movementSamples.length < 50) return false;
+        if (!state.baselineValid || state.movementSamples.length < 50) return false;
         const ordered = [...state.movementSamples].filter(Number.isFinite).sort((a, b) => a - b);
         if (!ordered.length) return false;
         const peak95 = ordered[Math.min(ordered.length - 1, Math.floor(ordered.length * 0.95))];
-        return peak95 >= Math.max(0.5, state.noiseSigma * 3);
+        return peak95 >= state.threshold;
+    }
+
+    noiseCorrectEnvelope(state, value) {
+        if (!state?.baselineValid || !Number.isFinite(state.baseline)) return 0;
+        const measured = Math.max(0, Number(value) || 0);
+        // Envelopes represent RMS-like magnitudes. Subtracting their power
+        // avoids the channel-specific dead zone created by subtracting the
+        // complete detection threshold from every sample.
+        return Math.sqrt(Math.max(0, measured * measured - state.baseline * state.baseline));
     }
 
     applyCalibrationChartRanges(channels) {
@@ -585,7 +620,10 @@
         groups.forEach(group => {
             const values = channels
                 .filter(channel => channel.startsWith(`${group}-`))
-                .flatMap(channel => this.envelopeDisplay[channel].movementSamples)
+                .flatMap(channel => {
+                    const state = this.envelopeDisplay[channel];
+                    return state.movementSamples.map(value => this.noiseCorrectEnvelope(state, value));
+                })
                 .filter(value => Number.isFinite(value) && value >= 0)
                 .sort((a, b) => a - b);
             if (!values.length) return;
@@ -642,9 +680,9 @@
         }
         if (!this.isExternalSignalSource()) return state.smoothed;
 
-        // Display-only transformation. The original sample and envelope remain
-        // untouched for recording, export and analysis.
-        state.lastCorrected = Math.max(0, state.smoothed - state.threshold);
+        // The threshold only controls the activity state. Quantitative signal
+        // amplitude uses continuous noise-power subtraction instead.
+        state.lastCorrected = this.noiseCorrectEnvelope(state, state.smoothed);
         return state.lastCorrected;
     }
 
@@ -662,18 +700,25 @@
                 }
                 const correctedEnvelope = this.smoothEnvelope(key, original.envelope, sample.time);
                 if (this.calibrationPhase === 'movement') {
-                    this.captureCalibrationMovement(key, original.amplitude, correctedEnvelope);
+                    this.captureCalibrationMovement(key, original.amplitude, original.envelope);
                 }
+                const envelopeReference = Math.max(0, Number(state.smoothed) || 0);
+                const amplitudeFactor = envelopeReference > 0
+                    ? Math.min(1, correctedEnvelope / envelopeReference)
+                    : 0;
                 calibrated[group][side] = {
                     ...original,
                     rawAmplitude: original.rawAmplitude ?? original.amplitude,
                     rawEnvelope: original.rawEnvelope ?? original.envelope,
-                    amplitude: state.calibrated && correctedEnvelope <= 0 ? 0 : original.amplitude,
+                    amplitude: state.calibrated ? original.amplitude * amplitudeFactor : 0,
                     envelope: correctedEnvelope,
                     calibration: state.calibrated ? {
                         baseline: state.baseline,
                         noiseSigma: state.noiseSigma,
-                        threshold: state.threshold
+                        threshold: state.threshold,
+                        correctionMethod: 'noise-power-subtraction',
+                        comparisonValid: state.comparisonValid,
+                        sharedVisualScale: this.chartConfig?.activityVisualGain ?? 1
                     } : null
                 };
             });
@@ -692,7 +737,8 @@
         badge.textContent = status === 'active'
             ? 'Contracción'
             : status === 'rest' ? 'Reposo'
-                : status === 'calibrating' ? 'Calibrando…' : 'Sin calibrar';
+                : status === 'calibrating' ? 'Calibrando…'
+                    : status === 'invalid' ? 'Calibración no válida' : 'Sin calibrar';
         const state = this.envelopeDisplay[channel];
         badge.title = state?.calibrated
             ? `Baseline ${state.baseline.toFixed(2)} mV · ruido σ ${state.noiseSigma.toFixed(2)} mV · umbral ${state.threshold.toFixed(2)} mV`
