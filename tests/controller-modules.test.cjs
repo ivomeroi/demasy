@@ -33,6 +33,18 @@ test('registra los controladores modulares sobre la aplicación principal', () =
     });
 });
 
+test('estima el porcentaje de una batería Li-ion y rechaza lecturas saturadas', () => {
+    class TestApp {}
+    const context = vm.createContext({ window: { KinesioEMGApp: TestApp } });
+    vm.runInContext(readFileSync('controllers/device-connection-controller.js', 'utf8'), context);
+    const app = new TestApp();
+    assert.equal(app.batteryPercentageFromMv(4200), 100);
+    assert.equal(app.batteryPercentageFromMv(3800), 50);
+    assert.equal(app.batteryPercentageFromMv(3400), 5);
+    assert.equal(app.batteryPercentageFromMv(5000), null);
+    assert.equal(app.batteryPercentageFromMv(0), null);
+});
+
 test('calibra el reposo con mediana y dispersión robusta sin aplicar ganancia', () => {
     class TestApp {}
     const context = vm.createContext({ window: { KinesioEMGApp: TestApp } });

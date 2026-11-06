@@ -50,7 +50,7 @@
 
         this.serialManager.onDataUpdate((data) => {
             this.latestSensorStatus = data.sensorStatus;
-            this.updateSensorConnectionIndicators(data.sensorStatus);
+            this.updateSensorConnectionIndicators(data.sensorStatus, data.batteryMv);
             if (!this.isPaused && this.signalSource === 'serial') {
                 this.ingestSignalData(data);
             } else if (this.signalSource === 'serial') {
@@ -98,7 +98,7 @@
 
         this.bluetoothManager.onDataUpdate((data) => {
             this.latestSensorStatus = data.sensorStatus;
-            this.updateSensorConnectionIndicators(data.sensorStatus);
+            this.updateSensorConnectionIndicators(data.sensorStatus, data.batteryMv);
             if (!this.isPaused && this.signalSource === 'bluetooth') {
                 this.ingestSignalData(data);
             } else if (this.signalSource === 'bluetooth') {
@@ -215,7 +215,57 @@
         }
     }
 
-    updateSensorConnectionIndicators(sensorStatus) {
+    batteryPercentageFromMv(millivolts) {
+        const voltage = Number(millivolts);
+        if (!Number.isFinite(voltage) || voltage < 2500 || voltage > 4350) return null;
+        const curve = [
+            [3300, 0], [3400, 5], [3500, 10], [3600, 20], [3700, 35],
+            [3800, 50], [3900, 65], [4000, 80], [4100, 90], [4200, 100]
+        ];
+        if (voltage <= curve[0][0]) return 0;
+        if (voltage >= curve[curve.length - 1][0]) return 100;
+        for (let index = 1; index < curve.length; index++) {
+            const [upperMv, upperPercent] = curve[index];
+            const [lowerMv, lowerPercent] = curve[index - 1];
+            if (voltage <= upperMv) {
+                const position = (voltage - lowerMv) / (upperMv - lowerMv);
+                return Math.round(lowerPercent + position * (upperPercent - lowerPercent));
+            }
+        }
+        return null;
+    }
+
+    updateBatteryIndicator(id, millivolts, available) {
+        const indicator = document.getElementById(id);
+        if (!indicator) return;
+        const voltage = Number(millivolts);
+        const percentage = available ? this.batteryPercentageFromMv(voltage) : null;
+        const value = indicator.querySelector('.battery-value');
+        const meter = indicator.querySelector('.battery-meter-fill');
+        const validVoltage = Number.isFinite(voltage) && voltage > 0;
+        const invalid = available && validVoltage && percentage === null;
+        const status = !available || !validVoltage
+            ? 'unavailable'
+            : invalid ? 'invalid'
+                : percentage <= 10 ? 'critical'
+                    : percentage <= 25 ? 'low' : 'good';
+        indicator.dataset.batteryStatus = status;
+        indicator.hidden = !available;
+        if (value) {
+            value.textContent = invalid ? 'Lectura inválida' : percentage === null ? '—' : `${percentage}%`;
+        }
+        if (meter) {
+            meter.style.width = `${percentage ?? 0}%`;
+            meter.parentElement?.setAttribute('aria-valuenow', percentage === null ? '0' : String(percentage));
+        }
+        const voltageLabel = validVoltage ? `${(voltage / 1000).toFixed(2)} V` : 'sin lectura';
+        indicator.title = invalid
+            ? `${voltageLabel}: fuera del rango esperado para una batería Li-ion de una celda`
+            : `${percentage ?? 0}% · ${voltageLabel} (estimación)`;
+        indicator.setAttribute('aria-label', indicator.title);
+    }
+
+    updateSensorConnectionIndicators(sensorStatus, batteryMv = null) {
         const labels = [
             'S1 · Flexor izquierdo',
             'S2 · Flexor derecho',
@@ -231,7 +281,10 @@
             indicator.setAttribute('aria-label', indicator.title);
             const state = indicator.querySelector('.sensor-link-state');
             if (state) state.textContent = active ? 'Activo' : 'Sin señal';
+            this.updateBatteryIndicator(`battery-s${index + 1}`, batteryMv?.sensors?.[index], active);
         });
+        const baseAvailable = Array.isArray(sensorStatus) && Number(batteryMv?.base) > 0;
+        this.updateBatteryIndicator('battery-base', batteryMv?.base, baseAvailable);
         if (Array.isArray(sensorStatus)) {
             const previous = this.previousDiagnosticSensorStatus;
             sensorStatus.forEach((active, index) => {
