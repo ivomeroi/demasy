@@ -353,6 +353,14 @@
         return [this.getCalibrationChannels(target)];
     }
 
+    isBilateralCalibrationBatch(channels) {
+        if (!Array.isArray(channels) || channels.length !== 2) return false;
+        const [firstGroup] = channels[0].split('-');
+        return channels.every(channel => channel.startsWith(`${firstGroup}-`))
+            && channels.some(channel => channel.endsWith('-left'))
+            && channels.some(channel => channel.endsWith('-right'));
+    }
+
     setCalibrationOverlayVisibility(channels, visible) {
         const groups = new Set(channels.map(channel => channel.split('-')[0]));
         document.querySelectorAll('[data-calibration-group]').forEach(overlay => {
@@ -492,13 +500,14 @@
         // Never invent per-channel gains to force both sides to look alike.
         const batchValid = baselineChannels === this.activeCalibrationChannels.length
             && channelsWithMovement === this.activeCalibrationChannels.length;
+        const comparisonValid = batchValid && this.isBilateralCalibrationBatch(this.activeCalibrationChannels);
         this.activeCalibrationChannels.forEach(channel => {
             const state = this.envelopeDisplay[channel];
-            state.comparisonValid = batchValid && this.activeCalibrationChannels.length > 1;
+            state.comparisonValid = comparisonValid;
             state.calibrated = batchValid;
             this.updateActivityBadge(channel, batchValid ? 'rest' : 'invalid');
         });
-        const calibratedChannels = batchValid ? this.activeCalibrationChannels.length : 0;
+        const batchCalibratedChannels = batchValid ? this.activeCalibrationChannels.length : 0;
 
         const calibratedRanges = batchValid
             ? this.applyCalibrationChartRanges(this.activeCalibrationChannels)
@@ -507,15 +516,15 @@
         this.diagnosticLog.recordEvent('calibration-batch-completed', {
             group: this.activeCalibrationChannels[0]?.split('-')[0] || 'unknown',
             channels: this.activeCalibrationChannels,
-            calibratedChannels,
+            calibratedChannels: batchCalibratedChannels,
             baselineChannels,
             channelsWithMovement,
-            comparisonValid: batchValid,
+            comparisonValid,
             ranges: calibratedRanges,
             calibration: Object.fromEntries(this.activeCalibrationChannels.map(channel => [channel, this.getCalibrationSnapshot()[channel]]))
         });
 
-        this.calibrationSummary.calibratedChannels += calibratedChannels;
+        this.calibrationSummary.calibratedChannels += batchCalibratedChannels;
         this.calibrationSummary.channelsWithMovement += channelsWithMovement;
         this.calibrationSummary.ranges.push(...calibratedRanges.filter(label => label !== 'sin ajuste'));
 
@@ -542,25 +551,25 @@
         if (button) button.disabled = false;
         if (selector) selector.disabled = false;
         const { expectedChannels } = this.calibrationSummary;
-        calibratedChannels = this.calibrationSummary.calibratedChannels;
-        channelsWithMovement = this.calibrationSummary.channelsWithMovement;
+        const totalCalibratedChannels = this.calibrationSummary.calibratedChannels;
+        const totalChannelsWithMovement = this.calibrationSummary.channelsWithMovement;
         const rangeLabels = this.calibrationSummary.ranges.length ? this.calibrationSummary.ranges : ['sin ajuste'];
         const completedSummary = {
             expectedChannels,
-            calibratedChannels,
-            channelsWithMovement,
+            calibratedChannels: totalCalibratedChannels,
+            channelsWithMovement: totalChannelsWithMovement,
             ranges: rangeLabels,
             calibration: this.getCalibrationSnapshot()
         };
         this.calibrationSummary = null;
         this.diagnosticLog.recordEvent('calibration-completed', completedSummary);
         this.showNotification(
-            calibratedChannels === expectedChannels && channelsWithMovement === expectedChannels
-                ? `Calibración completada en ${calibratedChannels} sensor${calibratedChannels === 1 ? '' : 'es'}. Escala ajustada a ${rangeLabels.join(' / ')} mV.`
-                : calibratedChannels > 0
-                    ? `Calibración parcial: reposo ${calibratedChannels}/${expectedChannels}, movimiento ${channelsWithMovement}/${expectedChannels}.`
+            totalCalibratedChannels === expectedChannels && totalChannelsWithMovement === expectedChannels
+                ? `Calibración completada en ${totalCalibratedChannels} sensor${totalCalibratedChannels === 1 ? '' : 'es'}. Escala ajustada a ${rangeLabels.join(' / ')} mV.`
+                : totalCalibratedChannels > 0
+                    ? `Calibración parcial: reposo ${totalCalibratedChannels}/${expectedChannels}, movimiento ${totalChannelsWithMovement}/${expectedChannels}.`
                     : 'No se recibieron datos para calibrar.',
-            calibratedChannels === expectedChannels && channelsWithMovement === expectedChannels ? 'success' : 'warning'
+            totalCalibratedChannels === expectedChannels && totalChannelsWithMovement === expectedChannels ? 'success' : 'warning'
         );
     }
 

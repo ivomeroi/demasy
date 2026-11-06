@@ -67,6 +67,10 @@ test('divide la calibración total en flexores y extensores consecutivos', () =>
         JSON.parse(JSON.stringify(app.getCalibrationBatches('extensor-left'))),
         [['extensor-left']]
     );
+    assert.equal(app.isBilateralCalibrationBatch(['flexor-left', 'flexor-right']), true);
+    assert.equal(app.isBilateralCalibrationBatch(['extensor-left', 'extensor-right']), true);
+    assert.equal(app.isBilateralCalibrationBatch(['flexor-right']), false);
+    assert.equal(app.isBilateralCalibrationBatch(['flexor-left', 'extensor-right']), false);
 });
 
 test('conserva la muestra original y corrige potencia de ruido sin usar el umbral como zona muerta', () => {
