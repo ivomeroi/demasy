@@ -9,7 +9,7 @@
 // =========================
 // BATERIA DE LA BASE
 // =========================
-#define BATTERY_PIN 1
+#define BATTERY_PIN 2
 #define BATTERY_LED_PIN 3
 #define BATTERY_LOW_MV 3400
 #define BATTERY_DIVIDER 2.0f       // Divisor resistivo 47k/47k.
